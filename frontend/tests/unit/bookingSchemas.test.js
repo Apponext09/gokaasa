@@ -11,6 +11,7 @@ function form(guests, extra = {}) {
     rooms: [{ guests }],
     gstNumber: '',
     companyName: '',
+    billingAddress: '',
     specialRequest: '',
     ...extra,
   };

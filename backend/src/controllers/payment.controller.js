@@ -17,6 +17,14 @@ export const paymentController = {
     return res.json(await paymentService.reportFailure(req.user.id, req.validated.body));
   },
 
+  async getPayment(req, res) {
+    return res.json(await paymentService.getById(req.user.id, req.validated.params.id));
+  },
+
+  async getRefund(req, res) {
+    return res.json(await paymentService.getRefundById(req.user.id, req.validated.params.id));
+  },
+
   async devCheckout(req, res) {
     return res.json(await paymentService.devCheckout(req.user.id, req.validated.body));
   },

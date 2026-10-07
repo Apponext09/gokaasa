@@ -204,7 +204,7 @@ export function HotelDetailsPage() {
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
         <Skeleton className="h-4 w-64" />
         <Skeleton className="h-9 w-96" />
-        <Skeleton className="h-[26rem] w-full rounded-2xl" />
+        <Skeleton className="h-[26rem] w-full rounded-[var(--radius-card)]" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -301,7 +301,7 @@ export function HotelDetailsPage() {
               <p className="text-sm text-[var(--text-muted)]">The hotel has not added a description yet.</p>
             )}
           </div>
-          <dl className="grid grid-cols-2 gap-4 self-start rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 text-sm lg:grid-cols-1">
+          <dl className="grid grid-cols-2 gap-4 self-start rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 text-sm lg:grid-cols-1">
             {hotel.checkInTime && (
               <div><dt className="text-[var(--text-muted)]">Check-in from</dt><dd className="font-medium text-[var(--text-strong)]">{hotel.checkInTime.slice(0, 5)}</dd></div>
             )}
@@ -337,7 +337,7 @@ export function HotelDetailsPage() {
           </div>
 
           {(editing || !hasStay) && (
-            <div className="grid gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 md:grid-cols-[1.4fr_1fr] md:items-start">
+            <div className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 md:grid-cols-[1.4fr_1fr] md:items-start">
               <DateRangePicker
                 idPrefix="details"
                 min={today}
@@ -366,8 +366,8 @@ export function HotelDetailsPage() {
 
           {hasStay && availabilityState === 'loading' && (
             <div className="space-y-4" aria-label="Checking room availability">
-              <Skeleton className="h-64 w-full rounded-xl" />
-              <Skeleton className="h-64 w-full rounded-xl" />
+              <Skeleton className="h-64 w-full rounded-[var(--radius-card)]" />
+              <Skeleton className="h-64 w-full rounded-[var(--radius-card)]" />
             </div>
           )}
 
@@ -409,7 +409,7 @@ export function HotelDetailsPage() {
           ) : (
             <ul className="grid gap-3 md:grid-cols-2">
               {policies.map((policy) => (
-                <li key={policy.code} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4">
+                <li key={policy.code} className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4">
                   <p className="font-medium text-[var(--text-strong)]">{policy.name}</p>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">{policy.summary}</p>
                 </li>

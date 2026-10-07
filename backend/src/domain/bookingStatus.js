@@ -8,6 +8,9 @@
  *       └──► FAILED ◄───┘                  │
  *             └────────────────────────────┴──► REFUND_PENDING   (only for a payment captured after the hold ended)
  *
+ * REFUNDED means the refund owed under the policy was completed, whatever percentage that was — the exact
+ * amount is tracked separately on `refunded_minor`, so the status never has to distinguish "full" from
+ * "partial": a 50%-policy cancellation is still a completed, REFUNDED booking.
  * A failed refund leaves the booking in REFUND_PENDING; the refund itself is retried, not the booking moved.
  * CONFIRMED is only ever reached from PAID, which is only reached after a server-verified payment.
  * Opening Razorpay Checkout never changes the booking.

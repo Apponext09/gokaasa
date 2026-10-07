@@ -37,10 +37,12 @@ export function SelectionBar({ selection, onClear }) {
         checkOut: selection.checkOut,
         rooms: selection.rooms,
         occupancy: selection.occupancy,
+        idempotencyKey: selection.idempotencyKey,
       });
       navigate(`/booking/guest-details?holdId=${hold.id}`);
     } catch (err) {
-      toast.error(normalizeError(err).message);
+      const normalized = normalizeError(err);
+      toast.error(normalized.status === 409 ? `This room just became unavailable. ${normalized.message}` : normalized.message);
     } finally {
       setStarting(false);
     }

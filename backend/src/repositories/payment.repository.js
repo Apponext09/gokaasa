@@ -42,6 +42,11 @@ export const paymentRepository = {
     return rows[0] ?? null;
   },
 
+  async findById(id, client = pool) {
+    const { rows } = await client.query(`SELECT ${PAYMENT_COLUMNS} FROM payments p WHERE p.id = $1`, [id]);
+    return rows[0] ?? null;
+  },
+
   /** Locks the payment row for a settlement decision. */
   async lockByOrder(orderId, client) {
     const { rows } = await client.query(`SELECT ${PAYMENT_COLUMNS} FROM payments p WHERE p.provider_order_id = $1 FOR UPDATE`, [orderId]);
@@ -93,6 +98,11 @@ export const paymentRepository = {
 
   async lockRefund(id, client) {
     const { rows } = await client.query(`SELECT ${REFUND_COLUMNS} FROM refunds r WHERE r.id = $1 FOR UPDATE`, [id]);
+    return rows[0] ?? null;
+  },
+
+  async findRefundById(id, client = pool) {
+    const { rows } = await client.query(`SELECT ${REFUND_COLUMNS} FROM refunds r WHERE r.id = $1`, [id]);
     return rows[0] ?? null;
   },
 

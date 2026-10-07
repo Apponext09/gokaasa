@@ -44,6 +44,7 @@ export const holdCreateSchema = z
     roomTypeId: positiveId,
     ratePlanId: positiveId,
     rooms: z.number().int().min(1).max(LIMITS.maxRooms),
+    idempotencyKey: z.string().trim().min(1).max(100).optional(),
     ...stayFields,
   })
   .superRefine((value, ctx) => {
@@ -93,16 +94,21 @@ export const guestDetailsSchema = z.object({
   gstNumber: z
     .preprocess(
       (value) => (typeof value === 'string' ? value.trim().toUpperCase() : value),
-      z.string().regex(/^$|^[0-9A-Z]{15}$/, 'GST numbers have 15 characters').optional(),
+      z.string().regex(/^$|^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/, 'Enter a valid 15-character GSTIN').optional(),
     )
     .transform((value) => (value ? value : undefined)),
   companyName: optionalText(120),
+  billingAddress: optionalText(300),
   specialRequest: optionalText(500),
 });
 
 export const holdIdParam = z.object({ id: positiveId });
 
 export const bookingIdParam = z.object({ id: positiveId });
+
+export const paymentIdParam = z.object({ id: positiveId });
+
+export const refundIdParam = z.object({ id: positiveId });
 
 export const createOrderSchema = z.object({ holdId: positiveId });
 

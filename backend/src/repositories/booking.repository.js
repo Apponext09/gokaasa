@@ -12,7 +12,7 @@ const BOOKING_COLUMNS = `
   b.adults, b.children, b.rooms_count, b.currency, b.subtotal_minor, b.taxes_minor, b.fees_minor, b.discount_minor,
   b.total_minor, b.paid_minor, b.refunded_minor, b.cancellation_policy, b.cancellation_deadline_at, b.check_in_at,
   b.primary_first_name, b.primary_last_name, b.primary_email::text AS primary_email, b.primary_phone,
-  b.gst_number, b.company_name, b.special_request, b.hotel_name, b.hotel_slug, b.hotel_address, b.hotel_city,
+  b.gst_number, b.company_name, b.billing_address, b.special_request, b.hotel_name, b.hotel_slug, b.hotel_address, b.hotel_city,
   b.hotel_country_code, b.hotel_image_url, b.rate_plan_name, b.meal_plan, b.is_refundable,
   b.cancelled_at, b.cancellation_reason, b.created_at, b.updated_at
 `;
@@ -70,17 +70,27 @@ export const bookingRepository = {
     const { rows } = await client.query(
       `INSERT INTO booking_holds (user_id, hotel_id, room_type_id, rate_plan_id, check_in, check_out, nights, rooms,
                                   occupancy, currency, subtotal_minor, discount_minor, taxes_minor, fees_minor, total_minor,
-                                  quote_snapshot, status, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'HELD', now() + ($17 || ' minutes')::interval)
+                                  quote_snapshot, idempotency_key, status, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HELD', now() + ($18 || ' minutes')::interval)
        RETURNING id, expires_at`,
       [
         values.userId, values.hotelId, values.roomTypeId, values.ratePlanId, values.checkIn, values.checkOut,
         values.nights, values.rooms, JSON.stringify(values.occupancy), values.currency, values.subtotal,
         values.discount, values.taxes, values.fees, values.total, JSON.stringify(values.quoteSnapshot),
-        String(values.holdMinutes),
+        values.idempotencyKey ?? null, String(values.holdMinutes),
       ],
     );
     return rows[0];
+  },
+
+  /** The hold a previous identical request with this idempotency key already created, if it's still live. */
+  async findHoldByIdempotencyKey(userId, idempotencyKey, client = pool) {
+    const { rows } = await client.query(
+      `SELECT ${HOLD_COLUMNS} FROM booking_holds h
+        WHERE h.user_id = $1 AND h.idempotency_key = $2 AND h.status = 'HELD' AND h.expires_at > now()`,
+      [userId, idempotencyKey],
+    );
+    return rows[0] ?? null;
   },
 
   /** Replaces the priced components after a re-quote. Expiry and reservations are unchanged. */

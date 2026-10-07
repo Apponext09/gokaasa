@@ -7,7 +7,7 @@ import { EXPIRED_MESSAGE } from '../bookingFormat.js';
 export function HoldExpiredPanel({ message = EXPIRED_MESSAGE }) {
   const navigate = useNavigate();
   return (
-    <div role="alert" className="mx-auto max-w-xl rounded-2xl border border-warning-600/30 bg-warning-50 p-8 text-center">
+    <div role="alert" className="mx-auto max-w-xl rounded-[var(--radius-card)] border border-warning-600/30 bg-warning-50 p-8 text-center">
       <Clock className="mx-auto mb-3 h-8 w-8 text-warning-600" aria-hidden="true" />
       <h2 className="text-lg font-semibold text-[var(--text-strong)]">The room is no longer held</h2>
       <p className="mt-2 text-sm text-[var(--text-body)]">{message}</p>

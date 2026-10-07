@@ -3,7 +3,7 @@ import { authRouter } from './auth.routes.js';
 import { adminRouter } from './admin.routes.js';
 import { amenityRouter, hotelRouter } from './hotel.routes.js';
 import { destinationRouter, wishlistRouter } from './discovery.routes.js';
-import { bookingRouter, bookingsRouter, myBookingsRouter, paymentRouter } from './booking.routes.js';
+import { bookingRouter, bookingsRouter, myBookingsRouter, paymentRouter, refundsRouter } from './booking.routes.js';
 
 export const apiRouter = Router();
 
@@ -16,4 +16,5 @@ apiRouter.use('/booking', bookingRouter);
 apiRouter.use('/bookings', bookingsRouter);
 apiRouter.use('/my-bookings', myBookingsRouter);
 apiRouter.use('/payments', paymentRouter);
+apiRouter.use('/refunds', refundsRouter);
 apiRouter.use('/admin', adminRouter);

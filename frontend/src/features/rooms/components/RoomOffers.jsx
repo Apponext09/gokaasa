@@ -23,7 +23,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
   const freeCancel = plan.refundable && plan.cancellationPolicy && !plan.cancellationPolicy.isNonRefundable && plan.cancellationPolicy.refundPercent === 100;
 
   return (
-    <li className={cn('rounded-lg border p-4 transition-colors', selected ? 'border-brand-500 bg-brand-50/60' : 'border-[var(--border-subtle)]')}>
+    <li className={cn('rounded-[var(--radius-control)] border p-4 transition-colors', selected ? 'border-brand-500 bg-brand-50/60' : 'border-[var(--border-subtle)]')}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +91,7 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
   const scarce = room.available && room.availableRooms > 0 && room.availableRooms <= 3;
 
   return (
-    <article className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+    <article className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
       <div className="grid gap-0 md:grid-cols-[18rem_minmax(0,1fr)]">
         <div className="relative">
           <SafeImage src={current?.url} alt={current?.altText ?? room.name} className="aspect-[4/3] w-full md:h-full md:aspect-auto md:min-h-56" sizes="(min-width: 768px) 288px, 100vw" fallbackLabel={`${room.name}: photos coming soon`} />
@@ -153,7 +153,7 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
 export function UnavailableRooms({ rooms }) {
   if (rooms.length === 0) return null;
   return (
-    <details className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4">
+    <details className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4">
       <summary className="cursor-pointer text-sm font-medium text-[var(--text-body)]">
         {rooms.length} other room type{rooms.length === 1 ? '' : 's'} not available for these dates
       </summary>

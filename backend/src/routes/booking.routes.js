@@ -13,6 +13,8 @@ import {
   holdCreateSchema,
   holdIdParam,
   myBookingsQuery,
+  paymentIdParam,
+  refundIdParam,
   verifySchema,
 } from '../validators/booking.validator.js';
 
@@ -49,3 +51,10 @@ paymentRouter.post('/create-order', authenticate, validate({ body: createOrderSc
 paymentRouter.post('/verify', authenticate, validate({ body: verifySchema }), paymentController.verify);
 paymentRouter.post('/failed', authenticate, validate({ body: failedPaymentSchema }), paymentController.reportFailure);
 paymentRouter.post('/dev/checkout', authenticate, validate({ body: devCheckoutSchema }), paymentController.devCheckout);
+// Registered last: a literal path above (e.g. "config") must never be shadowed by this ":id" pattern.
+paymentRouter.get('/:id', authenticate, validate({ params: paymentIdParam }), paymentController.getPayment);
+
+/** One refund, owner only. Mounted at /api/refunds. */
+export const refundsRouter = Router();
+refundsRouter.use(authenticate);
+refundsRouter.get('/:id', validate({ params: refundIdParam }), paymentController.getRefund);

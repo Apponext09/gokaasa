@@ -15,10 +15,22 @@ import { processRefund } from './refund.service.js';
 const log = createLogger('booking');
 const MS_PER_HOUR = 60 * 60 * 1000;
 
-/** Booking reference: GK-<year in the business zone>-<six digit sequence>, from one sequence, never reused. */
+// Scrambles the booking sequence into a non-sequential-looking number so two consecutive bookings don't
+// get visibly adjacent references. This is one step of modular multiplication, a bijection rather than a
+// hash: every sequence value still maps to its own unique output, so there is no collision risk to retry
+// around. 2^31-1 is prime and far beyond any realistic booking volume; 48271 is coprime to it (any value
+// in [1, modulus) is, since the modulus is prime), so the mapping covers the full range one-to-one.
+const REF_SCRAMBLE_MODULUS = 2_147_483_647;
+const REF_SCRAMBLE_MULTIPLIER = 48_271;
+
+function scrambleSequence(sequence) {
+  return (sequence * REF_SCRAMBLE_MULTIPLIER) % REF_SCRAMBLE_MODULUS;
+}
+
+/** Booking reference: GK-<year in the business zone>-<scrambled sequence>, from one sequence, never reused. */
 function bookingRefFor(sequence) {
   const year = localToday(config.booking.businessTimezone).slice(0, 4);
-  return `GK-${year}-${String(sequence).padStart(6, '0')}`;
+  return `GK-${year}-${String(scrambleSequence(sequence)).padStart(7, '0')}`;
 }
 
 /**
@@ -63,6 +75,7 @@ export async function ensureBookingForHold(client, hold) {
     primary_phone: primary.mobile,
     gst_number: details.gstNumber ?? null,
     company_name: details.companyName ?? null,
+    billing_address: details.billingAddress ?? null,
     special_request: details.specialRequest ?? null,
     hotel_name: snapshot.hotel.name,
     hotel_slug: snapshot.hotel.slug,
@@ -209,6 +222,7 @@ export async function buildBookingDto(client, booking, { includePreview = true }
     },
     gstNumber: booking.gst_number,
     companyName: booking.company_name,
+    billingAddress: booking.billing_address,
     specialRequest: booking.special_request,
     amounts: {
       currency: booking.currency,

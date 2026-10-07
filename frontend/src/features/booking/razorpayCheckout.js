@@ -40,7 +40,7 @@ export async function openRazorpayCheckout({ scriptUrl, keyId, orderId, amount, 
     name: 'Gokaasa',
     description,
     prefill,
-    theme: { color: '#2563eb' },
+    theme: { color: '#1e3a5f' }, // brand-600 (navy) — kept in sync with index.css's --color-brand-600
     handler: (response) =>
       onSuccess({
         razorpay_order_id: response.razorpay_order_id,

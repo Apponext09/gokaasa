@@ -183,6 +183,9 @@ function GuestForm({ hold, onSaved, onExpired }) {
             <Input id="company" invalid={!!errors.companyName} {...register('companyName')} />
           </FormField>
         </div>
+        <FormField id="billing-address" label="Billing address" error={errors.billingAddress?.message}>
+          <Textarea id="billing-address" rows={2} invalid={!!errors.billingAddress} {...register('billingAddress')} />
+        </FormField>
         <FormField id="special" label="Special requests" hint="The hotel will try to meet requests, but cannot guarantee them." error={errors.specialRequest?.message}>
           <Textarea id="special" rows={3} invalid={!!errors.specialRequest} {...register('specialRequest')} />
         </FormField>

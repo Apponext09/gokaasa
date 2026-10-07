@@ -46,8 +46,9 @@ export function buildGuestFormSchema(occupancy) {
         .string()
         .trim()
         .toUpperCase()
-        .refine((value) => value === '' || /^[0-9A-Z]{15}$/.test(value), 'GST numbers have 15 characters'),
+        .refine((value) => value === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(value), 'Enter a valid 15-character GSTIN'),
       companyName: z.string().trim().max(120, 'Company name must be at most 120 characters'),
+      billingAddress: z.string().trim().max(300, 'Keep the billing address to 300 characters or fewer'),
       specialRequest: z.string().trim().max(500, 'Keep special requests to 500 characters or fewer'),
     })
     .superRefine((value, ctx) => {
@@ -95,6 +96,7 @@ export function defaultGuestValues(occupancy, saved = null) {
     }),
     gstNumber: saved?.gstNumber ?? '',
     companyName: saved?.companyName ?? '',
+    billingAddress: saved?.billingAddress ?? '',
     specialRequest: saved?.specialRequest ?? '',
   };
 }
@@ -113,6 +115,7 @@ export function toGuestDetailsPayload(values) {
     })),
     gstNumber: values.gstNumber || undefined,
     companyName: values.companyName || undefined,
+    billingAddress: values.billingAddress || undefined,
     specialRequest: values.specialRequest || undefined,
   };
 }

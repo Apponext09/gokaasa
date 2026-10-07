@@ -54,7 +54,7 @@ export function BookingConfirmationPage() {
       <BookingProgress current={confirmed ? 5 : 4} />
 
       {confirmed ? (
-        <div className="mb-6 rounded-2xl border border-success-600/30 bg-success-50 p-6 text-center sm:p-8">
+        <div className="mb-6 rounded-[var(--radius-card)] border border-success-600/30 bg-success-50 p-6 text-center sm:p-8">
           <CheckCircle2 className="mx-auto h-10 w-10 text-success-600" aria-hidden="true" />
           <h1 className="mt-3 text-2xl font-semibold text-[var(--text-strong)]">✓ Booking Confirmed</h1>
           <p className="mt-1 text-sm text-[var(--text-body)]">A confirmation has been sent to {booking.primaryContact.email}.</p>
@@ -64,7 +64,7 @@ export function BookingConfirmationPage() {
           </p>
         </div>
       ) : (
-        <div className="mb-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6">
+        <div className="mb-6 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6">
           <p className="text-sm text-[var(--text-muted)]">Booking reference</p>
           <p className="font-mono text-xl font-semibold text-[var(--text-strong)]">{booking.bookingRef}</p>
           <p className="mt-2 text-sm">

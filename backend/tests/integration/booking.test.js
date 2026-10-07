@@ -434,6 +434,32 @@ describe('holds: creation, server-side quote, expiry', () => {
     assert.equal((await holdRow(hold.body.hold.id)).status, 'EXPIRED');
     assert.equal((await reservationTotal(hold.body.hold.id)).held, 0);
   });
+
+  it('a double-submitted hold request (same idempotency key) reuses the first hold instead of taking a second room', async () => {
+    const checkIn = day(68);
+    const body = {
+      hotelId, roomTypeId: roomA, ratePlanId: planRO, checkIn, checkOut: addDays(checkIn, 1),
+      rooms: 1, occupancy: [{ adults: 2, childAges: [] }], idempotencyKey: 'guest-double-click-68',
+    };
+    const [first, second] = await Promise.all([
+      request(app).post('/api/booking/holds').set(bearer(guestToken)).send(body),
+      request(app).post('/api/booking/holds').set(bearer(guestToken)).send(body),
+    ]);
+    assert.equal(first.status, 201, JSON.stringify(first.body));
+    assert.equal(second.status, 201, JSON.stringify(second.body));
+    assert.equal(first.body.hold.id, second.body.hold.id, 'both requests resolve to the same hold');
+    const { rows } = await pool.query(
+      `SELECT COALESCE(SUM(quantity), 0)::int AS units FROM inventory_reservations
+        WHERE room_type_id = $1 AND stay_date = $2 AND status = 'HELD'`,
+      [roomA, checkIn],
+    );
+    assert.equal(rows[0].units, 1, 'only one room was actually reserved, not two');
+
+    // A request with no idempotency key at all is completely unaffected: it always gets its own hold.
+    const plain = await createHold(guestToken, { offset: 68, roomId: roomA, planId: planRO });
+    assert.equal(plain.status, 201);
+    assert.notEqual(plain.body.hold.id, first.body.hold.id);
+  });
 });
 
 describe('guest details and quotes', () => {
@@ -486,6 +512,31 @@ describe('guest details and quotes', () => {
     const after = await request(app).get(`/api/bookings/${booking.id}`).set(bearer(guestToken));
     assert.equal(after.body.booking.hotel.name, 'Harbour Booking Hotel', 'the snapshot, not the live hotel');
     assert.equal(after.body.booking.rooms[0].name, 'Deluxe Room');
+  });
+
+  it('billing address is saved with the other optional business details', async () => {
+    const hold = await createHold(guestToken, { offset: 70 });
+    const id = hold.body.hold.id;
+    const details = { ...guestDetailsFor([{ adults: 2, childAges: [] }]), billingAddress: '221B Baker Street, Mumbai 400001' };
+    const saved = await request(app).put(`/api/booking/holds/${id}/guests`).set(bearer(guestToken)).send(details);
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+
+    const order = await startPayment(guestToken, id);
+    const payment = fake.pay({ orderId: order.orderId, amount: order.amount });
+    const verified = await request(app).post('/api/payments/verify').set(bearer(guestToken)).send(payment);
+    assert.equal(verified.status, 200, JSON.stringify(verified.body));
+    assert.equal(verified.body.booking.billingAddress, '221B Baker Street, Mumbai 400001');
+  });
+
+  it('booking references follow the GK-YYYY-NNNNNNN format and are not sequential between bookings', async () => {
+    const first = await confirmedBooking(guestToken, { offset: 72 });
+    const second = await confirmedBooking(guestToken, { offset: 74 });
+    const refPattern = /^GK-\d{4}-\d{6,}$/;
+    assert.match(first.booking.bookingRef, refPattern);
+    assert.match(second.booking.bookingRef, refPattern);
+    const firstNum = Number(first.booking.bookingRef.split('-')[2]);
+    const secondNum = Number(second.booking.bookingRef.split('-')[2]);
+    assert.notEqual(Math.abs(secondNum - firstNum), 1, 'two consecutive bookings must not have adjacent reference numbers');
   });
 });
 
@@ -757,6 +808,44 @@ describe('bookings: ownership, My Trips, cancellation and refunds', () => {
       .set(bearer(guestToken))
       .send(guestDetailsFor([{ adults: 2, childAges: [] }]));
     assert.equal(res.status, 409);
+  });
+
+  it('a payment can be read by id, scoped to its owner', async () => {
+    const { booking, payment } = await confirmedBooking(guestToken, { offset: 76 });
+    const row = await pool.query(`SELECT id FROM payments WHERE provider_order_id = $1`, [payment.razorpay_order_id]);
+    const paymentId = row.rows[0].id;
+
+    const mine = await request(app).get(`/api/payments/${paymentId}`).set(bearer(guestToken));
+    assert.equal(mine.status, 200, JSON.stringify(mine.body));
+    assert.equal(mine.body.bookingId, booking.id);
+    assert.equal(mine.body.status, 'SUCCESS');
+
+    const theirs = await request(app).get(`/api/payments/${paymentId}`).set(bearer(otherToken));
+    assert.equal(theirs.status, 404);
+  });
+
+  it('a refund can be read by id, scoped to its owner', async () => {
+    const { booking } = await confirmedBooking(guestToken, { offset: 78, planId: planPartial });
+    const cancelled = await request(app).post(`/api/bookings/${booking.id}/cancel`).set(bearer(guestToken)).send({ reason: 'Plans changed' });
+    assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+    const refundRow = await pool.query(`SELECT id FROM refunds WHERE booking_id = $1`, [booking.id]);
+    const refundId = refundRow.rows[0].id;
+
+    const mine = await request(app).get(`/api/refunds/${refundId}`).set(bearer(guestToken));
+    assert.equal(mine.status, 200, JSON.stringify(mine.body));
+    assert.equal(mine.body.bookingId, booking.id);
+
+    const theirs = await request(app).get(`/api/refunds/${refundId}`).set(bearer(otherToken));
+    assert.equal(theirs.status, 404);
+  });
+
+  it('hold creation and release are recorded in the audit log', async () => {
+    const hold = await createHold(guestToken, { offset: 80 });
+    const id = hold.body.hold.id;
+    await request(app).post(`/api/booking/holds/${id}/release`).set(bearer(guestToken));
+
+    const rows = await pool.query(`SELECT action FROM audit_logs WHERE entity = 'booking_hold' AND entity_id = $1 ORDER BY id`, [String(id)]);
+    assert.deepEqual(rows.rows.map((r) => r.action), ['booking_hold.created', 'booking_hold.released']);
   });
 });
 

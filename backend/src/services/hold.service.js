@@ -93,38 +93,65 @@ export const holdService = {
    * night by night under the same transaction, so a failure leaves nothing behind.
    */
   async create(userId, input) {
+    // A double-click on "Continue", or a retried request, carries the same idempotency key the first
+    // attempt did; reuse that attempt's hold instead of tying up a second set of rooms. Callers that send
+    // no key (including every existing caller) get a new hold every time, exactly as before.
+    if (input.idempotencyKey) {
+      const existing = await bookingRepository.findHoldByIdempotencyKey(userId, input.idempotencyKey);
+      if (existing) return toHoldDto(existing);
+    }
+
     const holdMinutes = config.booking.holdDurationMinutes;
-    const hold = await withTransaction(async (client) => {
-      const quote = await quoteStay(client, input, { checkAvailability: true });
+    let hold;
+    try {
+      hold = await withTransaction(async (client) => {
+        const quote = await quoteStay(client, input, { checkAvailability: true });
 
-      const { id, expires_at: expiresAt } = await bookingRepository.insertHold(client, {
-        userId,
-        hotelId: quote.hotelId,
-        roomTypeId: quote.roomTypeId,
-        ratePlanId: quote.ratePlanId,
-        checkIn: quote.checkIn,
-        checkOut: quote.checkOut,
-        nights: quote.nights,
-        rooms: quote.rooms,
-        occupancy: quote.occupancy,
-        currency: quote.currency,
-        subtotal: quote.subtotal,
-        discount: quote.discount,
-        taxes: quote.taxes,
-        fees: quote.fees,
-        total: quote.total,
-        quoteSnapshot: quote.snapshot,
-        holdMinutes,
+        const { id, expires_at: expiresAt } = await bookingRepository.insertHold(client, {
+          userId,
+          hotelId: quote.hotelId,
+          roomTypeId: quote.roomTypeId,
+          ratePlanId: quote.ratePlanId,
+          checkIn: quote.checkIn,
+          checkOut: quote.checkOut,
+          nights: quote.nights,
+          rooms: quote.rooms,
+          occupancy: quote.occupancy,
+          currency: quote.currency,
+          subtotal: quote.subtotal,
+          discount: quote.discount,
+          taxes: quote.taxes,
+          fees: quote.fees,
+          total: quote.total,
+          quoteSnapshot: quote.snapshot,
+          holdMinutes,
+          idempotencyKey: input.idempotencyKey ?? null,
+        });
+
+        const nights = quote.snapshot.nightly.map((row) => row.date);
+        for (const date of nights) {
+          await inventoryRepository.insertHold(client, { roomTypeId: quote.roomTypeId, stayDate: date, quantity: quote.rooms, holdId: id });
+        }
+
+        await auditService.record(client, {
+          actor: { id: userId },
+          action: 'booking_hold.created',
+          entity: 'booking_hold',
+          entityId: id,
+          newValue: { hotelId: quote.hotelId, roomTypeId: quote.roomTypeId, ratePlanId: quote.ratePlanId, rooms: quote.rooms, total: quote.total, currency: quote.currency },
+        });
+        log.info('hold created', { holdId: id, hotelId: quote.hotelId, roomTypeId: quote.roomTypeId, rooms: quote.rooms, nights: nights.length });
+        return { id, expiresAt };
       });
-
-      const nights = quote.snapshot.nightly.map((row) => row.date);
-      for (const date of nights) {
-        await inventoryRepository.insertHold(client, { roomTypeId: quote.roomTypeId, stayDate: date, quantity: quote.rooms, holdId: id });
+    } catch (error) {
+      // Two near-simultaneous requests with the same idempotency key can both pass the check above; the
+      // unique index lets only one insert succeed, and the loser returns the winner's hold instead of an error.
+      if (input.idempotencyKey && error.code === '23505' && error.constraint === 'booking_holds_idempotency_unique') {
+        const existing = await bookingRepository.findHoldByIdempotencyKey(userId, input.idempotencyKey);
+        if (existing) return toHoldDto(existing);
       }
-
-      log.info('hold created', { holdId: id, hotelId: quote.hotelId, roomTypeId: quote.roomTypeId, rooms: quote.rooms, nights: nights.length });
-      return { id, expiresAt };
-    });
+      throw error;
+    }
     const row = await bookingRepository.findHold(hold.id);
     return toHoldDto(row);
   },
@@ -236,6 +263,13 @@ export const holdService = {
         holdStatus: HOLD_STATUS.RELEASED,
         bookingStatus: hold.booking_id ? BOOKING_STATUS.FAILED : null,
         reason,
+      });
+      await auditService.record(client, {
+        actor: { id: userId },
+        action: 'booking_hold.released',
+        entity: 'booking_hold',
+        entityId: hold.id,
+        newValue: { reason },
       });
     });
     return this.get(userId, holdId);

@@ -7,7 +7,7 @@ export function StaySummary({ quote, className = '' }) {
   const { hotel, room, ratePlan, cancellationPolicy, stay, totals } = quote;
   const money = (minor) => formatMoneyMinor(minor, totals.currency);
   return (
-    <article className={`overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm ${className}`} aria-label="Booking summary">
+    <article className={`overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm ${className}`} aria-label="Booking summary">
       <div className="aspect-[16/9] bg-[var(--surface-muted)]">
         <SafeImage src={hotel.imageUrl} alt={hotel.name} className="h-full w-full object-cover" sizes="(min-width: 1024px) 22rem, 100vw" />
       </div>

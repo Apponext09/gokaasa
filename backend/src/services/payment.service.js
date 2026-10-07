@@ -349,6 +349,44 @@ export const paymentService = {
     return { status: 'CONFIRMED', booking: await buildBookingDto(null, booking) };
   },
 
+  /** One payment, owner-scoped via its booking. A payment id for someone else's booking 404s, never 403s. */
+  async getById(userId, paymentId) {
+    const payment = await paymentRepository.findById(paymentId);
+    if (!payment) throw AppError.notFound('Payment not found');
+    const booking = await bookingRepository.findBooking(payment.booking_id);
+    if (!booking || booking.user_id !== userId) throw AppError.notFound('Payment not found');
+    return {
+      id: payment.id,
+      bookingId: payment.booking_id,
+      bookingRef: booking.booking_ref,
+      status: payment.status,
+      amountMinor: Number(payment.amount_minor),
+      currency: payment.currency,
+      paidAt: payment.paid_at,
+      createdAt: payment.created_at,
+    };
+  },
+
+  /** One refund, owner-scoped via its booking, the same way a payment is. */
+  async getRefundById(userId, refundId) {
+    const refund = await paymentRepository.findRefundById(refundId);
+    if (!refund) throw AppError.notFound('Refund not found');
+    const booking = await bookingRepository.findBooking(refund.booking_id);
+    if (!booking || booking.user_id !== userId) throw AppError.notFound('Refund not found');
+    return {
+      id: refund.id,
+      bookingId: refund.booking_id,
+      bookingRef: booking.booking_ref,
+      paymentId: refund.payment_id,
+      amountMinor: Number(refund.amount_minor),
+      currency: booking.currency,
+      status: refund.status,
+      reason: refund.reason,
+      createdAt: refund.created_at,
+      processedAt: refund.processed_at,
+    };
+  },
+
   /** Client-side failure or dismissal. Only moves an open payment to FAILED; the hold stays until it expires. */
   async reportFailure(userId, { razorpayOrderId, reason }) {
     await ownedPaymentOrThrow(userId, razorpayOrderId);
