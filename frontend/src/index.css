@@ -1,0 +1,72 @@
+@import 'tailwindcss';
+
+/*
+ * Gokaasa design tokens. Every colour, radius and font used in the app comes from here,
+ * so re-theming is a change to this file only.
+ */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --color-brand-50: #eef8f7;
+  --color-brand-100: #d4eeec;
+  --color-brand-200: #a9ddd9;
+  --color-brand-500: #14918f;
+  --color-brand-600: #0b6e6e;
+  --color-brand-700: #095757;
+  --color-brand-800: #084747;
+
+  --color-accent-400: #f2b75c;
+  --color-accent-500: #e8a33d;
+
+  --color-success-50: #ecf8f0;
+  --color-success-600: #17803d;
+  --color-warning-50: #fdf5e6;
+  --color-warning-600: #a86a0d;
+  --color-danger-50: #fdeeee;
+  --color-danger-600: #c2372f;
+  --color-danger-700: #a02a23;
+
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+}
+
+/* Semantic surface tokens. Dark mode is intentionally out of scope for V1. */
+:root {
+  --surface-page: #f7f8fa;
+  --surface-card: #ffffff;
+  --surface-muted: #f1f3f6;
+  --border-subtle: #e4e7ec;
+  --text-strong: #101828;
+  --text-body: #344054;
+  --text-muted: #667085;
+  color-scheme: light;
+}
+
+html,
+body {
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Respect users who ask the OS for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

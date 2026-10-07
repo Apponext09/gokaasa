@@ -1,0 +1,183 @@
+/*
+ * Search state lives in the URL. This module is the only place that reads or writes it, so a shared or reloaded
+ * link always restores the same search. It has no path aliases and no browser APIs, so Node can test it directly.
+ */
+
+export const LIMITS = Object.freeze({
+  maxRooms: 8,
+  minAdults: 1,
+  maxAdults: 6,
+  maxChildrenPerRoom: 4,
+  minAge: 0,
+  maxAge: 17,
+  maxNights: 30,
+});
+
+export const SORT_OPTIONS = [
+  { value: 'recommended', label: 'Recommended' },
+  { value: 'price_asc', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' },
+  { value: 'guest_rating', label: 'Guest rating' },
+  { value: 'star_rating', label: 'Star rating' },
+];
+
+const SORTS = SORT_OPTIONS.map((o) => o.value);
+const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
+const PROPERTY_TYPES = ['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE'];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function isIsoDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
+
+export function addDays(iso, days) {
+  return new Date(new Date(`${iso}T00:00:00Z`).getTime() + days * DAY_MS).toISOString().slice(0, 10);
+}
+
+export function nightsBetween(checkIn, checkOut) {
+  if (!isIsoDate(checkIn) || !isIsoDate(checkOut) || checkOut <= checkIn) return 0;
+  return Math.round((new Date(`${checkOut}T00:00:00Z`) - new Date(`${checkIn}T00:00:00Z`)) / DAY_MS);
+}
+
+/** Today in the hotel's reference calendar (date only, no time zone arithmetic). */
+export function todayIso(now = new Date()) {
+  return now.toISOString().slice(0, 10);
+}
+
+/** "Mumbai, India" -> "mumbai"; the same rule as the server, so URLs and matching agree. */
+export function slugifyPlace(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/** Occupancy in the URL form: rooms separated by "|", each "adults" plus optional "-age.age". */
+export function formatOccupancy(rooms) {
+  return rooms.map((room) => `${room.adults}${room.childAges.length ? `-${room.childAges.join('.')}` : ''}`).join('|');
+}
+
+export function parseOccupancy(value) {
+  if (!value) return [{ adults: 2, childAges: [] }];
+  const segments = String(value).split('|');
+  if (segments.length > LIMITS.maxRooms) return null;
+  const rooms = [];
+  for (const segment of segments) {
+    const [adultsPart, agesPart = ''] = segment.split('-');
+    if (!/^\d+$/.test(adultsPart)) return null;
+    const adults = Number(adultsPart);
+    if (adults < LIMITS.minAdults || adults > LIMITS.maxAdults) return null;
+    const childAges = agesPart === '' ? [] : agesPart.split('.').map(Number);
+    if (childAges.length > LIMITS.maxChildrenPerRoom) return null;
+    if (childAges.some((age) => !Number.isInteger(age) || age < LIMITS.minAge || age > LIMITS.maxAge)) return null;
+    rooms.push({ adults, childAges });
+  }
+  return rooms;
+}
+
+/** Comma list with only values that pass `isValid`. Empty results become undefined (no filter). */
+const csvList = (value, isValid) => {
+  if (!value) return undefined;
+  const items = [...new Set(value.split(',').map((v) => v.trim()).filter(Boolean))];
+  const valid = items.filter((item) => isValid(item));
+  return valid.length ? valid : undefined;
+};
+
+const oneOf = (values) => (item) => values.includes(item);
+const AMENITY_CODE = /^[A-Z][A-Z0-9_]{1,40}$/;
+
+/**
+ * Reads the URL into a search state. Unknown or invalid values fall back to safe defaults rather than
+ * producing an error page: the URL is user-editable and the results always reflect what is shown.
+ */
+export function parseSearchParams(params) {
+  const get = (key) => (typeof params.get === 'function' ? params.get(key) : params[key]);
+  const checkIn = isIsoDate(get('checkIn')) ? get('checkIn') : null;
+  const checkOut = isIsoDate(get('checkOut')) ? get('checkOut') : null;
+  const occupancy = parseOccupancy(get('occ')) ?? [{ adults: 2, childAges: [] }];
+  const sort = SORTS.includes(get('sort')) ? get('sort') : 'recommended';
+  const page = Math.max(1, Math.min(500, Number.parseInt(get('page') ?? '1', 10) || 1));
+
+  const num = (key) => {
+    const raw = get(key);
+    if (raw == null || raw === '') return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? Math.floor(n) : undefined;
+  };
+  const minPrice = num('minPrice');
+  const maxPrice = num('maxPrice');
+  const guestRating = [3.5, 4, 4.5].includes(Number(get('guestRating'))) ? Number(get('guestRating')) : undefined;
+  const stars = csvList(get('stars'), oneOf(['1', '2', '3', '4', '5']))?.map(Number).sort((a, b) => a - b);
+
+  return {
+    destination: slugifyPlace(get('destination') ?? '') || null,
+    area: slugifyPlace(get('area') ?? '') || null,
+    checkIn,
+    checkOut,
+    occupancy,
+    sort,
+    page,
+    filters: {
+      minPrice: minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice ? undefined : minPrice,
+      maxPrice: minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice ? undefined : maxPrice,
+      stars,
+      guestRating,
+      propertyTypes: csvList(get('propertyTypes'), oneOf(PROPERTY_TYPES)),
+      amenities: csvList(get('amenities'), (code) => AMENITY_CODE.test(code)),
+      freeCancellation: get('freeCancellation') === 'true',
+      mealPlans: csvList(get('mealPlans'), oneOf(MEAL_PLANS)),
+    },
+  };
+}
+
+/** The inverse of parseSearchParams. Empty filters are omitted so URLs stay short and shareable. */
+export function toSearchParams(state) {
+  const params = new URLSearchParams();
+  if (state.checkIn) params.set('checkIn', state.checkIn);
+  if (state.checkOut) params.set('checkOut', state.checkOut);
+  if (state.occupancy) params.set('occ', formatOccupancy(state.occupancy));
+  if (state.sort && state.sort !== 'recommended') params.set('sort', state.sort);
+  if (state.page && state.page > 1) params.set('page', String(state.page));
+  const f = state.filters ?? {};
+  if (f.minPrice != null) params.set('minPrice', String(f.minPrice));
+  if (f.maxPrice != null) params.set('maxPrice', String(f.maxPrice));
+  if (f.stars?.length) params.set('stars', [...f.stars].sort().join(','));
+  if (f.guestRating) params.set('guestRating', String(f.guestRating));
+  if (f.propertyTypes?.length) params.set('propertyTypes', f.propertyTypes.join(','));
+  if (f.amenities?.length) params.set('amenities', [...f.amenities].sort().join(','));
+  if (f.freeCancellation) params.set('freeCancellation', 'true');
+  if (f.mealPlans?.length) params.set('mealPlans', f.mealPlans.join(','));
+  return params;
+}
+
+/** Search-level params (dates and occupancy) for links to a hotel or a destination. */
+export function stayParams(state) {
+  const params = new URLSearchParams();
+  if (state.checkIn) params.set('checkIn', state.checkIn);
+  if (state.checkOut) params.set('checkOut', state.checkOut);
+  if (state.occupancy) params.set('occ', formatOccupancy(state.occupancy));
+  return params;
+}
+
+export function summarizeOccupancy(rooms) {
+  const roomCount = rooms.length;
+  const adults = rooms.reduce((sum, r) => sum + r.adults, 0);
+  const children = rooms.reduce((sum, r) => sum + r.childAges.length, 0);
+  const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  return `${plural(roomCount, 'Room')} · ${plural(adults, 'Adult')}${children ? ` · ${plural(children, 'Child')}` : ''}`;
+}
+
+/** Stay validity used by the search widget and the details page before any request is made. */
+export function validateStay({ checkIn, checkOut }, today) {
+  if (!isIsoDate(checkIn)) return 'Choose a check-in date';
+  if (!isIsoDate(checkOut)) return 'Choose a check-out date';
+  if (checkIn < today) return 'Check-in cannot be in the past';
+  if (checkOut <= checkIn) return 'Check-out must be after check-in';
+  if (nightsBetween(checkIn, checkOut) > LIMITS.maxNights) return `Stays can be at most ${LIMITS.maxNights} nights`;
+  return null;
+}
