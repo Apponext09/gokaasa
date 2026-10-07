@@ -56,6 +56,8 @@ import { managerController } from '../controllers/manager.controller.js';
 import { adminBookingController } from '../controllers/adminBooking.controller.js';
 import { adminCustomerController } from '../controllers/adminCustomer.controller.js';
 import { auditLogController } from '../controllers/auditLog.controller.js';
+import { reviewController } from '../controllers/review.controller.js';
+import { adminReviewListQuery, moderateSchema, reviewIdParam } from '../validators/review.validator.js';
 import {
   adminBookingIdParam,
   adminBookingListQuery,
@@ -345,3 +347,8 @@ adminRouter.get('/customers/:id', validate({ params: adminCustomerIdParam }), ad
 
 // Audit log viewer. ADMIN only — it can reveal other staff members' actions across every hotel.
 adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), authorize('ADMIN'), auditLogController.list);
+
+// Reviews moderation. HOTEL_MANAGER gets read-only visibility into its own hotels (scoped in the service,
+// same hotel_managers table as everything else); only ADMIN may change a review's status.
+adminRouter.get('/reviews', validate({ query: adminReviewListQuery }), reviewController.listForModeration);
+adminRouter.post('/reviews/:id/moderate', validate({ params: reviewIdParam, body: moderateSchema }), authorize('ADMIN'), reviewController.moderate);

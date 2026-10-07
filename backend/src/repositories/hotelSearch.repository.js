@@ -136,6 +136,8 @@ export const hotelSearchRepository = {
                 ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
                        WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities,
                 ($14::bigint IS NOT NULL AND EXISTS (SELECT 1 FROM wishlists w WHERE w.user_id = $14::bigint AND w.hotel_id = h.id)) AS wishlisted,
+                (SELECT json_build_object('average', ROUND(AVG(r.rating)::numeric, 1), 'count', COUNT(*))
+                   FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED') AS internal_rating,
                 MIN(ROUND(hb.final_total::numeric / $8::int)::bigint) OVER () AS price_floor,
                 MAX(ROUND(hb.final_total::numeric / $8::int)::bigint) OVER () AS price_ceiling
            FROM hotel_best hb

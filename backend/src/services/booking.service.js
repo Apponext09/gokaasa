@@ -11,6 +11,7 @@ import { createLogger } from '../utils/logger.js';
 import { auditService } from './audit.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { processRefund } from './refund.service.js';
+import { reviewRepository } from '../repositories/review.repository.js';
 
 const log = createLogger('booking');
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -170,16 +171,18 @@ export function toBookingSummary(booking) {
     currency: booking.currency,
     paidMinor: Number(booking.paid_minor),
     createdAt: booking.created_at,
+    review: null,
   };
 }
 
 export async function buildBookingDto(client, booking, { includePreview = true } = {}) {
   const db = client ?? pool;
-  const [rooms, guests, payments, refunds] = await Promise.all([
+  const [rooms, guests, payments, refunds, review] = await Promise.all([
     bookingRepository.bookingRooms(booking.id, db),
     bookingRepository.bookingGuests(booking.id, db),
     paymentRepository.paymentsForBooking(booking.id, db),
     paymentRepository.refundsForBooking(booking.id, db),
+    reviewRepository.findByBookingId(booking.id, db),
   ]);
   const latestPayment = payments[payments.length - 1] ?? null;
   const paid = payments.find((p) => p.status === PAYMENT_STATUS.SUCCESS || p.status === PAYMENT_STATUS.REFUNDED) ?? null;
@@ -260,6 +263,8 @@ export async function buildBookingDto(client, booking, { includePreview = true }
     },
     createdAt: booking.created_at,
     updatedAt: booking.updated_at,
+    // Lets the guest's own booking detail page offer Write/View Review without a second round trip.
+    review: review ? { id: review.id, status: review.status } : null,
   };
   if (includePreview && booking.status === BOOKING_STATUS.CONFIRMED) {
     dto.cancellation.preview = previewFor(booking);
@@ -311,11 +316,17 @@ export const bookingService = {
   async list(userId, tab) {
     const today = localToday(config.booking.businessTimezone);
     const rows = await bookingRepository.listForUser(userId, tab, today);
+    // Only a completed stay can carry a review, but looking it up for any tab is cheap (one indexed
+    // batch query) and keeps this function from needing to know the eligibility rule itself.
+    const reviews = await reviewRepository.findByBookingIds(rows.map((row) => row.id));
+    const reviewByBookingId = new Map(reviews.map((review) => [review.booking_id, review]));
     const items = [];
     for (const row of rows) {
       const summary = toBookingSummary(row);
       const rooms = await bookingRepository.bookingRooms(row.id);
       summary.roomName = rooms[0]?.room_name ?? null;
+      const review = reviewByBookingId.get(row.id);
+      summary.review = review ? { id: review.id, status: review.status } : null;
       items.push(summary);
     }
     return { tab, items };

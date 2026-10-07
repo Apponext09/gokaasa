@@ -62,12 +62,17 @@ export function HotelCard({ hotel, state }) {
               <span className="truncate">{place}</span>
             </p>
           </div>
-          {hotel.guestRating != null && (
+          {/* The provider's guest rating, where there is one. Otherwise Gokaasa's own guest reviews fill the gap rather than showing nothing. */}
+          {(hotel.guestRating != null || hotel.rating) && (
             <div className="flex shrink-0 items-center gap-2">
               <span className="grid h-8 min-w-8 place-items-center rounded-md bg-brand-600 px-1.5 text-sm font-semibold text-white">
-                {hotel.guestRating.toFixed(1)}
+                {(hotel.guestRating ?? hotel.rating.average).toFixed(1)}
               </span>
-              {hotel.reviewCount > 0 && <span className="text-xs text-[var(--text-muted)]">{hotel.reviewCount.toLocaleString('en-IN')} reviews</span>}
+              {hotel.guestRating != null ? (
+                hotel.reviewCount > 0 && <span className="text-xs text-[var(--text-muted)]">{hotel.reviewCount.toLocaleString('en-IN')} reviews</span>
+              ) : (
+                <span className="text-xs text-[var(--text-muted)]">{hotel.rating.count.toLocaleString('en-IN')} Gokaasa review{hotel.rating.count === 1 ? '' : 's'}</span>
+              )}
             </div>
           )}
         </div>

@@ -28,6 +28,7 @@ import { RefundsPage } from '@/pages/admin/RefundsPage.jsx';
 import { CustomersPage } from '@/pages/admin/CustomersPage.jsx';
 import { CustomerDetailPage } from '@/pages/admin/CustomerDetailPage.jsx';
 import { AuditLogsPage } from '@/pages/admin/AuditLogsPage.jsx';
+import { ReviewsPage } from '@/pages/admin/ReviewsPage.jsx';
 
 function NotFoundPage() {
   return (
@@ -92,6 +93,7 @@ export function App() {
         <Route path="refunds" element={<RefundsPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="reviews" element={<ReviewsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
       </Route>
     </Routes>

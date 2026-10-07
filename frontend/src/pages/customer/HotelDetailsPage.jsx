@@ -14,6 +14,7 @@ import { RoomCard, UnavailableRooms } from '@/features/rooms/components/RoomOffe
 import { SelectionBar } from '@/features/booking/SelectionBar.jsx';
 import { clearSelection, readSelection, saveSelection } from '@/features/booking/selection.js';
 import { WishlistButton } from '@/components/shared/WishlistButton.jsx';
+import { HotelReviewsSection } from '@/features/reviews/HotelReviewsSection.jsx';
 import {
   formatOccupancy,
   nightsBetween,
@@ -271,12 +272,16 @@ export function HotelDetailsPage() {
             <p className="flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
               <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" /> {location}
             </p>
-            {hotel.guestRating != null && (
+            {(hotel.guestRating != null || hotel.rating) && (
               <p className="flex items-center gap-2 text-sm">
-                <span className="grid h-7 min-w-7 place-items-center rounded-md bg-brand-600 px-1.5 font-semibold text-white">{hotel.guestRating.toFixed(1)}</span>
-                <span className="text-[var(--text-body)]">
-                  {hotel.reviewCount > 0 ? `${hotel.reviewCount.toLocaleString('en-IN')} guest reviews` : 'Guest rating'}
+                <span className="grid h-7 min-w-7 place-items-center rounded-md bg-brand-600 px-1.5 font-semibold text-white">
+                  {(hotel.guestRating ?? hotel.rating.average).toFixed(1)}
                 </span>
+                <a href="#reviews" className="text-[var(--text-body)] hover:underline">
+                  {hotel.guestRating != null
+                    ? (hotel.reviewCount > 0 ? `${hotel.reviewCount.toLocaleString('en-IN')} guest reviews` : 'Guest rating')
+                    : `${hotel.rating.count.toLocaleString('en-IN')} Gokaasa review${hotel.rating.count === 1 ? '' : 's'}`}
+                </a>
               </p>
             )}
           </div>
@@ -428,6 +433,9 @@ export function HotelDetailsPage() {
             </a>
           )}
         </section>
+
+        {/* 14. Reviews */}
+        <HotelReviewsSection hotelRef={hotel.slug} rating={hotel.rating} />
 
         {/* 16. Similar hotels */}
         {hotel.similarHotels?.length > 0 && (

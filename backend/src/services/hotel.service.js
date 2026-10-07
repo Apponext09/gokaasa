@@ -10,6 +10,7 @@ import { wishlistRepository } from '../repositories/wishlist.repository.js';
 import { hotelSearchService } from './hotelSearch.service.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
 import { hotelImportRepository } from '../repositories/hotelImport.repository.js';
+import { reviewService } from './review.service.js';
 import { AppError } from '../utils/AppError.js';
 import { slugify } from '../utils/slug.js';
 import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
@@ -286,13 +287,18 @@ export const hotelService = {
    */
   async getPublic(idOrSlug, { userId = null } = {}) {
     const detail = await loadHotelDetail(pool, idOrSlug, { publicOnly: true });
-    const [policies, similarHotels, isWishlisted] = await Promise.all([
+    const [policies, similarHotels, isWishlisted, rating] = await Promise.all([
       cancellationPolicyRepository.listForHotel(detail.id),
       hotelSearchService.similar(detail),
       wishlistRepository.has(userId, detail.id),
+      reviewService.ratingForHotel(detail.id),
     ]);
     return {
       ...detail,
+      // Gokaasa's own guest-review aggregate (reviews.*, APPROVED only). Separate from starRating/
+      // guestRating/reviewCount above, which are provider-sourced and still drive search sort/filter —
+      // this is intentionally additive, not a replacement, so nothing there changes behaviour.
+      rating,
       cancellationPolicies: policies
         .filter((policy) => policy.status === 'ACTIVE')
         .map((policy) => ({ code: policy.code, name: policy.name, summary: describePolicy(policy) })),

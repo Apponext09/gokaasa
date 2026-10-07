@@ -64,6 +64,9 @@ export function toHotelCard(row) {
     starRating: row.star_rating,
     guestRating: row.guest_rating == null ? null : Number(row.guest_rating),
     reviewCount: row.review_count,
+    // Gokaasa's own guest-review aggregate (APPROVED only). Separate from guestRating/reviewCount above,
+    // which are provider-sourced and still drive sort=guest_rating / the guestRating filter untouched.
+    rating: row.internal_rating?.count > 0 ? { average: Number(row.internal_rating.average), count: row.internal_rating.count } : null,
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),

@@ -7,6 +7,7 @@ import { Badge, Card } from '@/components/ui/surfaces.jsx';
 import { EmptyState, PageHeader } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
+import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { normalizeError } from '@/services/api.js';
@@ -92,6 +93,15 @@ export function MyTripsPage() {
                         <Button variant="danger-outline" size="sm" onClick={() => setCancelling(trip.id)}>
                           Cancel Booking
                         </Button>
+                      )}
+                      {tab === 'completed' && (
+                        <ReviewCta
+                          bookingId={trip.id}
+                          review={trip.review}
+                          onChanged={(review) =>
+                            setState((s) => ({ ...s, items: s.items.map((item) => (item.id === trip.id ? { ...item, review } : item)) }))
+                          }
+                        />
                       )}
                     </div>
                   </div>

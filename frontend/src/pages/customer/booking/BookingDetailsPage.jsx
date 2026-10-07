@@ -6,6 +6,7 @@ import { Badge, Card } from '@/components/ui/surfaces.jsx';
 import { EmptyState, FullPageSpinner } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
+import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, occupancyLabel } from '@/features/booking/bookingFormat.js';
 import { downloadInvoice } from '@/features/booking/invoice.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
@@ -74,6 +75,11 @@ export function BookingDetailsPage() {
               Cancel booking
             </Button>
           )}
+          <ReviewCta
+            bookingId={booking.id}
+            review={booking.review}
+            onChanged={(review) => setBooking((b) => ({ ...b, review }))}
+          />
         </div>
       </header>
 

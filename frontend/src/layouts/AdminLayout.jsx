@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { BarChart3, Building2, CalendarCheck, LogOut, Menu, ReceiptText, ScrollText, Search, Users, Wallet, X } from 'lucide-react';
+import { BarChart3, Building2, CalendarCheck, LogOut, Menu, ReceiptText, ScrollText, Search, Star, Users, Wallet, X } from 'lucide-react';
 import { Logo } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
@@ -22,6 +22,7 @@ const NAV = [
       { to: '/admin/payments', label: 'Payments', icon: Wallet },
       { to: '/admin/refunds', label: 'Refunds', icon: ReceiptText },
       { to: '/admin/customers', label: 'Customers', icon: Users },
+      { to: '/admin/reviews', label: 'Reviews', icon: Star },
     ],
   },
   {
