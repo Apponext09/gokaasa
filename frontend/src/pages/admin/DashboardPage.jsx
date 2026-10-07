@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, CalendarCheck, IndianRupee, Timer, Users, BedDouble, Search, ClipboardCheck, CircleAlert, Rocket } from 'lucide-react';
-import { Alert, Card, CardContent, Skeleton } from '@/components/ui/surfaces.jsx';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Building2, CalendarCheck, IndianRupee, Timer, Users, BedDouble, Search, ClipboardCheck, CircleAlert, Rocket, TrendingUp } from 'lucide-react';
+import { Alert, Badge, Card, CardContent, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { PageHeader, formatMoney } from '@/components/shared/index.jsx';
+import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 
@@ -29,16 +31,79 @@ function formatMinutes(value) {
   return `${value.toFixed(1)} min`;
 }
 
+const shortDate = (iso) => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+
+const RANGES = [
+  { key: 'today', label: 'Today', days: 0 },
+  { key: '7d', label: '7 Days', days: 6 },
+  { key: '30d', label: '30 Days', days: 29 },
+  { key: '90d', label: '90 Days', days: 89 },
+];
+
+function isoDaysAgo(days) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+function isoToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** One metric, one line. Two separate charts rather than one dual-axis chart. */
+function TrendChart({ data, dataKey, color, valueFormatter, label }) {
+  return (
+    <div>
+      <p className="mb-2 text-sm font-medium text-[var(--text-strong)]">{label}</p>
+      <ResponsiveContainer width="100%" height={180}>
+        <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <defs>
+            <linearGradient id={`fill-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="var(--border-subtle)" strokeDasharray="3 3" />
+          <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} />
+          <YAxis width={36} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} axisLine={false} tickLine={false} allowDecimals={false} />
+          <Tooltip
+            formatter={(value) => [valueFormatter ? valueFormatter(value) : value, label]}
+            labelFormatter={shortDate}
+            contentStyle={{ borderRadius: 10, border: '1px solid var(--border-subtle)', fontSize: 12 }}
+          />
+          <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#fill-${dataKey})`} dot={false} activeDot={{ r: 4 }} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export function DashboardPage() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [rangeKey, setRangeKey] = useState('30d');
+  const [trends, setTrends] = useState(null);
+  const [trendsError, setTrendsError] = useState(null);
 
   useEffect(() => {
-    adminApi
-      .dashboard()
-      .then(setData)
-      .catch((err) => setError(normalizeError(err).message));
+    adminApi.dashboard().then(setData).catch((err) => setError(normalizeError(err).message));
   }, []);
+
+  const range = useMemo(() => {
+    const preset = RANGES.find((r) => r.key === rangeKey) ?? RANGES[2];
+    return { from: isoDaysAgo(preset.days), to: isoToday() };
+  }, [rangeKey]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTrendsError(null);
+    adminApi
+      .dashboardTrends(range)
+      .then((result) => !cancelled && setTrends(result))
+      .catch((err) => !cancelled && setTrendsError(normalizeError(err).message));
+    return () => {
+      cancelled = true;
+    };
+  }, [range]);
 
   if (error) return <Alert tone="error" title="Dashboard unavailable">{error}</Alert>;
 
@@ -54,6 +119,8 @@ export function DashboardPage() {
   }
 
   const { hotels, rooms, customers, bookings, onboarding } = data;
+  const revenueData = trends?.revenueSeries.map((row) => ({ date: row.date, amount: row.collectedMinor / 100 })) ?? [];
+  const bookingData = trends?.bookingSeries ?? [];
 
   return (
     <div className="space-y-8">
@@ -68,6 +135,84 @@ export function DashboardPage() {
           </Link>
         }
       />
+
+      <section aria-labelledby="trends-heading" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="trends-heading" className="flex items-center gap-2 text-base font-semibold text-[var(--text-strong)]">
+            <TrendingUp className="h-4 w-4 text-brand-700" aria-hidden="true" /> Trends
+          </h2>
+          <div className="flex gap-1 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => setRangeKey(r.key)}
+                className={`rounded-[calc(var(--radius-control)-2px)] px-3 py-1.5 text-xs font-medium transition-colors ${rangeKey === r.key ? 'bg-brand-600 text-white' : 'text-[var(--text-body)] hover:bg-[var(--surface-muted)]'}`}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {trendsError && <Alert tone="error">{trendsError}</Alert>}
+
+        {!trends && !trendsError ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+        ) : trends && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card className="p-5">
+                <TrendChart data={bookingData} dataKey="count" color="#1e3a5f" label="Bookings over time" />
+              </Card>
+              <Card className="p-5">
+                <TrendChart data={revenueData} dataKey="amount" color="#cc8a2a" label="Revenue over time" valueFormatter={(v) => formatMoney(v * 100)} />
+              </Card>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
+              <Card className="p-5">
+                <p className="mb-3 text-sm font-medium text-[var(--text-strong)]">Revenue</p>
+                <dl className="grid grid-cols-2 gap-4 text-sm">
+                  <div><dt className="text-[var(--text-muted)]">Gross booking value</dt><dd className="text-lg font-semibold text-[var(--text-strong)]">{formatMoney(trends.revenue.grossMinor)}</dd></div>
+                  <div><dt className="text-[var(--text-muted)]">Collected</dt><dd className="text-lg font-semibold text-[var(--text-strong)]">{formatMoney(trends.revenue.collectedMinor)}</dd></div>
+                  <div><dt className="text-[var(--text-muted)]">Refunded</dt><dd className="text-lg font-semibold text-danger-600">{formatMoney(trends.revenue.refundedMinor)}</dd></div>
+                  <div><dt className="text-[var(--text-muted)]">Net</dt><dd className="text-lg font-semibold text-success-600">{formatMoney(trends.revenue.netMinor)}</dd></div>
+                </dl>
+              </Card>
+
+              <Card className="p-5">
+                <p className="mb-3 text-sm font-medium text-[var(--text-strong)]">Booking status</p>
+                <div className="flex flex-col gap-2">
+                  {Object.entries(trends.statusBreakdown).length === 0 && <p className="text-sm text-[var(--text-muted)]">No bookings in this range.</p>}
+                  {Object.entries(trends.statusBreakdown).map(([status, count]) => (
+                    <div key={status} className="flex items-center justify-between text-sm">
+                      <Badge tone={BOOKING_STATUS_LABEL[status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[status]?.label ?? status}</Badge>
+                      <span className="font-medium text-[var(--text-strong)]">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card className="p-5">
+                <p className="mb-3 text-sm font-medium text-[var(--text-strong)]">Top hotels</p>
+                <div className="flex flex-col gap-2">
+                  {trends.topHotels.length === 0 && <p className="text-sm text-[var(--text-muted)]">No bookings in this range.</p>}
+                  {trends.topHotels.map((hotel) => (
+                    <Link key={hotel.id} to={`/admin/hotels/${hotel.id}`} className="flex items-center justify-between text-sm hover:text-brand-700">
+                      <span className="truncate text-[var(--text-body)]">{hotel.name}</span>
+                      <span className="shrink-0 font-medium text-[var(--text-strong)]">{formatMoney(hotel.revenueMinor)}</span>
+                    </Link>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </>
+        )}
+      </section>
 
       <section aria-labelledby="onboarding-heading" className="space-y-4">
         <h2 id="onboarding-heading" className="text-base font-semibold text-[var(--text-strong)]">
@@ -102,8 +247,8 @@ export function DashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard icon={Building2} label="Total hotels" value={hotels.total} hint={`${hotels.drafts} draft · ${hotels.pendingReview} in review`} to="/admin/hotels" />
           <StatCard icon={BedDouble} label="Total rooms" value={rooms.total} />
-          <StatCard icon={Users} label="Customers" value={customers.total} />
-          <StatCard icon={CalendarCheck} label="Bookings" value={bookings.total} hint={`${bookings.today} created today`} />
+          <StatCard icon={Users} label="Customers" value={customers.total} to="/admin/customers" />
+          <StatCard icon={CalendarCheck} label="Bookings" value={bookings.total} hint={`${bookings.today} created today`} to="/admin/bookings" />
         </div>
         <Card>
           <CardContent className="flex items-center gap-3 p-5">

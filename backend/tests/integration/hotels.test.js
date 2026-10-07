@@ -43,6 +43,8 @@ describe('admin hotel management', () => {
     assert.equal(res.body.hotel.countryCode, 'IN');
     assert.equal(res.body.hotel.slug, 'sea-breeze-test-hotel-mumbai');
     hotelId = res.body.hotel.id;
+    // Hotel managers are now scoped per hotel; assign this test's manager so later tests can act on it.
+    await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) SELECT id, $2 FROM users WHERE email = $1`, ['manager@example.com', hotelId]);
   });
 
   it('validates input and returns field errors', async () => {

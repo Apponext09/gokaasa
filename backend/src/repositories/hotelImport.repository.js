@@ -68,13 +68,18 @@ export const hotelImportRepository = {
     return rows;
   },
 
-  async listJobs({ page, limit, status }) {
+  async listJobs({ page, limit, status, createdBy }) {
     const params = [];
-    let where = 'TRUE';
+    const clauses = [];
     if (status) {
       params.push(status);
-      where = `j.status = $${params.length}`;
+      clauses.push(`j.status = $${params.length}`);
     }
+    if (createdBy != null) {
+      params.push(createdBy);
+      clauses.push(`j.created_by = $${params.length}`);
+    }
+    const where = clauses.length > 0 ? clauses.join(' AND ') : 'TRUE';
     params.push(limit, (page - 1) * limit);
     const { rows } = await pool.query(
       `SELECT ${JOB_COLUMNS}, COUNT(*) OVER()::int AS total_count
@@ -101,7 +106,13 @@ export const hotelImportRepository = {
   },
 
   /** Dashboard onboarding metrics, all computed from stored data. */
-  async onboardingMetrics() {
+  async onboardingMetrics({ createdBy = null } = {}) {
+    const params = [];
+    let filter = '';
+    if (createdBy != null) {
+      params.push(createdBy);
+      filter = `WHERE created_by = $${params.length}`;
+    }
     const { rows } = await pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE finished_at >= date_trunc('day', now()) AND status IN ('COMPLETED', 'REVIEW_REQUIRED'))::int AS imported_today,
@@ -110,7 +121,8 @@ export const hotelImportRepository = {
           FILTER (WHERE status IN ('COMPLETED', 'REVIEW_REQUIRED') AND created_at >= now() - interval '30 days')::numeric, 1) AS avg_minutes_30d,
         COUNT(*) FILTER (WHERE status IN ('COMPLETED', 'REVIEW_REQUIRED') AND created_at >= now() - interval '30 days')::int AS completed_30d
       FROM hotel_import_jobs
-    `);
+      ${filter}
+    `, params);
     return rows[0];
   },
 

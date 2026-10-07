@@ -337,52 +337,73 @@ export const bookingService = {
   async cancel(userId, bookingId, { reason } = {}) {
     const outcome = await withTransaction(async (client) => {
       const booking = await requireOwnedBooking(client, userId, bookingId, { lock: true });
-
-      if (booking.status !== BOOKING_STATUS.CONFIRMED) {
-        return { booking, refundId: null, idempotent: true };
-      }
-      const preview = previewFor(booking);
-      if (!preview.canCancel) throw AppError.conflict('This stay has already started, so it cannot be cancelled online.');
-
-      const payment = await paymentRepository.findSuccessfulForBooking(booking.id, client);
-      let refundId = null;
-      assertTransition(booking.status, BOOKING_STATUS.CANCELLED);
-      await bookingRepository.setBookingStatus(client, booking.id, BOOKING_STATUS.CANCELLED, {
-        cancelled_at: new Date(),
-        cancellation_reason: reason ?? 'GUEST_REQUEST',
-      });
-      await bookingRepository.releaseReservationsForBooking(client, booking.id);
-
-      if (preview.refundMinor > 0) {
-        if (!payment) throw AppError.serviceUnavailable('The payment for this booking could not be found.');
-        refundId = await paymentRepository.insertRefund(client, {
-          paymentId: payment.id,
-          bookingId: booking.id,
-          amountMinor: preview.refundMinor,
-          reason: preview.reason,
-          idempotencyKey: `cancel:${booking.id}:${payment.id}`,
-        });
-        assertTransition(BOOKING_STATUS.CANCELLED, BOOKING_STATUS.REFUND_PENDING);
-        await bookingRepository.setBookingStatus(client, booking.id, BOOKING_STATUS.REFUND_PENDING);
-      }
-
-      await auditService.record(client, {
-        actor: { id: userId },
-        action: 'booking.cancelled',
-        entity: 'booking',
-        entityId: booking.id,
-        newValue: { refundMinor: preview.refundMinor, reason: preview.reason },
-      });
-      return { booking, refundId, idempotent: false };
+      return performCancel(client, booking, { reason, actor: { id: userId } });
     });
+    return finishCancel(bookingId, outcome);
+  },
 
-    if (outcome.refundId) {
-      await processRefund(outcome.refundId);
-    }
-    log.info('booking cancelled', { bookingId, refund: Boolean(outcome.refundId), idempotent: outcome.idempotent });
-    const fresh = await bookingRepository.findBooking(bookingId);
-    await notificationService.sendCancellation(fresh).catch(() => {});
-    return buildBookingDto(null, fresh, { includePreview: false });
+  /**
+   * Same cancellation, triggered by staff rather than the guest. The caller (adminBooking.service.js) is
+   * responsible for the hotel-manager-scoping check; this only looks the booking up by id, with no
+   * ownership filter, and reuses the exact same refund logic — nothing is reimplemented here.
+   */
+  async cancelAsAdmin(bookingId, { reason } = {}, actor) {
+    const outcome = await withTransaction(async (client) => {
+      const booking = await bookingRepository.lockBooking(bookingId, client);
+      if (!booking) throw AppError.notFound('Booking not found');
+      return performCancel(client, booking, { reason, actor });
+    });
+    return finishCancel(bookingId, outcome);
   },
 };
+
+/** The part of cancellation shared by the guest and staff paths: everything after the booking is loaded. */
+async function performCancel(client, booking, { reason, actor }) {
+  if (booking.status !== BOOKING_STATUS.CONFIRMED) {
+    return { booking, refundId: null, idempotent: true };
+  }
+  const preview = previewFor(booking);
+  if (!preview.canCancel) throw AppError.conflict('This stay has already started, so it cannot be cancelled online.');
+
+  const payment = await paymentRepository.findSuccessfulForBooking(booking.id, client);
+  let refundId = null;
+  assertTransition(booking.status, BOOKING_STATUS.CANCELLED);
+  await bookingRepository.setBookingStatus(client, booking.id, BOOKING_STATUS.CANCELLED, {
+    cancelled_at: new Date(),
+    cancellation_reason: reason ?? 'GUEST_REQUEST',
+  });
+  await bookingRepository.releaseReservationsForBooking(client, booking.id);
+
+  if (preview.refundMinor > 0) {
+    if (!payment) throw AppError.serviceUnavailable('The payment for this booking could not be found.');
+    refundId = await paymentRepository.insertRefund(client, {
+      paymentId: payment.id,
+      bookingId: booking.id,
+      amountMinor: preview.refundMinor,
+      reason: preview.reason,
+      idempotencyKey: `cancel:${booking.id}:${payment.id}`,
+    });
+    assertTransition(BOOKING_STATUS.CANCELLED, BOOKING_STATUS.REFUND_PENDING);
+    await bookingRepository.setBookingStatus(client, booking.id, BOOKING_STATUS.REFUND_PENDING);
+  }
+
+  await auditService.record(client, {
+    actor,
+    action: 'booking.cancelled',
+    entity: 'booking',
+    entityId: booking.id,
+    newValue: { refundMinor: preview.refundMinor, reason: preview.reason },
+  });
+  return { booking, refundId, idempotent: false };
+}
+
+async function finishCancel(bookingId, outcome) {
+  if (outcome.refundId) {
+    await processRefund(outcome.refundId);
+  }
+  log.info('booking cancelled', { bookingId, refund: Boolean(outcome.refundId), idempotent: outcome.idempotent });
+  const fresh = await bookingRepository.findBooking(bookingId);
+  await notificationService.sendCancellation(fresh).catch(() => {});
+  return buildBookingDto(null, fresh, { includePreview: false });
+}
 

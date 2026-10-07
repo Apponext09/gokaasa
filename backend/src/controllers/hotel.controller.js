@@ -26,7 +26,7 @@ export const hotelController = {
 
   // Admin: hotel management
   async listAdmin(req, res) {
-    return res.json(await hotelService.listAdmin(req.validated.query));
+    return res.json(await hotelService.listAdmin(req.validated.query, req.user));
   },
 
   async getAdmin(req, res) {
@@ -64,7 +64,7 @@ export const hotelController = {
   },
 
   async importJobs(req, res) {
-    return res.json(await hotelImportService.listJobs(req.validated.query));
+    return res.json(await hotelImportService.listJobs(req.validated.query, req.user));
   },
 
   async importJob(req, res) {
@@ -79,7 +79,11 @@ export const hotelController = {
     });
   },
 
-  async dashboard(_req, res) {
-    return res.json(await dashboardService.summary());
+  async dashboard(req, res) {
+    return res.json(await dashboardService.summary(req.user));
+  },
+
+  async dashboardTrends(req, res) {
+    return res.json(await dashboardService.trends(req.validated.query, req.user));
   },
 };

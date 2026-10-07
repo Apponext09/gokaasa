@@ -69,6 +69,8 @@ before(async () => {
   jobId = res.body.job.id;
   const job = await waitForJob(request(app), adminToken, jobId);
   hotelId = job.hotelId;
+  // Hotel managers are now scoped per hotel; assign this test's manager so it can reach the import review.
+  await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) SELECT id, $2 FROM users WHERE email = $1`, ['manager@example.com', hotelId]);
 });
 
 after(async () => {

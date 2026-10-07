@@ -22,7 +22,7 @@ const HOTEL_COLUMNS = `
 
 const escapeLike = (value) => value.replace(/[\\%_]/g, (char) => `\\${char}`);
 
-function buildFilters(filters, { publicOnly }) {
+function buildFilters(filters, { publicOnly, managerUserId }) {
   const clauses = ['h.deleted_at IS NULL'];
   const params = [];
   const param = (value) => {
@@ -34,6 +34,9 @@ function buildFilters(filters, { publicOnly }) {
     clauses.push(`h.status = 'PUBLISHED'`);
   } else if (filters.status) {
     clauses.push(`h.status = ${param(filters.status)}`);
+  }
+  if (managerUserId != null) {
+    clauses.push(`EXISTS (SELECT 1 FROM hotel_managers hm WHERE hm.hotel_id = h.id AND hm.user_id = ${param(managerUserId)})`);
   }
   if (filters.q) {
     const pattern = param(`%${escapeLike(filters.q)}%`);
@@ -48,8 +51,8 @@ function buildFilters(filters, { publicOnly }) {
 }
 
 export const hotelRepository = {
-  async list(filters, { publicOnly = false } = {}) {
-    const { where, params } = buildFilters(filters, { publicOnly });
+  async list(filters, { publicOnly = false, managerUserId = null } = {}) {
+    const { where, params } = buildFilters(filters, { publicOnly, managerUserId });
     const orderBy = SORT_OPTIONS[filters.sort] ?? SORT_OPTIONS.updated_desc;
     const limit = filters.limit;
     const offset = (filters.page - 1) * filters.limit;
@@ -183,10 +186,23 @@ export const hotelRepository = {
     );
   },
 
-  async countByStatus(client = pool) {
+  async countByStatus(client = pool, managerUserId = null) {
+    const params = [];
+    let filter = '';
+    if (managerUserId != null) {
+      params.push(managerUserId);
+      filter = `AND EXISTS (SELECT 1 FROM hotel_managers hm WHERE hm.hotel_id = h.id AND hm.user_id = $${params.length})`;
+    }
     const { rows } = await client.query(
-      `SELECT status, COUNT(*)::int AS count FROM hotels WHERE deleted_at IS NULL GROUP BY status`,
+      `SELECT h.status, COUNT(*)::int AS count FROM hotels h WHERE h.deleted_at IS NULL ${filter} GROUP BY h.status`,
+      params,
     );
     return Object.fromEntries(rows.map((row) => [row.status, row.count]));
+  },
+
+  /** Hotel ids a HOTEL_MANAGER is assigned to. Used to scope bookings/payments/customers to "my hotels". */
+  async managedHotelIds(userId, client = pool) {
+    const { rows } = await client.query(`SELECT hotel_id FROM hotel_managers WHERE user_id = $1`, [userId]);
+    return rows.map((row) => row.hotel_id);
   },
 };

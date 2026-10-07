@@ -1,0 +1,131 @@
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { CalendarCheck, Search } from 'lucide-react';
+import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Input, Select } from '@/components/ui/form-controls.jsx';
+import { EmptyState, Pagination, PageHeader, formatMoney } from '@/components/shared/index.jsx';
+import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
+import { adminApi } from '@/services/endpoints.js';
+import { normalizeError } from '@/services/api.js';
+
+const STATUS_OPTIONS = Object.keys(BOOKING_STATUS_LABEL);
+
+const FILTER_KEYS = ['q', 'status', 'sort', 'page'];
+
+function useFilters() {
+  const [params, setParams] = useSearchParams();
+  const filters = Object.fromEntries(FILTER_KEYS.map((key) => [key, params.get(key) ?? '']));
+  const update = (changes, { resetPage = true } = {}) => {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value === '' || value == null) next.delete(key);
+      else next.set(key, String(value));
+    }
+    if (resetPage && !('page' in changes)) next.delete('page');
+    setParams(next);
+  };
+  return [filters, update];
+}
+
+export function BookingsPage() {
+  const [filters, updateFilters] = useFilters();
+  const [searchText, setSearchText] = useState(filters.q);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchText !== filters.q) updateFilters({ q: searchText.trim() });
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setError(null);
+    adminApi
+      .listBookings({
+        page: Number(filters.page) || 1,
+        limit: 20,
+        sort: filters.sort || 'created_desc',
+        ...(filters.q && { q: filters.q }),
+        ...(filters.status && { status: filters.status }),
+      })
+      .then((result) => !cancelled && setData(result))
+      .catch((err) => !cancelled && setError(normalizeError(err).message));
+    return () => {
+      cancelled = true;
+    };
+  }, [filters.q, filters.status, filters.sort, filters.page]);
+
+  const hasFilters = Boolean(filters.q || filters.status);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Bookings" description="Every booking across your hotels, with its current payment and booking status." />
+
+      <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
+        <div className="relative sm:col-span-2">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+          <Input aria-label="Search by reference, name or email" placeholder="Booking ref, customer name or email" className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} />
+        </div>
+        <Select aria-label="Filter by status" value={filters.status} onChange={(e) => updateFilters({ status: e.target.value })}>
+          <option value="">All statuses</option>
+          {STATUS_OPTIONS.map((status) => (
+            <option key={status} value={status}>{BOOKING_STATUS_LABEL[status].label}</option>
+          ))}
+        </Select>
+      </Card>
+
+      {error && <Alert tone="error">{error}</Alert>}
+
+      <Card className="overflow-hidden">
+        {data === null && !error ? (
+          <div className="space-y-3 p-5">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
+        ) : data?.items.length === 0 ? (
+          <EmptyState icon={CalendarCheck} title={hasFilters ? 'No bookings match these filters' : 'No bookings yet'} description={hasFilters ? 'Try changing or clearing your filters.' : 'Bookings will appear here once guests start booking.'} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[820px] text-left text-sm">
+              <caption className="sr-only">Bookings</caption>
+              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-semibold">Booking</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Customer</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Hotel</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Dates</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Amount</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-subtle)]">
+                {data?.items.map((b) => (
+                  <tr key={b.id} className="hover:bg-[var(--surface-muted)]/50">
+                    <td className="px-4 py-3">
+                      <Link to={`/admin/bookings/${b.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{b.bookingRef}</Link>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--text-body)]">
+                      <p>{b.customer.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{b.customer.email}</p>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--text-body)]">
+                      <p>{b.hotel.name}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{b.hotel.city}</p>
+                    </td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">{b.checkIn} → {b.checkOut}</td>
+                    <td className="px-4 py-3 text-[var(--text-strong)]">{formatMoney(b.amounts.total, b.amounts.currency)}</td>
+                    <td className="px-4 py-3"><Badge tone={BOOKING_STATUS_LABEL[b.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[b.status]?.label ?? b.status}</Badge></td>
+                    <td className="px-4 py-3 text-[var(--text-muted)]">{new Date(b.createdAt).toLocaleDateString('en-IN')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {data && <Pagination page={data.pagination.page} totalPages={data.pagination.totalPages} onPageChange={(page) => updateFilters({ page }, { resetPage: false })} />}
+    </div>
+  );
+}

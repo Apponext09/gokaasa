@@ -13,6 +13,7 @@ import { hotelImportRepository } from '../repositories/hotelImport.repository.js
 import { AppError } from '../utils/AppError.js';
 import { slugify } from '../utils/slug.js';
 import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
+import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
 
 
 // Only ADMIN may release or withdraw a hotel. HOTEL_MANAGER can prepare and submit drafts.
@@ -89,9 +90,10 @@ async function uniqueSlug(client, base) {
 }
 
 export const hotelService = {
-  /** Admin/hotel-manager list with every status visible. */
-  async listAdmin(query) {
-    const { rows, total } = await hotelRepository.list(query);
+  /** Admin/hotel-manager list with every status visible. A manager sees only its assigned hotels. */
+  async listAdmin(query, actor) {
+    const managerUserId = actor?.roles.includes('ADMIN') ? null : actor?.id ?? null;
+    const { rows, total } = await hotelRepository.list(query, { managerUserId });
     return toPage(rows.map((row) => toHotelSummary(row, { includeInternal: true })), total, query.page, query.limit);
   },
 
@@ -109,6 +111,7 @@ export const hotelService = {
         created_by: actor.id,
         updated_by: actor.id,
       });
+      await assignManagerIfNeeded(client, { creatorId: actor.id, hotelId: id });
       await auditService.record(client, {
         actor,
         action: 'hotel.created',

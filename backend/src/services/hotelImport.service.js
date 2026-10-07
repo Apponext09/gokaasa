@@ -15,6 +15,7 @@ import { slugify } from '../utils/slug.js';
 import { createLogger } from '../utils/logger.js';
 import { toImage, toImportJob, toHotelDetail, toPage } from './presenters.js';
 import { hotelService } from './hotel.service.js';
+import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
 
 const log = createLogger('hotel-import');
 const MAX_ATTEMPTS = 3;
@@ -202,6 +203,8 @@ export const hotelImportService = {
           })),
         );
 
+        await assignManagerIfNeeded(client, { creatorId: claimed.created_by, hotelId });
+
         const needsReview = normalized.missing.length > 0;
         await hotelImportRepository.updateJob(client, jobId, {
           status: needsReview ? 'REVIEW_REQUIRED' : 'COMPLETED',
@@ -364,8 +367,10 @@ export const hotelImportService = {
     };
   },
 
-  async listJobs(query) {
-    const { rows, total } = await hotelImportRepository.listJobs(query);
+  /** ADMIN sees every job; HOTEL_MANAGER sees only the ones it started. */
+  async listJobs(query, actor) {
+    const createdBy = actor.roles.includes('ADMIN') ? null : actor.id;
+    const { rows, total } = await hotelImportRepository.listJobs({ ...query, createdBy });
     return toPage(rows.map((row) => toImportJob(row)), total, query.page, query.limit);
   },
 

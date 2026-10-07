@@ -18,6 +18,7 @@ export const hotelApi = {
 
 export const adminApi = {
   dashboard: () => api.get('/admin/dashboard/summary').then((r) => r.data),
+  dashboardTrends: (params) => api.get('/admin/dashboard/trends', { params }).then((r) => r.data),
   listHotels: (params) => api.get('/admin/hotels', { params }).then((r) => r.data),
   getHotel: (id) => api.get(`/admin/hotels/${id}`).then((r) => r.data.hotel),
   createHotel: (body) => api.post('/admin/hotels', body).then((r) => r.data.hotel),
@@ -54,6 +55,26 @@ export const adminApi = {
   importReview: (id) => api.get(`/admin/hotel-import/jobs/${id}/review`).then((r) => r.data),
   discardImport: (id) => api.post(`/admin/hotel-import/jobs/${id}/discard`).then((r) => r.data.job),
   providers: () => api.get('/admin/hotel-import/providers').then((r) => r.data),
+
+  // Hotel manager assignment
+  listManagersForHotel: (id) => api.get(`/admin/hotels/${id}/managers`).then((r) => r.data.managers),
+  assignManager: (id, userId) => api.post(`/admin/hotels/${id}/managers`, { userId }).then((r) => r.data.managers),
+  unassignManager: (id, userId) => api.delete(`/admin/hotels/${id}/managers/${userId}`).then((r) => r.data.managers),
+  listManagers: (params) => api.get('/admin/managers', { params }).then((r) => r.data.managers),
+
+  // Bookings, payments, refunds (platform-wide, scoped server-side for a hotel manager)
+  listBookings: (params) => api.get('/admin/bookings', { params }).then((r) => r.data),
+  getBooking: (id) => api.get(`/admin/bookings/${id}`).then((r) => r.data.booking),
+  cancelBooking: (id, body) => api.post(`/admin/bookings/${id}/cancel`, body).then((r) => r.data.booking),
+  listPayments: (params) => api.get('/admin/payments', { params }).then((r) => r.data),
+  listRefunds: (params) => api.get('/admin/refunds', { params }).then((r) => r.data),
+
+  // Customers
+  listCustomers: (params) => api.get('/admin/customers', { params }).then((r) => r.data),
+  getCustomer: (id) => api.get(`/admin/customers/${id}`).then((r) => r.data.customer),
+
+  // Audit log (ADMIN only; the backend enforces this)
+  listAuditLogs: (params) => api.get('/admin/audit-logs', { params }).then((r) => r.data),
 };
 
 /** Room inventory: room types, room images, rate plans, cancellation policies, calendar and blocks. */

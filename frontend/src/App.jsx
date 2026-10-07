@@ -21,6 +21,13 @@ import { HotelEditorPage } from '@/pages/admin/HotelEditorPage.jsx';
 import { ImportReviewPage } from '@/pages/admin/ImportReviewPage.jsx';
 import { RoomsPage } from '@/pages/admin/RoomsPage.jsx';
 import { RoomEditorPage } from '@/pages/admin/RoomEditorPage.jsx';
+import { BookingsPage } from '@/pages/admin/BookingsPage.jsx';
+import { BookingDetailPage } from '@/pages/admin/BookingDetailPage.jsx';
+import { PaymentsPage } from '@/pages/admin/PaymentsPage.jsx';
+import { RefundsPage } from '@/pages/admin/RefundsPage.jsx';
+import { CustomersPage } from '@/pages/admin/CustomersPage.jsx';
+import { CustomerDetailPage } from '@/pages/admin/CustomerDetailPage.jsx';
+import { AuditLogsPage } from '@/pages/admin/AuditLogsPage.jsx';
 
 function NotFoundPage() {
   return (
@@ -79,6 +86,13 @@ export function App() {
         <Route path="hotels/:hotelId/rooms" element={<RoomsPage />} />
         <Route path="hotels/:hotelId/rooms/new" element={<RoomEditorPage />} />
         <Route path="hotels/:hotelId/rooms/:roomId" element={<RoomEditorPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
+        <Route path="bookings/:id" element={<BookingDetailPage />} />
+        <Route path="payments" element={<PaymentsPage />} />
+        <Route path="refunds" element={<RefundsPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="audit-logs" element={<AuditLogsPage />} />
       </Route>
     </Routes>
   );

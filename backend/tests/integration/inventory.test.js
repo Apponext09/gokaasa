@@ -97,6 +97,8 @@ before(async () => {
   managerToken = await loginAs('manager@example.com');
   customerToken = await loginAs('guest@example.com');
   hotelId = await publishedHotel('Inventory Test Hotel');
+  // Hotel managers are now scoped per hotel; assign this test's manager so later tests can act on it.
+  await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) SELECT id, $2 FROM users WHERE email = $1`, ['manager@example.com', hotelId]);
   const list = await request(app).get(`/api/admin/hotels/${hotelId}/cancellation-policies`).set(bearer(adminToken));
   policies = Object.fromEntries(list.body.policies.map((policy) => [policy.code, policy]));
 });
