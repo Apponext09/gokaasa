@@ -6,7 +6,6 @@ import { DestinationField } from '@/features/search/components/DestinationField.
 import { DateRangePicker } from '@/features/search/components/DateRangePicker.jsx';
 import { GuestsPopover } from '@/features/search/components/GuestsPopover.jsx';
 import { addDays, slugifyPlace, stayParams, todayIso, validateStay } from '@/features/search/searchParams.js';
-import { cn } from '@/lib/utils.js';
 
 const titleCase = (slug) => slug.split('-').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 
@@ -58,46 +57,55 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted }) {
 
   const compact = variant === 'compact';
 
-  return (
-    <form
-      onSubmit={submit}
-      noValidate
-      aria-label="Search hotels"
-      className={cn(
-        'w-full',
-        compact
-          ? 'grid grid-cols-1 gap-2 md:grid-cols-[1.4fr_1.3fr_1fr_auto] md:items-stretch'
-          : 'rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-3 shadow-sm md:p-4',
-      )}
-    >
-      <div className={cn(!compact && 'grid grid-cols-1 gap-3 lg:grid-cols-[1.5fr_1.4fr_1fr_auto] lg:items-stretch')}>
+  const dateRange = (
+    <DateRangePicker
+      idPrefix={variant}
+      min={today}
+      checkIn={stay.checkIn}
+      checkOut={stay.checkOut}
+      bare={!compact}
+      onChange={({ checkIn, checkOut }) => {
+        setError(null);
+        setStay((current) => ({
+          checkIn: checkIn ?? current.checkIn,
+          checkOut: checkOut ?? (checkIn ? null : current.checkOut),
+        }));
+      }}
+    />
+  );
+
+  if (compact) {
+    return (
+      <form onSubmit={submit} noValidate aria-label="Search hotels" className="grid w-full grid-cols-1 gap-2 md:grid-cols-[1.4fr_1.3fr_1fr_auto] md:items-stretch">
         <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} />
-      </div>
-      <div className={cn(!compact && 'mt-3 lg:mt-0')}>
-        <DateRangePicker
-          idPrefix={variant}
-          min={today}
-          checkIn={stay.checkIn}
-          checkOut={stay.checkOut}
-          onChange={({ checkIn, checkOut }) => {
-            setError(null);
-            setStay((current) => ({
-              checkIn: checkIn ?? current.checkIn,
-              checkOut: checkOut ?? (checkIn ? null : current.checkOut),
-            }));
-          }}
-        />
-      </div>
-      <div className={cn(!compact && 'mt-3 lg:mt-0')}>
+        {dateRange}
         <GuestsPopover idPrefix={variant} rooms={occupancy} onChange={setOccupancy} />
-      </div>
-      <div className={cn(!compact && 'mt-3 lg:mt-0')}>
-        <Button type="submit" size="lg" className={cn('w-full', !compact && 'h-14')}>
+        <Button type="submit" size="lg" className="w-full">
           <Search className="h-4 w-4" aria-hidden="true" /> Search Hotels
         </Button>
+        {error && (
+          <p role="alert" className="mt-2 text-sm text-danger-600 md:col-span-4">
+            {error}
+          </p>
+        )}
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} noValidate aria-label="Search hotels" className="w-full rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1.5 shadow-sm">
+      <div className="grid grid-cols-1 divide-y divide-[var(--border-subtle)] lg:grid-cols-[1.5fr_1.4fr_1fr_auto] lg:items-stretch lg:divide-x lg:divide-y-0">
+        <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} bare />
+        {dateRange}
+        <GuestsPopover idPrefix={variant} rooms={occupancy} onChange={setOccupancy} bare />
+        <div className="flex items-center p-1.5 lg:pl-3">
+          <Button type="submit" size="lg" className="h-14 w-full">
+            <Search className="h-4 w-4" aria-hidden="true" /> Search Hotels
+          </Button>
+        </div>
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-sm text-danger-600 md:col-span-4">
+        <p role="alert" className="px-3 pb-1 pt-2 text-sm text-danger-600">
           {error}
         </p>
       )}

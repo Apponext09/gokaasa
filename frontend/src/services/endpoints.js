@@ -105,7 +105,8 @@ export const availabilityApi = {
 export const discoveryApi = {
   search: (params, { signal } = {}) => api.get('/hotels/search', { params, signal }).then((r) => r.data),
   suggestDestinations: (q, { signal } = {}) => api.get('/destinations/search', { params: { q }, signal }).then((r) => r.data.items),
-  popularDestinations: () => api.get('/destinations/popular').then((r) => r.data.items),
+  popularDestinations: (params) => api.get('/destinations/popular', { params }).then((r) => r.data.items),
+  stats: () => api.get('/destinations/stats').then((r) => r.data),
   featuredHotels: () => api.get('/hotels', { params: { limit: 6 } }).then((r) => r.data.items),
   hotel: (ref, { signal } = {}) => api.get(`/hotels/${encodeURIComponent(ref)}`, { signal }).then((r) => r.data.hotel),
   availability: (ref, params, { signal } = {}) => api.get(`/hotels/${encodeURIComponent(ref)}/availability`, { params, signal }).then((r) => r.data),

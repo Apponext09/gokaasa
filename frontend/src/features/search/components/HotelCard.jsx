@@ -21,6 +21,9 @@ export function hotelPath(hotel, state) {
 export function HotelCard({ hotel, state }) {
   const offer = hotel.bestOffer;
   const place = [hotel.area, hotel.city, hotel.country].filter(Boolean).join(', ');
+  const hasDiscount = offer?.discountTotalMinor > 0;
+  const originalPerNightMinor = hasDiscount ? Math.round(offer.baseTotalMinor / offer.nights) : null;
+  const discountPercent = hasDiscount ? Math.round((offer.discountTotalMinor / offer.baseTotalMinor) * 100) : null;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-shadow hover:shadow-md md:flex-row">
@@ -71,7 +74,7 @@ export function HotelCard({ hotel, state }) {
 
         {hotel.amenities.length > 0 && (
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
-            {hotel.amenities.slice(0, 4).map((name) => (
+            {hotel.amenities.slice(0, 3).map((name) => (
               <li key={name} className="flex items-center gap-1">
                 <Check className="h-3.5 w-3.5 text-success-600" aria-hidden="true" /> {name}
               </li>
@@ -97,12 +100,16 @@ export function HotelCard({ hotel, state }) {
                 </Badge>
               )}
               {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <Badge tone="warning">Only {offer.roomsLeft} left</Badge>}
+              {discountPercent > 0 && <Badge tone="premium">{discountPercent}% off</Badge>}
             </div>
 
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div className="space-y-0.5">
                 <p className="text-xs text-[var(--text-muted)]">{offer.roomName}</p>
                 <p className="flex items-baseline gap-2">
+                  {originalPerNightMinor > 0 && (
+                    <span className="text-sm text-[var(--text-muted)] line-through">{formatMoney(originalPerNightMinor)}</span>
+                  )}
                   <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(offer.pricePerNightMinor)}</span>
                   <span className="text-sm text-[var(--text-muted)]">/ night</span>
                 </p>

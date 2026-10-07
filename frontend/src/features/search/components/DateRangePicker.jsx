@@ -26,7 +26,7 @@ function monthGrid(year, month) {
  * Date-only range picker for hotel stays. Check-out can never be on or before check-in, past days are
  * disabled, and the nights count is shown. Works with touch and keyboard.
  */
-export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = 'stay', disabled = false }) {
+export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = 'stay', disabled = false, bare = false }) {
   const [open, setOpen] = useState(false);
   const anchor = checkIn && isIsoDate(checkIn) ? checkIn : min;
   const [cursor, setCursor] = useState(() => ({ year: Number(anchor.slice(0, 4)), month: Number(anchor.slice(5, 7)) - 1 }));
@@ -73,7 +73,12 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
 
   return (
     <div ref={ref} className="relative">
-      <div className="grid grid-cols-2 divide-x divide-[var(--border-subtle)] rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+      <div
+        className={cn(
+          'grid grid-cols-2 divide-x divide-[var(--border-subtle)]',
+          !bare && 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)]',
+        )}
+      >
         <button
           type="button"
           id={`${idPrefix}-checkin`}

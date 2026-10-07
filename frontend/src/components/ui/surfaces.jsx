@@ -43,6 +43,7 @@ export const badgeVariants = cva(
       tone: {
         neutral: 'bg-[var(--surface-muted)] text-[var(--text-body)]',
         brand: 'bg-brand-50 text-brand-700',
+        premium: 'bg-accent-50 text-accent-700',
         success: 'bg-success-50 text-success-600',
         warning: 'bg-warning-50 text-warning-600',
         danger: 'bg-danger-50 text-danger-600',

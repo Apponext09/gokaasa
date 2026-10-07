@@ -111,7 +111,7 @@ export function SearchResultsPage() {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
       {/* Search summary. The full search widget opens in place, so the results never leave the page. */}
-      <section aria-label="Search summary" className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-sm">
+      <section aria-label="Search summary" className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-sm">
         {!modifying ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 space-y-0.5">
@@ -144,7 +144,7 @@ export function SearchResultsPage() {
       </section>
 
       {!hasStay && status === 'idle' && (
-        <div className="mt-8 rounded-2xl border border-dashed border-[var(--border-subtle)] p-8 text-center">
+        <div className="mt-8 rounded-[var(--radius-card)] border border-dashed border-[var(--border-subtle)] p-8 text-center">
           <EmptyState
             title="Choose your dates"
             description={stayProblem ? `${stayProblem}.` : 'Pick check-in and check-out, and your guests, to see available rooms and prices.'}
@@ -166,7 +166,7 @@ export function SearchResultsPage() {
           <section className="min-w-0" aria-live="polite">
             <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-strong)]">{title}</h1>
+                <h1 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">{title}</h1>
                 <p className="text-sm text-[var(--text-muted)]">
                   {status === 'loading' && !data ? 'Checking availability…' : `${total.toLocaleString('en-IN')} propert${total === 1 ? 'y' : 'ies'} found`}
                 </p>
@@ -205,7 +205,7 @@ export function SearchResultsPage() {
               )}
 
               {status === 'ready' && data?.items.length === 0 && (
-                <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-8">
+                <div className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-8">
                   <EmptyState
                     icon={Search}
                     title="No hotels found"
@@ -245,7 +245,7 @@ export function SearchResultsPage() {
       {sheetOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
           <button className="absolute inset-0 bg-black/40" aria-label="Close filters" onClick={() => setSheetOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-[var(--surface-card)] p-5 shadow-lg">
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-card)] bg-[var(--surface-card)] p-5 shadow-lg">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-base font-semibold">Filters</p>
               <Button variant="ghost" size="icon" aria-label="Close" onClick={() => setSheetOpen(false)}>

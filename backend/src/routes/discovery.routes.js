@@ -3,11 +3,12 @@ import { z } from 'zod';
 import { searchController } from '../controllers/search.controller.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validate } from '../middleware/validate.js';
-import { destinationSuggestQuery } from '../validators/hotelSearch.validator.js';
+import { destinationSuggestQuery, popularDestinationsQuery } from '../validators/hotelSearch.validator.js';
 
 export const destinationRouter = Router();
 destinationRouter.get('/search', validate({ query: destinationSuggestQuery }), searchController.suggestDestinations);
-destinationRouter.get('/popular', searchController.popularDestinations);
+destinationRouter.get('/popular', validate({ query: popularDestinationsQuery }), searchController.popularDestinations);
+destinationRouter.get('/stats', searchController.publicStats);
 
 export const wishlistRouter = Router();
 wishlistRouter.use(authenticate);

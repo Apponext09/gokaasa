@@ -1,9 +1,12 @@
 import { hotelSearchRepository } from '../repositories/hotelSearch.repository.js';
 import { destinationRepository } from '../repositories/destination.repository.js';
+import { hotelRepository } from '../repositories/hotel.repository.js';
+import { bookingRepository } from '../repositories/booking.repository.js';
 import { getStorage } from '../storage/index.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
 import { nightsBetween } from '../domain/pricing.js';
 import { localToday } from '../domain/businessDate.js';
+import { LIVE_BOOKING_STATUSES } from '../domain/bookingStatus.js';
 import { config } from '../config/index.js';
 import { toPage } from './presenters.js';
 import { AppError } from '../utils/AppError.js';
@@ -178,8 +181,8 @@ export const hotelSearchService = {
     };
   },
 
-  async popular() {
-    const rows = await destinationRepository.popularCities();
+  async popular(limit = 6) {
+    const rows = await destinationRepository.popularCities(limit);
     return {
       items: rows.map((row) => ({
         label: row.city,
@@ -187,6 +190,21 @@ export const hotelSearchService = {
         country: countryName(row.country_code),
         hotelCount: row.hotel_count,
       })),
+    };
+  },
+
+  /** Public trust-strip counts for the homepage. Published/confirmed figures only, never revenue or PII. */
+  async stats() {
+    const [hotelCounts, bookingCounts, coverage] = await Promise.all([
+      hotelRepository.countByStatus(),
+      bookingRepository.countByStatus(),
+      destinationRepository.coverage(),
+    ]);
+    const confirmedBookings = LIVE_BOOKING_STATUSES.reduce((sum, status) => sum + (bookingCounts[status] ?? 0), 0);
+    return {
+      hotels: { published: hotelCounts.PUBLISHED ?? 0 },
+      bookings: { confirmed: confirmedBookings },
+      destinations: { cities: coverage.cities, countries: coverage.countries },
     };
   },
 };

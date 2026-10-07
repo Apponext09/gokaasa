@@ -11,7 +11,7 @@ const MIN_CHARS = 2;
  * Destination box. Suggestions are debounced and cancelled when superseded, so typing never sends a request per
  * keystroke. A chosen suggestion carries the destination slug (city, area or hotel) used in the URL.
  */
-export function DestinationField({ value, onChange, onTextChange, disabled = false, id = 'destination' }) {
+export function DestinationField({ value, onChange, onTextChange, disabled = false, id = 'destination', bare = false }) {
   const [text, setText] = useState(value?.label ?? '');
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState('idle');
@@ -82,7 +82,13 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
 
   return (
     <div className="relative">
-      <label htmlFor={id} className="flex min-h-14 items-center gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
+      <label
+        htmlFor={id}
+        className={cn(
+          'flex min-h-14 items-center gap-3 px-4 focus-within:ring-2 focus-within:ring-brand-500/20',
+          bare ? 'focus-within:bg-[var(--surface-muted)]' : 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)] focus-within:border-brand-500',
+        )}
+      >
         <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Destination</span>

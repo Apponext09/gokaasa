@@ -43,4 +43,13 @@ export const destinationRepository = {
     );
     return rows;
   },
+
+  /** How many distinct cities and countries have a published hotel, for the homepage trust strip. */
+  async coverage() {
+    const { rows } = await pool.query(
+      `SELECT COUNT(DISTINCT city)::int AS cities, COUNT(DISTINCT country_code)::int AS countries
+         FROM hotels WHERE status = 'PUBLISHED' AND deleted_at IS NULL`,
+    );
+    return rows[0];
+  },
 };

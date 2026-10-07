@@ -89,3 +89,7 @@ export const hotelSearchQuery = z
 export const destinationSuggestQuery = z.object({
   q: z.string().trim().min(2, 'Type at least 2 characters').max(60),
 });
+
+export const popularDestinationsQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(6),
+});

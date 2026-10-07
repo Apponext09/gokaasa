@@ -12,8 +12,12 @@ export const searchController = {
     return res.json(await hotelSearchService.suggest(req.validated.query.q));
   },
 
-  async popularDestinations(_req, res) {
-    return res.json(await hotelSearchService.popular());
+  async popularDestinations(req, res) {
+    return res.json(await hotelSearchService.popular(req.validated.query.limit));
+  },
+
+  async publicStats(_req, res) {
+    return res.json(await hotelSearchService.stats());
   },
 
   async listWishlist(req, res) {

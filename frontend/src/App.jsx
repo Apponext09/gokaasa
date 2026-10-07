@@ -4,6 +4,8 @@ import { AdminLayout } from '@/layouts/AdminLayout.jsx';
 import { RequireAuth } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { HomePage } from '@/pages/customer/HomePage.jsx';
+import { DestinationsPage } from '@/pages/customer/DestinationsPage.jsx';
+import { WishlistPage } from '@/pages/customer/WishlistPage.jsx';
 import { SearchResultsPage } from '@/pages/customer/SearchResultsPage.jsx';
 import { HotelDetailsPage } from '@/pages/customer/HotelDetailsPage.jsx';
 import { GuestDetailsPage } from '@/pages/customer/booking/GuestDetailsPage.jsx';
@@ -41,16 +43,18 @@ export function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="destinations" element={<DestinationsPage />} />
         <Route path="hotels/:destination" element={<SearchResultsPage />} />
         <Route path="hotels/:citySlug/:hotelSlug" element={<HotelDetailsPage />} />
 
-        {/* Booking and My Trips belong to a signed-in guest. Signed-out visitors go to sign-in and come back here. */}
+        {/* Booking, My Trips and the wishlist belong to a signed-in guest. Signed-out visitors go to sign-in and come back here. */}
         <Route element={<RequireAuth />}>
           <Route path="booking/guest-details" element={<GuestDetailsPage />} />
           <Route path="booking/review" element={<BookingReviewPage />} />
           <Route path="booking/confirmation/:bookingId" element={<BookingConfirmationPage />} />
           <Route path="my-trips" element={<MyTripsPage />} />
           <Route path="my-trips/:bookingId" element={<BookingDetailsPage />} />
+          <Route path="wishlist" element={<WishlistPage />} />
         </Route>
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<NotFoundPage />} />

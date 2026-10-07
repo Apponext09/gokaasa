@@ -243,4 +243,10 @@ export const bookingRepository = {
       [bookingId],
     );
   },
+
+  /** How many bookings are in each status. Used for public counts (e.g. "confirmed stays"), never revenue. */
+  async countByStatus(client = pool) {
+    const { rows } = await client.query(`SELECT status, COUNT(*)::int AS count FROM bookings GROUP BY status`);
+    return Object.fromEntries(rows.map((row) => [row.status, row.count]));
+  },
 };

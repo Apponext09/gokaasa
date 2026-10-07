@@ -3,14 +3,15 @@ import { cva } from 'class-variance-authority';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils.js';
 
-/** Primary: main actions (Search, Import, Publish). Secondary: Edit, Cancel, Save Draft. Danger: Delete, Unpublish. */
+/** Primary: main actions (Search, Import, Publish). Secondary: Edit, Cancel, Save Draft. Danger: Delete, Unpublish. Premium: rare gold CTA for a single standout action (e.g. a featured deal) — don't use for routine actions. */
 export const buttonVariants = cva(
   'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
   {
     variants: {
       variant: {
-        primary: 'bg-brand-600 text-white hover:bg-brand-700',
+        primary: 'bg-brand-600 text-white shadow-sm hover:bg-brand-700',
         secondary: 'border border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-strong)] hover:bg-[var(--surface-muted)]',
+        premium: 'bg-accent-500 text-brand-900 shadow-sm hover:bg-accent-600',
         danger: 'bg-danger-600 text-white hover:bg-danger-700',
         'danger-outline': 'border border-danger-600 text-danger-600 hover:bg-danger-50',
         ghost: 'text-[var(--text-body)] hover:bg-[var(--surface-muted)]',

@@ -31,7 +31,7 @@ export function ConfirmDialog({ open, title, description, confirmLabel, tone = '
   return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
       <button aria-label="Dismiss" className="absolute inset-0 bg-black/30" onClick={() => !loading && onCancel()} tabIndex={-1} />
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="relative w-full max-w-md rounded-[var(--radius-card)] bg-[var(--surface-card)] p-6 shadow-lg">
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className="relative w-full max-w-md rounded-[var(--radius-card)] bg-[var(--surface-card)] p-6 shadow-xl shadow-black/10">
         <div className="mb-2 flex items-start justify-between gap-4">
           <h2 id={titleId} className="text-lg font-semibold text-[var(--text-strong)]">
             {title}
@@ -71,7 +71,7 @@ export function Modal({ open, title, onClose, children, wide = false }) {
   return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
       <button aria-label="Close" className="absolute inset-0 bg-black/70" onClick={onClose} tabIndex={-1} />
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`relative max-h-[90vh] w-full overflow-auto rounded-[var(--radius-card)] bg-[var(--surface-card)] p-5 shadow-lg ${wide ? 'max-w-4xl' : 'max-w-lg'}`}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`relative max-h-[90vh] w-full overflow-auto rounded-[var(--radius-card)] bg-[var(--surface-card)] p-5 shadow-xl shadow-black/10 ${wide ? 'max-w-4xl' : 'max-w-lg'}`}>
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 id={titleId} className="text-base font-semibold text-[var(--text-strong)]">
             {title}
