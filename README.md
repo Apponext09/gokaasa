@@ -10,7 +10,7 @@ Phase 1 (foundation) and the Phase 2 onboarding backbone are implemented. Custom
 ## Run it
 
 1. Create a PostgreSQL database with `ENCODING 'UTF8'`.
-2. `cd backend && cp .env.example .env`, then set `DATABASE_URL`, `JWT_SECRET` (32+ chars), and optionally `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+2. `cd backend && cp .env.example .env`, then set `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`, `JWT_SECRET` (32+ chars), and optionally `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 3. `npm install && npm run migrate && npm run seed && npm run dev`
 4. `cd frontend && npm install && npm run dev` and open http://localhost:5173.
 
@@ -18,7 +18,7 @@ Without provider credentials, search uses the OpenStreetMap source (no key neede
 
 ## Tests
 
-- `cd backend && npm test`: needs `DATABASE_URL` pointing at a database whose name contains `test`. The integration helper refuses any other name because it truncates tables.
+- `cd backend && npm test`: needs `DB_NAME` to point at a database whose name contains `test` (e.g. `gokaasa_db_test`). The integration helper refuses any other name because it truncates tables.
 
 ## Guarantees
 

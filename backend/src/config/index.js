@@ -8,8 +8,12 @@ const booleanFromEnv = z
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
-  DATABASE_SSL: booleanFromEnv,
+  DB_HOST: z.string().min(1, 'DB_HOST is required'),
+  DB_PORT: z.coerce.number().int().positive().default(5432),
+  DB_NAME: z.string().min(1, 'DB_NAME is required'),
+  DB_USER: z.string().min(1, 'DB_USER is required'),
+  DB_PASSWORD: z.string().min(1, 'DB_PASSWORD is required'),
+  DB_SSL: booleanFromEnv,
   FRONTEND_URL: z.url().default('http://localhost:5173'),
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 
@@ -57,8 +61,12 @@ export const config = Object.freeze({
   trustProxy: env.TRUST_PROXY,
   frontendUrl: env.FRONTEND_URL,
   database: {
-    url: env.DATABASE_URL,
-    ssl: env.DATABASE_SSL,
+    host: env.DB_HOST,
+    port: env.DB_PORT,
+    name: env.DB_NAME,
+    user: env.DB_USER,
+    password: env.DB_PASSWORD,
+    ssl: env.DB_SSL,
   },
   auth: {
     jwtSecret: env.JWT_SECRET,

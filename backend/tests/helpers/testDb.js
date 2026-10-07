@@ -50,7 +50,7 @@ const TABLES_TO_CLEAR = [
  * contains "test", so it can never truncate a real environment by accident.
  */
 export async function prepareTestDatabase() {
-  const dbName = new URL(process.env.DATABASE_URL).pathname.replace('/', '');
+  const dbName = process.env.DB_NAME ?? '';
   if (!/test/i.test(dbName)) {
     throw new Error(`Refusing to run integration tests against database "${dbName}". Use a database whose name contains "test".`);
   }

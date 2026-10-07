@@ -7,7 +7,11 @@ pg.types.setTypeParser(pg.types.builtins.NUMERIC, (value) => Number(value));
 pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
 
 export const pool = new pg.Pool({
-  connectionString: config.database.url,
+  host: config.database.host,
+  port: config.database.port,
+  database: config.database.name,
+  user: config.database.user,
+  password: config.database.password,
   ssl: config.database.ssl ? { rejectUnauthorized: config.isProduction } : undefined,
   // Provider content (names, descriptions, star glyphs) is Unicode. Set at connection start, never per query.
   options: '-c client_encoding=UTF8',
