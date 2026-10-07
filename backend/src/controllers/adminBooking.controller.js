@@ -1,4 +1,5 @@
 import { adminBookingService } from '../services/adminBooking.service.js';
+import { invoiceService } from '../services/invoice.service.js';
 
 function actorOf(req) {
   return { id: req.user.id, roles: req.user.roles, ip: req.ip };
@@ -23,5 +24,12 @@ export const adminBookingController = {
 
   async listRefunds(req, res) {
     return res.json(await adminBookingService.listRefunds(req.validated.query, actorOf(req)));
+  },
+
+  async downloadInvoice(req, res) {
+    const { filename, buffer } = await invoiceService.forStaff(req.validated.params.id, actorOf(req));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
   },
 };

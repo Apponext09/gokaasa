@@ -156,16 +156,22 @@ async function recordFailure({ orderId, reason, userId = null }) {
   const peekBooking = await bookingRepository.findBooking(peek.booking_id);
   if (userId !== null && peekBooking.user_id !== userId) throw AppError.notFound('Payment not found');
 
-  return withTransaction(async (client) => {
+  const result = await withTransaction(async (client) => {
     const booking = await bookingRepository.lockBooking(peekBooking.id, client);
     const payment = await paymentRepository.lockByOrder(orderId, client);
+    let justFailed = false;
     if (OPEN_PAYMENT_STATUSES.includes(payment.status)) {
       await paymentRepository.updatePayment(client, payment.id, PAYMENT_STATUS.FAILED, {
         failure_reason: String(reason ?? 'PAYMENT_FAILED').slice(0, 200),
       });
+      justFailed = true;
     }
-    return booking.id;
+    return { bookingId: booking.id, justFailed };
   });
+  if (result.justFailed) {
+    await notificationService.sendPaymentFailed(peekBooking).catch((error) => log.error('payment-failed notice failed', { message: error.message }));
+  }
+  return result.bookingId;
 }
 
 async function ownedPaymentOrThrow(userId, orderId) {

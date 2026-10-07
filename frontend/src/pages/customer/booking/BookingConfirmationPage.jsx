@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { CheckCircle2, Download, Luggage } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Card } from '@/components/ui/surfaces.jsx';
@@ -44,6 +45,8 @@ export function BookingConfirmationPage() {
     );
   }
   if (!booking) return <FullPageSpinner label="Loading your booking" />;
+
+  const handleInvoice = () => downloadInvoice(booking).catch((err) => toast.error(normalizeError(err).message));
 
   const confirmed = booking.status === 'CONFIRMED';
   const status = BOOKING_STATUS_LABEL[booking.status] ?? BOOKING_STATUS_LABEL.PAYMENT_PENDING;
@@ -119,7 +122,7 @@ export function BookingConfirmationPage() {
           <Link to={`/my-trips/${booking.id}`}>
             <Button variant="secondary" className="w-full sm:w-auto">View Booking</Button>
           </Link>
-          <Button variant="secondary" onClick={() => downloadInvoice(booking)} className="w-full sm:w-auto">
+          <Button variant="secondary" onClick={handleInvoice} className="w-full sm:w-auto">
             <Download className="h-4 w-4" aria-hidden="true" /> Download Invoice
           </Button>
           <Link to="/my-trips">

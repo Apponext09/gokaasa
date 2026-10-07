@@ -399,3 +399,57 @@ describe('17. invalid search parameters', () => {
     assert.equal(res.status, 422);
   });
 });
+
+describe('18. search security: SQL injection, invalid rating, out-of-range filters', () => {
+  it('SQL-injection-shaped values in every filter field are rejected by validation before they ever reach a query', async () => {
+    const payload = "' OR '1'='1";
+    const dropPayload = "mumbai'; DROP TABLE hotels; --";
+    const cases = [
+      `${stayParams}&destination=${encodeURIComponent(payload)}`,
+      `${stayParams}&destination=${encodeURIComponent(dropPayload)}`,
+      `${stayParams}&area=${encodeURIComponent(payload)}`,
+      `${stayParams}&amenities=${encodeURIComponent(payload)}`,
+      `${stayParams}&propertyTypes=${encodeURIComponent(payload)}`,
+      `${stayParams}&mealPlans=${encodeURIComponent(payload)}`,
+      `${stayParams}&sort=${encodeURIComponent(payload)}`,
+    ];
+    for (const query of cases) {
+      const res = await search(query);
+      assert.equal(res.status, 422, `expected 422 for ${query}: ${JSON.stringify(res.body)}`);
+    }
+    // The attempted DROP TABLE never ran: a completely unrelated, ordinary search still works afterwards.
+    const stillWorks = await search(`${stayParams}&destination=mumbai`);
+    assert.equal(stillWorks.status, 200, JSON.stringify(stillWorks.body));
+    const hotelCount = await pool.query(`SELECT COUNT(*)::int AS n FROM hotels`);
+    assert.ok(hotelCount.rows[0].n > 0, 'the hotels table was never dropped');
+  });
+
+  it('rejects an out-of-range or non-numeric guest rating', async () => {
+    for (const guestRating of ['10', '-1', 'five-stars', '4.5.1']) {
+      const res = await search(`${stayParams}&guestRating=${encodeURIComponent(guestRating)}`);
+      assert.equal(res.status, 422, `expected 422 for guestRating=${guestRating}`);
+    }
+  });
+
+  it('rejects a negative or non-numeric price range', async () => {
+    for (const query of [`${stayParams}&minPrice=-500`, `${stayParams}&maxPrice=-1`, `${stayParams}&minPrice=abc`]) {
+      const res = await search(query);
+      assert.equal(res.status, 422, `expected 422 for ${query}`);
+    }
+  });
+
+  it('rejects an unknown property type and an unknown amenity code, never silently ignoring them', async () => {
+    const badPropertyType = await search(`${stayParams}&propertyTypes=CASTLE`);
+    assert.equal(badPropertyType.status, 422);
+    const badAmenity = await search(`${stayParams}&amenities=not_a_real_code_123456789012345678901234567890`);
+    assert.equal(badAmenity.status, 422);
+  });
+
+  it('ignores unauthorised/internal fields such as hotel status or ids added to the query string, rather than erroring or treating them as a hidden filter', async () => {
+    // hotelSearchQuery does not define "status" or "id" at all, so zod drops them; the candidate-selection
+    // SQL always hardcodes status = 'PUBLISHED' itself and is never told which status to use by the client
+    // (see describe('1-3 ...') above, which already proves drafts never appear in results).
+    const res = await search(`${stayParams}&status=DRAFT&id=1&userId=999999`);
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+  });
+});

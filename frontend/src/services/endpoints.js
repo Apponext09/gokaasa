@@ -156,6 +156,16 @@ export const bookingApi = {
   cancel: (id, body = {}) => api.post(`/bookings/${id}/cancel`, body).then((r) => r.data.booking),
   myTrips: (tab) => api.get('/my-bookings', { params: { tab } }).then((r) => r.data),
   myBooking: (id) => api.get(`/my-bookings/${id}`).then((r) => r.data.booking),
+  /** The PDF is generated server-side from the booking's own stored snapshot, never recomputed from today's rates. */
+  invoiceBlob: (id) => api.get(`/bookings/${id}/invoice`, { responseType: 'blob' }).then((r) => r.data),
+};
+
+/** Notifications: the bell/dropdown's data, always scoped to the signed-in user by the server. */
+export const notificationApi = {
+  list: (params) => api.get('/notifications', { params }).then((r) => r.data),
+  unreadCount: () => api.get('/notifications/unread-count').then((r) => r.data.count),
+  markRead: (id) => api.patch(`/notifications/${id}/read`).then((r) => r.data.notification),
+  markAllRead: () => api.patch('/notifications/read-all').then((r) => r.data),
 };
 
 /** Customer reviews: eligibility, create/edit/delete a review, and the hotel's public review list. */

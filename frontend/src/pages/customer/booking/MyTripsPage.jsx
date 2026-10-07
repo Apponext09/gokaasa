@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarDays, Luggage } from 'lucide-react';
+import { toast } from 'sonner';
+import { CalendarDays, Download, Luggage } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Tabs } from '@/components/ui/tabs.jsx';
 import { Badge, Card } from '@/components/ui/surfaces.jsx';
@@ -8,10 +9,13 @@ import { EmptyState, PageHeader } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
 import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
+import { downloadInvoice } from '@/features/booking/invoice.js';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { normalizeError } from '@/services/api.js';
 import { bookingApi } from '@/services/endpoints.js';
+
+const INVOICEABLE_STATUSES = ['CONFIRMED', 'REFUNDED'];
 
 const TABS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -92,6 +96,15 @@ export function MyTripsPage() {
                       {tab === 'upcoming' && trip.status === 'CONFIRMED' && (
                         <Button variant="danger-outline" size="sm" onClick={() => setCancelling(trip.id)}>
                           Cancel Booking
+                        </Button>
+                      )}
+                      {INVOICEABLE_STATUSES.includes(trip.status) && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => downloadInvoice(trip).catch((err) => toast.error(normalizeError(err).message))}
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden="true" /> Invoice
                         </Button>
                       )}
                       {tab === 'completed' && (

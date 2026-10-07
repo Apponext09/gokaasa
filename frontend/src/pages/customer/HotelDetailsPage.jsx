@@ -4,7 +4,7 @@ import { Building2, Calendar, ExternalLink, MapPin, RefreshCw, Share2, Star, Use
 import { toast } from 'sonner';
 import { Alert, Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { EmptyState, formatDateTime } from '@/components/shared/index.jsx';
+import { EmptyState, formatDateTime, formatMoney } from '@/components/shared/index.jsx';
 import { DateRangePicker } from '@/features/search/components/DateRangePicker.jsx';
 import { GuestsPopover } from '@/features/search/components/GuestsPopover.jsx';
 import { HotelCard } from '@/features/search/components/HotelCard.jsx';
@@ -155,6 +155,9 @@ export function HotelDetailsPage() {
 
   const rooms = availability?.roomTypes ?? [];
   const bookable = rooms.filter((room) => room.available);
+  const cheapestPerNight = bookable.length > 0
+    ? Math.min(...bookable.flatMap((room) => room.ratePlans.map((plan) => plan.pricePerNight)))
+    : null;
   const unavailable = rooms.filter((room) => !room.available);
 
   const choose = (room, plan) => {
@@ -451,6 +454,21 @@ export function HotelDetailsPage() {
 
         <p className="text-xs text-[var(--text-muted)]">Last updated {formatDateTime(hotel.updatedAt)}.</p>
       </div>
+
+      {/* Mobile-only teaser CTA: once a room is actually picked, SelectionBar (below) takes over this same slot. */}
+      {!(selection && selection.hotelId === hotel.id) && hasStay && availabilityState === 'ready' && bookable.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-3">
+            <p className="text-sm">
+              <span className="font-semibold text-[var(--text-strong)]">{formatMoney(cheapestPerNight)}</span>
+              <span className="text-[var(--text-muted)]"> / night</span>
+            </p>
+            <a href="#rooms">
+              <Button>View Rooms</Button>
+            </a>
+          </div>
+        </div>
+      )}
 
       {selection && selection.hotelId === hotel.id && (
         <SelectionBar

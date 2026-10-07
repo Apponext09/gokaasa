@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge, Card } from '@/components/ui/surfaces.jsx';
@@ -48,6 +49,7 @@ export function BookingDetailsPage() {
   const status = BOOKING_STATUS_LABEL[booking.status] ?? BOOKING_STATUS_LABEL.PAYMENT_PENDING;
   const money = (minor) => formatMoneyMinor(minor, booking.amounts.currency);
   const canCancel = booking.status === 'CONFIRMED' && booking.cancellation.preview?.canCancel;
+  const handleInvoice = () => downloadInvoice(booking).catch((err) => toast.error(normalizeError(err).message));
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-8 sm:px-6">
@@ -66,7 +68,7 @@ export function BookingDetailsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {booking.status === 'CONFIRMED' && (
-            <Button variant="secondary" size="sm" onClick={() => downloadInvoice(booking)}>
+            <Button variant="secondary" size="sm" onClick={handleInvoice}>
               <Download className="h-4 w-4" aria-hidden="true" /> Invoice
             </Button>
           )}

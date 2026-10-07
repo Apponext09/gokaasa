@@ -6,6 +6,7 @@ import { localToday } from '../domain/businessDate.js';
 import { REVIEW_STATUS, canTransitionReview } from '../domain/reviewStatus.js';
 import { config } from '../config/index.js';
 import { auditService } from './audit.service.js';
+import { notificationService } from '../notifications/notificationService.js';
 import { AppError } from '../utils/AppError.js';
 import { toPage } from './presenters.js';
 
@@ -105,7 +106,7 @@ export const reviewService = {
     if (result.reason === 'NOT_COMPLETED') throw AppError.conflict('You can review a hotel after your stay is complete.');
     if (result.reason === 'ALREADY_REVIEWED') throw AppError.conflict('You have already reviewed this booking.');
 
-    return withTransaction(async (client) => {
+    const review = await withTransaction(async (client) => {
       const row = await reviewRepository.insert(client, { hotelId: result.booking.hotel_id, bookingId, userId, rating, title, body });
       await auditService.record(client, {
         actor: { id: userId },
@@ -116,6 +117,8 @@ export const reviewService = {
       });
       return toOwnReview({ ...row, hotel_name: null, hotel_slug: null, hotel_city: null });
     });
+    notificationService.sendReviewSubmitted(result.booking.hotel_id, result.booking.hotel_name, review.id).catch(() => {});
+    return review;
   },
 
   /** Only the review's own author, and only the content -- never hotel_id, booking_id or status directly. */
@@ -190,7 +193,13 @@ export const reviewService = {
         oldValue: { status: review.status }, newValue: { status: nextStatus, reason: reason ?? null },
       });
       const fresh = await reviewRepository.findById(reviewId, client);
-      return toModerationRow({ ...fresh, first_name: null, last_name: null, email: null, hotel_name: null, booking_ref: null });
+      return fresh;
+    }).then(async (row) => {
+      if (action === 'APPROVE' || action === 'REJECT') {
+        const hotel = await hotelRepository.findById(row.hotel_id).catch(() => null);
+        notificationService.sendReviewDecision(row, hotel?.name ?? '', action).catch(() => {});
+      }
+      return toModerationRow({ ...row, first_name: null, last_name: null, email: null, hotel_name: null, booking_ref: null });
     });
   },
 };

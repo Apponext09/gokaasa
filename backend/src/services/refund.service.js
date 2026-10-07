@@ -6,6 +6,7 @@ import { BOOKING_STATUS, assertTransition } from '../domain/bookingStatus.js';
 import { REFUND_STATUS, canTransitionRefund } from '../domain/refundStatus.js';
 import { PAYMENT_STATUS } from '../domain/paymentStatus.js';
 import { auditService } from './audit.service.js';
+import { notificationService } from '../notifications/notificationService.js';
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('refund');
@@ -48,7 +49,7 @@ export async function processRefund(refundId) {
     return 'FAILED';
   }
 
-  await withTransaction(async (client) => {
+  const { bookingId, amountMinor } = await withTransaction(async (client) => {
     const refund = await paymentRepository.lockRefund(refundId, client);
     await paymentRepository.updateRefund(client, refundId, REFUND_STATUS.SUCCESS, { provider_refund_id: providerRefund.id });
 
@@ -67,7 +68,10 @@ export async function processRefund(refundId) {
       entityId: booking.id,
       newValue: { refundId, amountMinor: Number(refund.amount_minor) },
     });
+    return { bookingId: booking.id, amountMinor: Number(refund.amount_minor) };
   });
   log.info('refund succeeded', { refundId });
+  const freshBooking = await bookingRepository.findBooking(bookingId);
+  await notificationService.sendRefundCompleted(freshBooking, { id: refundId, amount_minor: amountMinor }).catch((error) => log.error('refund-completed notice failed', { message: error.message }));
   return 'SUCCESS';
 }

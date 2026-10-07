@@ -10,6 +10,7 @@ import { NearbyHotelsPage } from '@/pages/customer/NearbyHotelsPage.jsx';
 import { AboutPage } from '@/pages/customer/AboutPage.jsx';
 import { ContactPage } from '@/pages/customer/ContactPage.jsx';
 import { ProfilePage } from '@/pages/customer/ProfilePage.jsx';
+import { NotificationsPage } from '@/pages/customer/NotificationsPage.jsx';
 import { SearchResultsPage } from '@/pages/customer/SearchResultsPage.jsx';
 import { HotelDetailsPage } from '@/pages/customer/HotelDetailsPage.jsx';
 import { GuestDetailsPage } from '@/pages/customer/booking/GuestDetailsPage.jsx';
@@ -72,6 +73,7 @@ export function App() {
           <Route path="my-trips/:bookingId" element={<BookingDetailsPage />} />
           <Route path="wishlist" element={<WishlistPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<NotFoundPage />} />

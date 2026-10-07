@@ -1,6 +1,7 @@
 import { pool, withTransaction } from '../db/pool.js';
 import { hotelRepository } from '../repositories/hotel.repository.js';
 import { auditService } from './audit.service.js';
+import { notificationService } from '../notifications/notificationService.js';
 import { AppError } from '../utils/AppError.js';
 
 export const managerService = {
@@ -43,6 +44,7 @@ export const managerService = {
         newValue: { userId },
       });
     });
+    notificationService.sendManagerAssigned(userId, hotel).catch(() => {});
     return this.listForHotel(hotelId);
   },
 

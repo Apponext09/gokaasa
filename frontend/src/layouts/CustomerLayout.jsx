@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 import { Heart, Menu, X } from 'lucide-react';
 import { Logo } from '@/components/shared/index.jsx';
 import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
+import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
@@ -105,6 +106,7 @@ function MobileDrawer({ open, onClose }) {
             <Link to="/my-trips" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">My Trips</Link>
             <Link to="/wishlist" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">Wishlist</Link>
             <Link to="/profile" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">My Profile</Link>
+            <Link to="/notifications" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">Notifications</Link>
             {isStaff && (
               <Link to="/admin/dashboard" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-brand-700 hover:bg-[var(--surface-muted)]">Admin</Link>
             )}
@@ -234,12 +236,14 @@ export function CustomerLayout() {
                 My Trips
               </Link>
             )}
+            {isAuthenticated && <div className="hidden md:block"><NotificationBell /></div>}
             <div className="hidden md:block">{status !== 'loading' && (isAuthenticated ? <ProfileMenu /> : <GuestLinks />)}</div>
             {isAuthenticated && (
               <Link to="/wishlist" aria-label="Wishlist" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-body)] hover:bg-[var(--surface-muted)] md:hidden">
                 <Heart className="h-4 w-4" aria-hidden="true" />
               </Link>
             )}
+            {isAuthenticated && <div className="md:hidden"><NotificationBell /></div>}
             <button
               type="button"
               aria-label={drawerOpen ? 'Close menu' : 'Open menu'}

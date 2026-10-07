@@ -333,6 +333,7 @@ adminRouter.delete('/availability-blocks/:id', validate({ params: blockParam }),
 // scoped to its assigned hotels inside the service layer (list/detail queries filter by hotel_managers).
 adminRouter.get('/bookings', validate({ query: adminBookingListQuery }), adminBookingController.list);
 adminRouter.get('/bookings/:id', validate({ params: adminBookingIdParam }), adminBookingController.detail);
+adminRouter.get('/bookings/:id/invoice', validate({ params: adminBookingIdParam }), adminBookingController.downloadInvoice);
 adminRouter.post(
   '/bookings/:id/cancel',
   validate({ params: adminBookingIdParam, body: cancelSchema }),

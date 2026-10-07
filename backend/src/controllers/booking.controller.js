@@ -1,5 +1,6 @@
 import { holdService } from '../services/hold.service.js';
 import { bookingService } from '../services/booking.service.js';
+import { invoiceService } from '../services/invoice.service.js';
 
 /** Customer booking flow: holds, guest details, bookings, My Trips and cancellation. Every call is owner-scoped. */
 export const bookingController = {
@@ -41,5 +42,12 @@ export const bookingController = {
 
   async listMyBookings(req, res) {
     return res.json(await bookingService.list(req.user.id, req.validated.query.tab));
+  },
+
+  async downloadInvoice(req, res) {
+    const { filename, buffer } = await invoiceService.forOwner(req.user.id, req.validated.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(buffer);
   },
 };

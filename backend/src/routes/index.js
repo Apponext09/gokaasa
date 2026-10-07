@@ -6,6 +6,7 @@ import { destinationRouter, wishlistRouter } from './discovery.routes.js';
 import { bookingRouter, bookingsRouter, myBookingsRouter, paymentRouter, refundsRouter } from './booking.routes.js';
 import { reviewRouter } from './review.routes.js';
 import { newsletterRouter } from './newsletter.routes.js';
+import { notificationRouter } from './notification.routes.js';
 
 export const apiRouter = Router();
 
@@ -21,4 +22,5 @@ apiRouter.use('/payments', paymentRouter);
 apiRouter.use('/refunds', refundsRouter);
 apiRouter.use('/reviews', reviewRouter);
 apiRouter.use('/newsletter', newsletterRouter);
+apiRouter.use('/notifications', notificationRouter);
 apiRouter.use('/admin', adminRouter);

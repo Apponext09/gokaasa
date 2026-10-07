@@ -21,6 +21,26 @@ import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { formatDateTime } from '@/components/shared/index.jsx';
+import { cn } from '@/lib/utils.js';
+
+/** Toggles one value in/out of a csv-style array filter (propertyTypes, amenities), clearing it to undefined when empty. */
+function toggleArrayFilter(filters, key, value) {
+  const current = filters[key] ?? [];
+  const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+  return { ...filters, [key]: next.length > 0 ? next : undefined };
+}
+
+/** Real filters only -- every chip reads and writes the exact same state FilterPanel does, so the two never disagree. */
+const QUICK_FILTERS = [
+  { key: 'recommended', label: 'Recommended', isActive: (s) => s.sort === 'recommended', apply: () => ({ sort: 'recommended' }) },
+  { key: 'freeCancellation', label: 'Free Cancellation', isActive: (s) => s.filters.freeCancellation === true, apply: (s) => ({ filters: { ...s.filters, freeCancellation: s.filters.freeCancellation ? undefined : true } }) },
+  { key: 'rating4', label: '4+ Rating', isActive: (s) => s.filters.guestRating === 4, apply: (s) => ({ filters: { ...s.filters, guestRating: s.filters.guestRating === 4 ? undefined : 4 } }) },
+  { key: 'under3000', label: 'Under ₹3,000', isActive: (s) => s.filters.maxPrice === 3000, apply: (s) => ({ filters: { ...s.filters, maxPrice: s.filters.maxPrice === 3000 ? undefined : 3000 } }) },
+  { key: 'hotels', label: 'Hotels', isActive: (s) => Boolean(s.filters.propertyTypes?.includes('HOTEL')), apply: (s) => ({ filters: toggleArrayFilter(s.filters, 'propertyTypes', 'HOTEL') }) },
+  { key: 'resorts', label: 'Resorts', isActive: (s) => Boolean(s.filters.propertyTypes?.includes('RESORT')), apply: (s) => ({ filters: toggleArrayFilter(s.filters, 'propertyTypes', 'RESORT') }) },
+  { key: 'pool', label: 'Pool', isActive: (s) => Boolean(s.filters.amenities?.includes('POOL')), apply: (s) => ({ filters: toggleArrayFilter(s.filters, 'amenities', 'POOL') }) },
+  { key: 'wifi', label: 'WiFi', isActive: (s) => Boolean(s.filters.amenities?.includes('WIFI')), apply: (s) => ({ filters: toggleArrayFilter(s.filters, 'amenities', 'WIFI') }) },
+];
 
 const titleCase = (slug) => slug.split('-').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 
@@ -142,6 +162,28 @@ export function SearchResultsPage() {
           </div>
         )}
       </section>
+
+      {hasStay && (
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Quick filters">
+          {QUICK_FILTERS.map((chip) => {
+            const active = chip.isActive(state);
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => update(chip.apply(state))}
+                className={cn(
+                  'inline-flex items-center rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500',
+                  active ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-muted)]',
+                )}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {!hasStay && status === 'idle' && (
         <div className="mt-8 rounded-[var(--radius-card)] border border-dashed border-[var(--border-subtle)] p-8 text-center">

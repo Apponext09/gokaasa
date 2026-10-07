@@ -15,6 +15,7 @@ import { AppError } from '../utils/AppError.js';
 import { slugify } from '../utils/slug.js';
 import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
 import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
+import { notificationService } from '../notifications/notificationService.js';
 
 
 // Only ADMIN may release or withdraw a hotel. HOTEL_MANAGER can prepare and submit drafts.
@@ -235,7 +236,7 @@ export const hotelService = {
       throw AppError.forbidden('Only administrators can change publication status');
     }
 
-    return withTransaction(async (client) => {
+    const detail = await withTransaction(async (client) => {
       const hotel = await hotelRepository.findById(id, { client });
       if (!hotel) throw AppError.notFound('Hotel not found');
 
@@ -273,6 +274,10 @@ export const hotelService = {
       });
       return loadHotelDetail(client, hotel.id, { includeInternal: true });
     });
+    if (action === 'SUBMIT_FOR_REVIEW') {
+      notificationService.sendHotelSubmittedForReview(detail).catch(() => {});
+    }
+    return detail;
   },
 
   /** Public, published-only listing for customers. */
