@@ -20,6 +20,14 @@ export const searchController = {
     return res.json(await hotelSearchService.stats());
   },
 
+  async nearby(req, res) {
+    return res.json(await hotelSearchService.nearby(req.validated.query, { userId: req.user?.id ?? null }));
+  },
+
+  async handpicked(req, res) {
+    return res.json(await hotelSearchService.handpicked(req.validated.query, { userId: req.user?.id ?? null }));
+  },
+
   async listWishlist(req, res) {
     return res.json({ items: await wishlistService.list(req.user.id) });
   },

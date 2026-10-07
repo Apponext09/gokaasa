@@ -93,3 +93,17 @@ export const destinationSuggestQuery = z.object({
 export const popularDestinationsQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(6),
 });
+
+/** A hotel teaser card for the homepage: no stay/occupancy context, so no cancellation policy or room detail. */
+export const nearbyHotelsQuery = z.object({
+  lat: z.coerce.number().min(-90, 'Invalid latitude').max(90, 'Invalid latitude'),
+  lng: z.coerce.number().min(-180, 'Invalid longitude').max(180, 'Invalid longitude'),
+  radiusKm: z.coerce.number().positive('Radius must be positive').max(100, 'Radius can be at most 100km').default(25),
+  page: z.coerce.number().int().min(1).max(100).default(1),
+  limit: z.coerce.number().int().min(1).max(24).default(8),
+});
+
+export const handpickedHotelsQuery = z.object({
+  page: z.coerce.number().int().min(1).max(100).default(1),
+  limit: z.coerce.number().int().min(1).max(24).default(10),
+});

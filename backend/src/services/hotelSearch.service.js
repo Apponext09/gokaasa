@@ -4,7 +4,7 @@ import { hotelRepository } from '../repositories/hotel.repository.js';
 import { bookingRepository } from '../repositories/booking.repository.js';
 import { getStorage } from '../storage/index.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
-import { nightsBetween } from '../domain/pricing.js';
+import { addDays, nightsBetween } from '../domain/pricing.js';
 import { localToday } from '../domain/businessDate.js';
 import { LIVE_BOOKING_STATUSES } from '../domain/bookingStatus.js';
 import { config } from '../config/index.js';
@@ -99,6 +99,37 @@ export function toHotelCard(row) {
   };
 }
 
+/**
+ * A homepage hotel teaser: no stay/occupancy context, so no bestOffer/cancellation -- just enough to
+ * decide whether to tap through. `distanceKm` is null for a handpicked (non-geo) card.
+ */
+function toCuratedCard(row) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    city: row.city,
+    area: row.area,
+    countryCode: row.country_code,
+    country: countryName(row.country_code),
+    starRating: row.star_rating,
+    guestRating: row.guest_rating == null ? null : Number(row.guest_rating),
+    reviewCount: row.review_count,
+    rating: row.internal_rating?.count > 0 ? { average: Number(row.internal_rating.average), count: row.internal_rating.count } : null,
+    distanceKm: row.distance_km == null ? null : Number(row.distance_km),
+    image: imageFor(row.cover),
+    amenities: row.top_amenities ?? [],
+    wishlisted: Boolean(row.wishlisted),
+    price: row.final_price_minor == null
+      ? null
+      : {
+        amountMinor: Number(row.final_price_minor),
+        originalAmountMinor: row.discount_minor > 0 ? Number(row.base_price_minor) : null,
+        discountPercent: row.discount_minor > 0 ? Math.round((Number(row.discount_minor) / Number(row.base_price_minor)) * 100) : null,
+      },
+  };
+}
+
 export const hotelSearchService = {
   /** Other published hotels in the same city. Light cards only: no room offer is implied. */
   async similar(hotel) {
@@ -165,6 +196,30 @@ export const hotelSearchService = {
       ...toPage(items, total, page, limit),
       priceBounds,
     };
+  },
+
+  /**
+   * Published hotels within `radiusKm` of a point the browser's geolocation API reported, nearest first.
+   * Distance and the candidate shortlist are computed entirely in SQL (a bounding box on the existing
+   * lat/lng index, then an exact haversine distance) -- nothing is fetched into Node to filter here.
+   */
+  async nearby(query, { userId = null } = {}) {
+    const { lat, lng, radiusKm, page, limit } = query;
+    const referenceDate = addDays(localToday(config.booking.businessTimezone), 1);
+    const { rows, total } = await hotelSearchRepository.curated({
+      lat, lng, radiusKm, referenceDate, userId, limit, offset: (page - 1) * limit,
+    });
+    return toPage(rows.map(toCuratedCard), total, page, limit);
+  },
+
+  /** The same teaser shape as `nearby`, but every published hotel is a candidate, ranked by rating. */
+  async handpicked(query, { userId = null } = {}) {
+    const { page, limit } = query;
+    const referenceDate = addDays(localToday(config.booking.businessTimezone), 1);
+    const { rows, total } = await hotelSearchRepository.curated({
+      referenceDate, userId, limit, offset: (page - 1) * limit,
+    });
+    return toPage(rows.map(toCuratedCard), total, page, limit);
   },
 
   /** Destination suggestions for the search box. The caller debounces; this only answers one request. */

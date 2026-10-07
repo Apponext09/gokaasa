@@ -41,6 +41,74 @@ export const hotelSearchRepository = {
   },
 
   /**
+   * One hotel-teaser query backing both "Hotels Near You" and "Handpicked Hotels": no stay/occupancy
+   * context is known (the homepage never asked for dates), so the price shown is the cheapest active rate
+   * for one representative night (`referenceDate`, normally tomorrow) rather than an availability-checked
+   * total -- the real, date-aware price is always recomputed on the hotel details / booking pages.
+   *
+   * Pass `lat`/`lng` for a true distance search (bounding box on the existing `hotels_geo_idx`, then an
+   * exact haversine distance, in plain SQL -- no PostGIS/earthdistance extension is installed). Omit them
+   * for "handpicked": every published hotel is a candidate, ordered by rating instead of distance.
+   */
+  async curated({ lat = null, lng = null, radiusKm = null, referenceDate, userId = null, limit, offset }) {
+    const { rows } = await pool.query(
+      `WITH base AS (
+         SELECT h.id, h.latitude, h.longitude FROM hotels h
+          WHERE h.status = 'PUBLISHED' AND h.deleted_at IS NULL
+            AND ($1::numeric IS NULL OR (
+                  h.latitude IS NOT NULL AND h.longitude IS NOT NULL
+                  AND h.latitude BETWEEN $1::numeric - ($3::numeric / 111.0) AND $1::numeric + ($3::numeric / 111.0)
+                  AND h.longitude BETWEEN $2::numeric - ($3::numeric / (111.320 * GREATEST(COS(RADIANS($1::numeric)), 0.01)))
+                                       AND $2::numeric + ($3::numeric / (111.320 * GREATEST(COS(RADIANS($1::numeric)), 0.01)))
+                ))
+       ),
+       distanced AS (
+         SELECT b.id,
+                CASE WHEN $1::numeric IS NULL THEN NULL ELSE
+                  ROUND((6371 * ACOS(LEAST(1, GREATEST(-1,
+                    COS(RADIANS($1::numeric)) * COS(RADIANS(b.latitude)) * COS(RADIANS(b.longitude) - RADIANS($2::numeric))
+                    + SIN(RADIANS($1::numeric)) * SIN(RADIANS(b.latitude))
+                  ))))::numeric, 1)
+                END AS distance_km
+           FROM base b
+       ),
+       within AS (
+         SELECT * FROM distanced WHERE $1::numeric IS NULL OR distance_km <= $3::numeric
+       ),
+       cheapest AS (
+         SELECT DISTINCT ON (rt.hotel_id) rt.hotel_id,
+                rpr.base_price_minor, rpr.discount_minor, rpr.final_price_minor
+           FROM room_types rt
+           JOIN within w ON w.id = rt.hotel_id
+           JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE' AND rp.deleted_at IS NULL
+           JOIN rate_prices rpr ON rpr.rate_plan_id = rp.id AND rpr.stay_date = $4::date
+          WHERE rt.status = 'ACTIVE' AND rt.deleted_at IS NULL
+          ORDER BY rt.hotel_id, rpr.final_price_minor ASC
+       )
+       SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
+              w.distance_km,
+              c.base_price_minor, c.discount_minor, c.final_price_minor,
+              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text)
+                 FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
+                ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
+              ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
+                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities,
+              (SELECT json_build_object('average', ROUND(AVG(r.rating)::numeric, 1), 'count', COUNT(*))
+                 FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED') AS internal_rating,
+              ($5::bigint IS NOT NULL AND EXISTS (SELECT 1 FROM wishlists ws WHERE ws.user_id = $5::bigint AND ws.hotel_id = h.id)) AS wishlisted,
+              COUNT(*) OVER ()::int AS total_count
+         FROM within w
+         JOIN hotels h ON h.id = w.id
+         LEFT JOIN cheapest c ON c.hotel_id = h.id
+        ORDER BY (CASE WHEN $1::numeric IS NULL THEN 0 ELSE w.distance_km END) ASC,
+                 h.guest_rating DESC NULLS LAST, h.review_count DESC, h.id ASC
+        LIMIT $6::int OFFSET $7::int`,
+      [lat, lng, radiusKm, referenceDate, userId, limit, offset],
+    );
+    return { rows, total: rows[0]?.total_count ?? 0 };
+  },
+
+  /**
    * @param {object} q
    *   cities: lowercased city names, or null for any city
    *   areas: lowercased area names, or null

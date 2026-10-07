@@ -24,6 +24,8 @@ export function HotelCard({ hotel, state }) {
   const hasDiscount = offer?.discountTotalMinor > 0;
   const originalPerNightMinor = hasDiscount ? Math.round(offer.baseTotalMinor / offer.nights) : null;
   const discountPercent = hasDiscount ? Math.round((offer.discountTotalMinor / offer.baseTotalMinor) * 100) : null;
+  // Amenities can repeat if a hotel was tagged with the same amenity under more than one provider label.
+  const amenities = [...new Set(hotel.amenities)].slice(0, 3);
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-shadow hover:shadow-md md:flex-row">
@@ -31,10 +33,16 @@ export function HotelCard({ hotel, state }) {
         <SafeImage
           src={hotel.image?.url}
           alt={hotel.image?.altText ?? hotel.name}
-          className="absolute inset-0"
+          className="absolute inset-0 transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 100vw"
           fallbackLabel={`${hotel.name}: photos coming soon`}
         />
+        {/* A fixed top-left slot, always the same badge, so the discount never competes for space with the other badges below. */}
+        {discountPercent > 0 && (
+          <div className="absolute left-3 top-3">
+            <Badge tone="premium">{discountPercent}% OFF</Badge>
+          </div>
+        )}
         <div className="absolute right-3 top-3">
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
@@ -62,8 +70,8 @@ export function HotelCard({ hotel, state }) {
               <span className="truncate">{place}</span>
             </p>
           </div>
-          {/* The provider's guest rating, where there is one. Otherwise Gokaasa's own guest reviews fill the gap rather than showing nothing. */}
-          {(hotel.guestRating != null || hotel.rating) && (
+          {/* The provider's guest rating, where there is one. Otherwise Gokaasa's own guest reviews fill the gap; with neither, "New" beats inventing a number. */}
+          {hotel.guestRating != null || hotel.rating ? (
             <div className="flex shrink-0 items-center gap-2">
               <span className="grid h-8 min-w-8 place-items-center rounded-md bg-brand-600 px-1.5 text-sm font-semibold text-white">
                 {(hotel.guestRating ?? hotel.rating.average).toFixed(1)}
@@ -74,12 +82,14 @@ export function HotelCard({ hotel, state }) {
                 <span className="text-xs text-[var(--text-muted)]">{hotel.rating.count.toLocaleString('en-IN')} Gokaasa review{hotel.rating.count === 1 ? '' : 's'}</span>
               )}
             </div>
+          ) : (
+            <Badge tone="neutral" className="shrink-0">New</Badge>
           )}
         </div>
 
-        {hotel.amenities.length > 0 && (
+        {amenities.length > 0 && (
           <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
-            {hotel.amenities.slice(0, 3).map((name) => (
+            {amenities.map((name) => (
               <li key={name} className="flex items-center gap-1">
                 <Check className="h-3.5 w-3.5 text-success-600" aria-hidden="true" /> {name}
               </li>
@@ -105,7 +115,6 @@ export function HotelCard({ hotel, state }) {
                 </Badge>
               )}
               {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <Badge tone="warning">Only {offer.roomsLeft} left</Badge>}
-              {discountPercent > 0 && <Badge tone="premium">{discountPercent}% off</Badge>}
             </div>
 
             <div className="flex flex-wrap items-end justify-between gap-4">

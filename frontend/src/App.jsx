@@ -6,6 +6,10 @@ import { Button } from '@/components/ui/button.jsx';
 import { HomePage } from '@/pages/customer/HomePage.jsx';
 import { DestinationsPage } from '@/pages/customer/DestinationsPage.jsx';
 import { WishlistPage } from '@/pages/customer/WishlistPage.jsx';
+import { NearbyHotelsPage } from '@/pages/customer/NearbyHotelsPage.jsx';
+import { AboutPage } from '@/pages/customer/AboutPage.jsx';
+import { ContactPage } from '@/pages/customer/ContactPage.jsx';
+import { ProfilePage } from '@/pages/customer/ProfilePage.jsx';
 import { SearchResultsPage } from '@/pages/customer/SearchResultsPage.jsx';
 import { HotelDetailsPage } from '@/pages/customer/HotelDetailsPage.jsx';
 import { GuestDetailsPage } from '@/pages/customer/booking/GuestDetailsPage.jsx';
@@ -52,10 +56,14 @@ export function App() {
         <Route path="register" element={<RegisterPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="destinations" element={<DestinationsPage />} />
+        <Route path="about" element={<AboutPage />} />
+        <Route path="contact" element={<ContactPage />} />
+        {/* Static segments ("nearby") must be declared before the dynamic ":destination", otherwise it is read as one. */}
+        <Route path="hotels/nearby" element={<NearbyHotelsPage />} />
         <Route path="hotels/:destination" element={<SearchResultsPage />} />
         <Route path="hotels/:citySlug/:hotelSlug" element={<HotelDetailsPage />} />
 
-        {/* Booking, My Trips and the wishlist belong to a signed-in guest. Signed-out visitors go to sign-in and come back here. */}
+        {/* Booking, My Trips, the wishlist and the profile belong to a signed-in guest. Signed-out visitors go to sign-in and come back here. */}
         <Route element={<RequireAuth />}>
           <Route path="booking/guest-details" element={<GuestDetailsPage />} />
           <Route path="booking/review" element={<BookingReviewPage />} />
@@ -63,6 +71,7 @@ export function App() {
           <Route path="my-trips" element={<MyTripsPage />} />
           <Route path="my-trips/:bookingId" element={<BookingDetailsPage />} />
           <Route path="wishlist" element={<WishlistPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<NotFoundPage />} />
