@@ -61,11 +61,13 @@ export const adminApi = {
   assignManager: (id, userId) => api.post(`/admin/hotels/${id}/managers`, { userId }).then((r) => r.data.managers),
   unassignManager: (id, userId) => api.delete(`/admin/hotels/${id}/managers/${userId}`).then((r) => r.data.managers),
   listManagers: (params) => api.get('/admin/managers', { params }).then((r) => r.data.managers),
+  getManager: (userId) => api.get(`/admin/managers/${userId}`).then((r) => r.data.manager),
 
   // Bookings, payments, refunds (platform-wide, scoped server-side for a hotel manager)
   listBookings: (params) => api.get('/admin/bookings', { params }).then((r) => r.data),
   getBooking: (id) => api.get(`/admin/bookings/${id}`).then((r) => r.data.booking),
   cancelBooking: (id, body) => api.post(`/admin/bookings/${id}/cancel`, body).then((r) => r.data.booking),
+  invoiceBlob: (id) => api.get(`/admin/bookings/${id}/invoice`, { responseType: 'blob' }).then((r) => r.data),
   listPayments: (params) => api.get('/admin/payments', { params }).then((r) => r.data),
   listRefunds: (params) => api.get('/admin/refunds', { params }).then((r) => r.data),
 
@@ -79,6 +81,18 @@ export const adminApi = {
   // Reviews moderation (ADMIN sees every hotel; a HOTEL_MANAGER is scoped server-side to their own)
   listReviews: (params) => api.get('/admin/reviews', { params }).then((r) => r.data),
   moderateReview: (id, action, reason) => api.post(`/admin/reviews/${id}/moderate`, { action, reason }).then((r) => r.data.review),
+
+  // Global search (command palette) and operational reports
+  search: (q, { signal } = {}) => api.get('/admin/search', { params: { q }, signal }).then((r) => r.data.items),
+  hotelPerformance: (params) => api.get('/admin/reports/hotel-performance', { params }).then((r) => r.data),
+  dashboardAlerts: () => api.get('/admin/dashboard/alerts').then((r) => r.data.alerts),
+
+  // CSV exports -- each returns a Blob the caller saves as a file; same filters as the matching list endpoint.
+  exportCsv: (entity, params) => api.get(`/admin/exports/${entity}`, { params, responseType: 'blob' }).then((r) => r.data),
+
+  // Settings (ADMIN can write; HOTEL_MANAGER can read)
+  getSettings: () => api.get('/admin/settings').then((r) => r.data),
+  updateSettings: (body) => api.patch('/admin/settings', body).then((r) => r.data),
 };
 
 /** Room inventory: room types, room images, rate plans, cancellation policies, calendar and blocks. */

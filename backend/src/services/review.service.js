@@ -9,6 +9,9 @@ import { auditService } from './audit.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { AppError } from '../utils/AppError.js';
 import { toPage } from './presenters.js';
+import { toCsv } from '../utils/csv.js';
+
+const EXPORT_CAP = 5000;
 
 /** A stay counts as "completed" exactly the way My Trips' Completed tab already does: confirmed, check-out passed. */
 function isCompletedStay(booking, today) {
@@ -171,6 +174,20 @@ export const reviewService = {
     const hotelIds = await hotelScopeFor(actor);
     const { rows, total } = await reviewRepository.listForModeration(query, hotelIds);
     return toPage(rows.map(toModerationRow), total, query.page, query.limit);
+  },
+
+  /** Same filters and scoping as `listForModeration`, just every matching row (up to a safety cap) instead of one page. */
+  async exportReviews(query, actor) {
+    const hotelIds = await hotelScopeFor(actor);
+    const { rows } = await reviewRepository.listForModeration({ ...query, page: 1, limit: EXPORT_CAP }, hotelIds);
+    const items = rows.map(toModerationRow);
+    return toCsv(items, [
+      { key: 'hotelName', header: 'Hotel' }, { key: 'bookingRef', header: 'Booking Ref' },
+      { key: 'reviewer.name', header: 'Guest' }, { key: 'reviewer.email', header: 'Email' },
+      { key: 'rating', header: 'Rating' }, { key: 'title', header: 'Title' }, { key: 'body', header: 'Review' },
+      { key: 'status', header: 'Status' }, { key: 'moderationReason', header: 'Moderation Reason' },
+      { key: 'moderatedAt', header: 'Moderated At' }, { key: 'createdAt', header: 'Created' },
+    ]);
   },
 
   /** ADMIN only, enforced by the route (authorize('ADMIN')) -- a HOTEL_MANAGER never reaches here. */

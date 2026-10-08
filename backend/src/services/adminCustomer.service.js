@@ -1,8 +1,12 @@
 import { hotelRepository } from '../repositories/hotel.repository.js';
 import { adminCustomerRepository } from '../repositories/adminCustomer.repository.js';
 import { adminBookingService } from './adminBooking.service.js';
+import { reviewService } from './review.service.js';
 import { AppError } from '../utils/AppError.js';
 import { toPage } from './presenters.js';
+import { toCsv } from '../utils/csv.js';
+
+const EXPORT_CAP = 5000;
 
 async function hotelScopeFor(actor) {
   if (actor.roles.includes('ADMIN')) return null;
@@ -44,11 +48,15 @@ export const adminCustomerService = {
     }
 
     const listArgs = { customerId, page: 1, limit: 50, sort: 'created_desc' };
-    const [bookings, payments, refunds] = await Promise.all([
+    const [bookings, payments, refunds, reviews] = await Promise.all([
       adminBookingService.list(listArgs, actor),
       adminBookingService.listPayments(listArgs, actor),
       adminBookingService.listRefunds(listArgs, actor),
+      reviewService.listMine(customerId),
     ]);
+    // A manager sees this customer only because of a booking at one of their own hotels -- their reviews
+    // at OTHER hotels are not this manager's business, so the same scope applies here too.
+    const scopedReviews = hotelIds == null ? reviews : reviews.filter((review) => hotelIds.includes(review.hotelId));
 
     return {
       id: customer.id,
@@ -60,6 +68,19 @@ export const adminCustomerService = {
       bookings: bookings.items,
       payments: payments.items,
       refunds: refunds.items,
+      reviews: scopedReviews,
     };
+  },
+
+  /** Same filters and scoping as `list`, just every matching row (up to a safety cap) instead of one page. */
+  async exportCustomers(query, actor) {
+    const hotelIds = await hotelScopeFor(actor);
+    const { rows } = await adminCustomerRepository.list({ ...query, page: 1, limit: EXPORT_CAP }, hotelIds);
+    const items = rows.map(toCustomerRow).map((row) => ({ ...row, totalSpendRupees: (row.totalSpendMinor / 100).toFixed(2) }));
+    return toCsv(items, [
+      { key: 'name', header: 'Customer' }, { key: 'email', header: 'Email' }, { key: 'phone', header: 'Phone' },
+      { key: 'bookingsCount', header: 'Bookings' }, { key: 'totalSpendRupees', header: 'Total Spend (INR)' },
+      { key: 'lastBookingAt', header: 'Last Booking' }, { key: 'joinedAt', header: 'Joined' },
+    ]);
   },
 };

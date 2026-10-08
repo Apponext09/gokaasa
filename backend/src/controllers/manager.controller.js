@@ -20,4 +20,8 @@ export const managerController = {
   async listManagers(req, res) {
     return res.json({ managers: await managerService.listManagers(req.validated.query) });
   },
+
+  async detail(req, res) {
+    return res.json({ manager: await managerService.detail(req.validated.params.userId) });
+  },
 };

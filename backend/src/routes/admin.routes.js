@@ -51,7 +51,11 @@ import {
   roomTypeListQuery,
   roomTypeUpdateSchema,
 } from '../validators/inventory.validator.js';
-import { managerAssignSchema, managerListQuery } from '../validators/manager.validator.js';
+import { managerAssignSchema, managerIdParam, managerListQuery } from '../validators/manager.validator.js';
+import { adminSearchController } from '../controllers/adminSearch.controller.js';
+import { adminSearchQuery } from '../validators/adminSearch.validator.js';
+import { settingsController } from '../controllers/settings.controller.js';
+import { settingsUpdateSchema } from '../validators/settings.validator.js';
 import { managerController } from '../controllers/manager.controller.js';
 import { adminBookingController } from '../controllers/adminBooking.controller.js';
 import { adminCustomerController } from '../controllers/adminCustomer.controller.js';
@@ -67,6 +71,7 @@ import {
   adminCustomerListQuery,
   auditLogQuery,
   dashboardTrendsQuery,
+  hotelPerformanceQuery,
 } from '../validators/adminBooking.validator.js';
 
 /**
@@ -83,8 +88,15 @@ adminRouter.use(staff);
 
 adminRouter.get('/dashboard/summary', hotelController.dashboard);
 adminRouter.get('/dashboard/trends', validate({ query: dashboardTrendsQuery }), hotelController.dashboardTrends);
+adminRouter.get('/reports/hotel-performance', validate({ query: hotelPerformanceQuery }), hotelController.hotelPerformance);
+adminRouter.get('/dashboard/alerts', hotelController.dashboardAlerts);
+adminRouter.get('/search', validate({ query: adminSearchQuery }), adminSearchController.search);
+
+adminRouter.get('/settings', settingsController.get);
+adminRouter.patch('/settings', validate({ body: settingsUpdateSchema }), authorize('ADMIN'), settingsController.update);
 
 adminRouter.get('/hotels', validate({ query: adminHotelListQuery }), hotelController.listAdmin);
+adminRouter.get('/exports/hotels', validate({ query: adminHotelListQuery }), hotelController.exportHotelsCsv);
 adminRouter.post('/hotels', validate({ body: hotelCreateSchema }), hotelController.createManual);
 adminRouter.get('/hotels/:id', validate({ params: idParam }), requireHotelAccess(hotelIdFromParam), hotelController.getAdmin);
 adminRouter.patch('/hotels/:id', validate({ params: idParam, body: hotelUpdateSchema }), requireHotelAccess(hotelIdFromParam), hotelController.update);
@@ -121,6 +133,7 @@ adminRouter.delete(
   managerController.unassign,
 );
 adminRouter.get('/managers', validate({ query: managerListQuery }), authorize('ADMIN'), managerController.listManagers);
+adminRouter.get('/managers/:userId', validate({ params: managerIdParam }), authorize('ADMIN'), managerController.detail);
 
 // Verification and provider reconciliation
 adminRouter.post(
@@ -332,6 +345,7 @@ adminRouter.delete('/availability-blocks/:id', validate({ params: blockParam }),
 // Bookings, payments and refunds: platform-wide visibility. ADMIN sees everything; HOTEL_MANAGER is
 // scoped to its assigned hotels inside the service layer (list/detail queries filter by hotel_managers).
 adminRouter.get('/bookings', validate({ query: adminBookingListQuery }), adminBookingController.list);
+adminRouter.get('/exports/bookings', validate({ query: adminBookingListQuery }), adminBookingController.exportBookingsCsv);
 adminRouter.get('/bookings/:id', validate({ params: adminBookingIdParam }), adminBookingController.detail);
 adminRouter.get('/bookings/:id/invoice', validate({ params: adminBookingIdParam }), adminBookingController.downloadInvoice);
 adminRouter.post(
@@ -340,10 +354,13 @@ adminRouter.post(
   adminBookingController.cancel,
 );
 adminRouter.get('/payments', validate({ query: adminPaymentListQuery }), adminBookingController.listPayments);
+adminRouter.get('/exports/payments', validate({ query: adminPaymentListQuery }), adminBookingController.exportPaymentsCsv);
 adminRouter.get('/refunds', validate({ query: adminRefundListQuery }), adminBookingController.listRefunds);
+adminRouter.get('/exports/refunds', validate({ query: adminRefundListQuery }), adminBookingController.exportRefundsCsv);
 
 // Customers. Platform-wide; HOTEL_MANAGER sees only customers who have booked one of its hotels.
 adminRouter.get('/customers', validate({ query: adminCustomerListQuery }), adminCustomerController.list);
+adminRouter.get('/exports/customers', validate({ query: adminCustomerListQuery }), adminCustomerController.exportCsv);
 adminRouter.get('/customers/:id', validate({ params: adminCustomerIdParam }), adminCustomerController.detail);
 
 // Audit log viewer. ADMIN only — it can reveal other staff members' actions across every hotel.
@@ -352,4 +369,5 @@ adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), authorize('AD
 // Reviews moderation. HOTEL_MANAGER gets read-only visibility into its own hotels (scoped in the service,
 // same hotel_managers table as everything else); only ADMIN may change a review's status.
 adminRouter.get('/reviews', validate({ query: adminReviewListQuery }), reviewController.listForModeration);
+adminRouter.get('/exports/reviews', validate({ query: adminReviewListQuery }), reviewController.exportReviewsCsv);
 adminRouter.post('/reviews/:id/moderate', validate({ params: reviewIdParam, body: moderateSchema }), authorize('ADMIN'), reviewController.moderate);

@@ -47,11 +47,23 @@ export const auditLogQuery = z.object({
   ...pagination,
   entity: z.string().trim().max(60).optional(),
   action: z.string().trim().max(80).optional(),
+  entityId: z.string().trim().max(40).optional(),
   actorId: positiveId.optional(),
+  q: z.string().trim().max(100).optional(),
   from: isoDate.optional(),
   to: isoDate.optional(),
 });
 
 export const dashboardTrendsQuery = z
   .object({ from: isoDate, to: isoDate })
+  .refine((value) => value.to >= value.from, { path: ['to'], message: 'End date must be on or after the start date' });
+
+export const hotelPerformanceQuery = z
+  .object({
+    from: isoDate,
+    to: isoDate,
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    sort: z.enum(['revenue_desc', 'bookings_desc', 'rating_desc']).default('revenue_desc'),
+  })
   .refine((value) => value.to >= value.from, { path: ['to'], message: 'End date must be on or after the start date' });

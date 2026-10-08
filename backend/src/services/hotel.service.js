@@ -16,6 +16,9 @@ import { slugify } from '../utils/slug.js';
 import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
 import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
 import { notificationService } from '../notifications/notificationService.js';
+import { toCsv } from '../utils/csv.js';
+
+const EXPORT_CAP = 5000;
 
 
 // Only ADMIN may release or withdraw a hotel. HOTEL_MANAGER can prepare and submit drafts.
@@ -97,6 +100,19 @@ export const hotelService = {
     const managerUserId = actor?.roles.includes('ADMIN') ? null : actor?.id ?? null;
     const { rows, total } = await hotelRepository.list(query, { managerUserId });
     return toPage(rows.map((row) => toHotelSummary(row, { includeInternal: true })), total, query.page, query.limit);
+  },
+
+  /** Same filters and scoping as `listAdmin`, just every matching row (up to a safety cap) instead of one page. */
+  async exportHotels(query, actor) {
+    const managerUserId = actor?.roles.includes('ADMIN') ? null : actor?.id ?? null;
+    const { rows } = await hotelRepository.list({ ...query, page: 1, limit: EXPORT_CAP }, { managerUserId });
+    const items = rows.map((row) => toHotelSummary(row, { includeInternal: true }));
+    return toCsv(items, [
+      { key: 'name', header: 'Hotel' }, { key: 'propertyType', header: 'Type' }, { key: 'starRating', header: 'Stars' },
+      { key: 'city', header: 'City' }, { key: 'countryCode', header: 'Country' }, { key: 'status', header: 'Status' },
+      { key: 'guestRating', header: 'Rating' }, { key: 'reviewCount', header: 'Reviews' }, { key: 'roomTypeCount', header: 'Room Types' },
+      { key: 'createdAt', header: 'Created' }, { key: 'updatedAt', header: 'Updated' },
+    ]);
   },
 
   async getAdmin(id) {

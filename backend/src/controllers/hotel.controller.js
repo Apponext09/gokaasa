@@ -3,6 +3,7 @@ import { hotelImportService } from '../services/hotelImport.service.js';
 import { dashboardService } from '../services/dashboard.service.js';
 import { getActiveProviders, describeProviders } from '../providers/index.js';
 import { pool } from '../db/pool.js';
+import { sendCsv } from '../utils/csv.js';
 
 /** Actor for audit logging and ownership columns, taken from the verified token only. */
 function actorOf(req) {
@@ -27,6 +28,10 @@ export const hotelController = {
   // Admin: hotel management
   async listAdmin(req, res) {
     return res.json(await hotelService.listAdmin(req.validated.query, req.user));
+  },
+
+  async exportHotelsCsv(req, res) {
+    return sendCsv(res, 'hotels.csv', await hotelService.exportHotels(req.validated.query, req.user));
   },
 
   async getAdmin(req, res) {
@@ -85,5 +90,13 @@ export const hotelController = {
 
   async dashboardTrends(req, res) {
     return res.json(await dashboardService.trends(req.validated.query, req.user));
+  },
+
+  async hotelPerformance(req, res) {
+    return res.json(await dashboardService.hotelPerformance(req.validated.query, req.user));
+  },
+
+  async dashboardAlerts(req, res) {
+    return res.json(await dashboardService.alerts(req.user));
   },
 };

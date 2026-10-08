@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Star } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, PageHeader, formatMoney } from '@/components/shared/index.jsx';
@@ -33,6 +33,12 @@ export function CustomerDetailPage() {
     <div className="space-y-6">
       <Link to="/admin/customers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to customers</Link>
       <PageHeader title={customer.name || customer.email} description={customer.email} actions={!customer.isActive && <Badge tone="danger">Inactive</Badge>} />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Bookings</p><p className="text-xl font-semibold text-[var(--text-strong)]">{customer.bookings.length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Total spend</p><p className="text-xl font-semibold text-[var(--text-strong)]">{formatMoney(customer.bookings.reduce((sum, b) => sum + b.amounts.paid, 0))}</p></Card>
+        <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Last booking</p><p className="text-xl font-semibold text-[var(--text-strong)]">{customer.bookings[0] ? new Date(customer.bookings[0].createdAt).toLocaleDateString('en-IN') : '—'}</p></Card>
+      </div>
 
       <Card>
         <CardHeader><CardTitle>Profile</CardTitle></CardHeader>
@@ -81,6 +87,33 @@ export function CustomerDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader><CardTitle>Reviews</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          {customer.reviews.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">No reviews written yet.</p>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {customer.reviews.map((review) => (
+                <div key={review.id} className="py-3 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium text-[var(--text-strong)]">{review.hotelName}</span>
+                    <Badge tone={review.status === 'APPROVED' ? 'success' : review.status === 'REJECTED' ? 'danger' : 'neutral'}>{review.status}</Badge>
+                  </div>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-[var(--text-muted)]">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} className={`h-3 w-3 ${i < review.rating ? 'fill-accent-500 text-accent-500' : 'text-[var(--border-subtle)]'}`} aria-hidden="true" />
+                    ))}
+                  </p>
+                  {review.title && <p className="mt-1 font-medium text-[var(--text-strong)]">{review.title}</p>}
+                  <p className="text-[var(--text-body)]">{review.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

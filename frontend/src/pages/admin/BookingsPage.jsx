@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarCheck, Search } from 'lucide-react';
+import { CalendarCheck, Download, Search } from 'lucide-react';
 import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
+import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney } from '@/components/shared/index.jsx';
 import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { downloadBlob } from '@/lib/utils.js';
 
 const STATUS_OPTIONS = Object.keys(BOOKING_STATUS_LABEL);
 
@@ -59,10 +61,27 @@ export function BookingsPage() {
   }, [filters.q, filters.status, filters.sort, filters.page]);
 
   const hasFilters = Boolean(filters.q || filters.status);
+  const [exporting, setExporting] = useState(false);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const blob = await adminApi.exportCsv('bookings', { ...(filters.q && { q: filters.q }), ...(filters.status && { status: filters.status }) });
+      downloadBlob(blob, 'bookings.csv');
+    } catch (err) {
+      setError(normalizeError(err).message);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Bookings" description="Every booking across your hotels, with its current payment and booking status." />
+      <PageHeader
+        title="Bookings"
+        description="Every booking across your hotels, with its current payment and booking status."
+        actions={<Button variant="secondary" size="sm" onClick={exportCsv} loading={exporting}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Export CSV</Button>}
+      />
 
       <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
         <div className="relative sm:col-span-2">

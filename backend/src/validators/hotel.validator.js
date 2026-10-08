@@ -71,10 +71,11 @@ export const adminHotelListQuery = z.object({
   countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/).optional(),
   starRating: z.coerce.number().int().min(1).max(5).optional(),
   propertyType: z.enum(PROPERTY_TYPES).optional(),
+  managerId: z.coerce.number().int().positive().optional(),
   sort: z.enum(SORT_KEYS).default('updated_desc'),
 });
 
-export const publicHotelListQuery = adminHotelListQuery.omit({ status: true });
+export const publicHotelListQuery = adminHotelListQuery.omit({ status: true, managerId: true });
 
 export const idParam = z.object({
   id: z.string().regex(/^\d+$/, 'Invalid id').transform(Number),

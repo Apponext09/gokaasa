@@ -7,7 +7,7 @@ function toRow(row) {
     action: row.action,
     entity: row.entity,
     entityId: row.entity_id,
-    actor: row.first_name ? { name: [row.first_name, row.last_name].filter(Boolean).join(' '), email: row.email } : null,
+    actor: row.first_name ? { name: [row.first_name, row.last_name].filter(Boolean).join(' '), email: row.email, roles: row.actor_roles ?? [] } : null,
     oldValue: row.old_value,
     newValue: row.new_value,
     ipAddress: row.ip_address,

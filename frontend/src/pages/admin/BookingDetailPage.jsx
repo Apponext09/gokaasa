@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
@@ -8,7 +8,41 @@ import { EmptyState, PageHeader, formatMoney, formatDateTime } from '@/component
 import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { downloadBlob } from '@/lib/utils.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { toast } from 'sonner';
+
+function ActivityTimeline({ entity, entityId }) {
+  const [entries, setEntries] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    adminApi
+      .listAuditLogs({ entity, entityId, limit: 10 })
+      .then((result) => !cancelled && setEntries(result.items))
+      .catch(() => !cancelled && setEntries([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [entity, entityId]);
+
+  if (entries === null) return <Skeleton className="h-24 w-full" />;
+  if (entries.length === 0) return <p className="text-sm text-[var(--text-muted)]">No recorded activity yet.</p>;
+
+  return (
+    <ol className="space-y-3">
+      {entries.map((entry) => (
+        <li key={entry.id} className="flex gap-3 text-sm">
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-600" aria-hidden="true" />
+          <div>
+            <p className="font-medium text-[var(--text-strong)]">{entry.action.replaceAll('.', ' ').replaceAll('_', ' ')}</p>
+            <p className="text-xs text-[var(--text-muted)]">{entry.actor ? entry.actor.name : 'System'} · {formatDateTime(entry.createdAt)}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 function Row({ label, value }) {
   return (
@@ -22,10 +56,12 @@ function Row({ label, value }) {
 export function BookingDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
 
   const load = () => {
     setError(null);
@@ -67,6 +103,18 @@ export function BookingDetailPage() {
 
   const canCancel = booking.status === 'CONFIRMED';
 
+  const downloadInvoice = async () => {
+    setDownloadingInvoice(true);
+    try {
+      const blob = await adminApi.invoiceBlob(id);
+      downloadBlob(blob, `${booking.bookingRef}-invoice.pdf`);
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Link to="/admin/bookings" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to bookings</Link>
@@ -76,12 +124,22 @@ export function BookingDetailPage() {
         actions={
           <>
             <Badge tone={BOOKING_STATUS_LABEL[booking.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[booking.status]?.label ?? booking.status}</Badge>
+            <Button variant="secondary" size="sm" onClick={downloadInvoice} loading={downloadingInvoice}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Invoice</Button>
             {canCancel && <Button variant="danger-outline" size="sm" onClick={() => setCancelOpen(true)}>Cancel booking</Button>}
           </>
         }
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Hotel</CardTitle></CardHeader>
+          <CardContent className="space-y-1 pt-0">
+            <Row label="Name" value={booking.hotel.name} />
+            <Row label="City" value={booking.hotel.city} />
+            {booking.hotel.address && <Row label="Address" value={booking.hotel.address} />}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle>Customer</CardTitle></CardHeader>
           <CardContent className="space-y-1 pt-0">
@@ -135,6 +193,15 @@ export function BookingDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader><CardTitle>Activity</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <ActivityTimeline entity="booking" entityId={booking.id} />
+          </CardContent>
+        </Card>
+      )}
 
       <ConfirmDialog
         open={cancelOpen}

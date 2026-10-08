@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Users } from 'lucide-react';
+import { Download, Search, Users } from 'lucide-react';
 import { Card, Skeleton, Alert } from '@/components/ui/surfaces.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
+import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { downloadBlob } from '@/lib/utils.js';
 
 export function CustomersPage() {
   const [params, setParams] = useSearchParams();
@@ -41,9 +43,26 @@ export function CustomersPage() {
     return () => { cancelled = true; };
   }, [q, page]);
 
+  const [exporting, setExporting] = useState(false);
+  const exportCsv = async () => {
+    setExporting(true);
+    try {
+      const blob = await adminApi.exportCsv('customers', { ...(q && { q }) });
+      downloadBlob(blob, 'customers.csv');
+    } catch (err) {
+      setError(normalizeError(err).message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Customers" description="Guests who have booked at your hotels." />
+      <PageHeader
+        title="Customers"
+        description="Guests who have booked at your hotels."
+        actions={<Button variant="secondary" size="sm" onClick={exportCsv} loading={exporting}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Export CSV</Button>}
+      />
 
       <Card className="p-4">
         <div className="relative max-w-md">

@@ -188,4 +188,101 @@ export const dashboardService = {
       topHotels: topHotels.map((row) => ({ id: row.id, name: row.name, city: row.city, bookings: row.bookings, revenueMinor: Number(row.revenue_minor) })),
     };
   },
+
+  /**
+   * The full, paginated/sortable version of `trends().topHotels` (which is capped at a top-5 widget).
+   * Same scoping, same date range and revenue definition -- just every hotel, not only the top 5.
+   */
+  async hotelPerformance({ from, to, page, limit, sort }, actor) {
+    const managerUserId = managerScopeOf(actor);
+    const hotelIds = managerUserId == null ? null : await hotelRepository.managedHotelIds(managerUserId);
+    const scopedTo = (hotelIds ?? []).length === 0 && managerUserId != null;
+    const hotelArray = scopedTo ? [-1] : hotelIds;
+
+    const ORDER_SQL = {
+      revenue_desc: 'revenue_minor DESC, bookings DESC',
+      bookings_desc: 'bookings DESC, revenue_minor DESC',
+      rating_desc: 'guest_rating DESC NULLS LAST, revenue_minor DESC',
+    };
+
+    const params = [from, to];
+    const filter = hotelIdFilter('h.id', hotelArray, params);
+    params.push(limit, (page - 1) * limit);
+    const { rows } = await pool.query(
+      `SELECT h.id, h.name, h.city, h.star_rating, h.guest_rating, h.review_count,
+              COUNT(b.id)::int AS bookings,
+              COALESCE(SUM(b.total_minor), 0)::bigint AS revenue_minor,
+              COUNT(*) OVER()::int AS total_count
+         FROM hotels h
+         LEFT JOIN bookings b ON b.hotel_id = h.id AND b.status NOT IN ('INITIATED', 'FAILED')
+           AND b.created_at >= $1::date AND b.created_at < ($2::date + interval '1 day')
+        WHERE h.deleted_at IS NULL ${filter}
+        GROUP BY h.id, h.name, h.city, h.star_rating, h.guest_rating, h.review_count
+        ORDER BY ${ORDER_SQL[sort] ?? ORDER_SQL.revenue_desc}
+        LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params,
+    );
+    const total = rows[0]?.total_count ?? 0;
+    return {
+      range: { from, to },
+      items: rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        city: row.city,
+        starRating: row.star_rating,
+        guestRating: row.guest_rating == null ? null : Number(row.guest_rating),
+        reviewCount: row.review_count,
+        bookings: row.bookings,
+        revenueMinor: Number(row.revenue_minor),
+      })),
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
+  },
+
+  /** Real, clickable operational alerts -- every count is a live query, scoped the same way everything else is. */
+  async alerts(actor) {
+    const managerUserId = managerScopeOf(actor);
+    const hotelIds = managerUserId == null ? null : await hotelRepository.managedHotelIds(managerUserId);
+    const scopedTo = (hotelIds ?? []).length === 0 && managerUserId != null;
+    const hotelArray = scopedTo ? [-1] : hotelIds;
+
+    const reviewParams = [];
+    const reviewFilter = hotelIdFilter('hotel_id', hotelArray, reviewParams);
+    const pendingReviews = await pool
+      .query(`SELECT COUNT(*)::int AS n FROM reviews WHERE status = 'PENDING' ${reviewFilter}`, reviewParams)
+      .then((r) => r.rows[0].n);
+
+    const refundParams = [];
+    const refundFilter = hotelIdFilter('b.hotel_id', hotelArray, refundParams);
+    const pendingRefunds = await pool
+      .query(
+        `SELECT COUNT(*)::int AS n FROM refunds r JOIN bookings b ON b.id = r.booking_id
+          WHERE r.status IN ('PENDING', 'PROCESSING') ${refundFilter}`,
+        refundParams,
+      )
+      .then((r) => r.rows[0].n);
+
+    const hotelParams = [];
+    const hotelFilter = hotelIdFilter('h.id', hotelArray, hotelParams);
+    const hotelsPendingApproval = await pool
+      .query(`SELECT COUNT(*)::int AS n FROM hotels h WHERE h.deleted_at IS NULL AND h.status = 'PENDING_REVIEW' ${hotelFilter}`, hotelParams)
+      .then((r) => r.rows[0].n);
+
+    const blockParams = [];
+    const blockFilter = hotelIdFilter('rt.hotel_id', hotelArray, blockParams);
+    const blocksEndingToday = await pool
+      .query(
+        `SELECT COUNT(*)::int AS n FROM availability_blocks ab JOIN room_types rt ON rt.id = ab.room_type_id
+          WHERE ab.is_active AND ab.end_date = CURRENT_DATE ${blockFilter}`,
+        blockParams,
+      )
+      .then((r) => r.rows[0].n);
+
+    const alerts = [];
+    if (pendingReviews > 0) alerts.push({ type: 'reviews_pending', count: pendingReviews, message: `${pendingReviews} review${pendingReviews === 1 ? '' : 's'} awaiting moderation`, href: '/admin/reviews?status=PENDING' });
+    if (pendingRefunds > 0) alerts.push({ type: 'refunds_pending', count: pendingRefunds, message: `${pendingRefunds} refund request${pendingRefunds === 1 ? '' : 's'} in progress`, href: '/admin/refunds?status=PENDING' });
+    if (hotelsPendingApproval > 0) alerts.push({ type: 'hotels_pending', count: hotelsPendingApproval, message: `${hotelsPendingApproval} hotel${hotelsPendingApproval === 1 ? '' : 's'} pending approval`, href: '/admin/hotels?status=PENDING_REVIEW' });
+    if (blocksEndingToday > 0) alerts.push({ type: 'blocks_ending', count: blocksEndingToday, message: `${blocksEndingToday} inventory block${blocksEndingToday === 1 ? '' : 's'} ending today`, href: null });
+    return { alerts };
+  },
 };

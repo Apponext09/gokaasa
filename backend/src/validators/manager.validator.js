@@ -7,3 +7,7 @@ export const managerAssignSchema = z.object({
 export const managerListQuery = z.object({
   q: z.string().trim().max(100).optional(),
 });
+
+export const managerIdParam = z.object({
+  userId: z.coerce.number().int().positive(),
+});

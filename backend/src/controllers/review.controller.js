@@ -1,6 +1,7 @@
 import { reviewService } from '../services/review.service.js';
 import { hotelRepository } from '../repositories/hotel.repository.js';
 import { AppError } from '../utils/AppError.js';
+import { sendCsv } from '../utils/csv.js';
 
 function actorOf(req) {
   return { id: req.user.id, roles: req.user.roles, ip: req.ip };
@@ -42,6 +43,10 @@ export const reviewController = {
   // Admin / hotel manager
   async listForModeration(req, res) {
     return res.json(await reviewService.listForModeration(req.validated.query, actorOf(req)));
+  },
+
+  async exportReviewsCsv(req, res) {
+    return sendCsv(res, 'reviews.csv', await reviewService.exportReviews(req.validated.query, actorOf(req)));
   },
 
   async moderate(req, res) {

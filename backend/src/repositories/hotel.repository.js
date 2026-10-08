@@ -38,6 +38,10 @@ function buildFilters(filters, { publicOnly, managerUserId }) {
   if (managerUserId != null) {
     clauses.push(`EXISTS (SELECT 1 FROM hotel_managers hm WHERE hm.hotel_id = h.id AND hm.user_id = ${param(managerUserId)})`);
   }
+  // Separate from managerUserId above: that's the viewer's OWN scoping, this is an arbitrary admin-chosen filter.
+  if (filters.managerId) {
+    clauses.push(`EXISTS (SELECT 1 FROM hotel_managers hm WHERE hm.hotel_id = h.id AND hm.user_id = ${param(filters.managerId)})`);
+  }
   if (filters.q) {
     const pattern = param(`%${escapeLike(filters.q)}%`);
     clauses.push(`(h.name ILIKE ${pattern} OR h.city ILIKE ${pattern})`);

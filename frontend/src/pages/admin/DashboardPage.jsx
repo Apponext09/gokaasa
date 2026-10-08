@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Building2, CalendarCheck, IndianRupee, Timer, Users, BedDouble, Search, ClipboardCheck, CircleAlert, Rocket, TrendingUp } from 'lucide-react';
+import { Building2, CalendarCheck, IndianRupee, Timer, Users, BedDouble, Search, ClipboardCheck, CircleAlert, Rocket, TrendingUp, Bell } from 'lucide-react';
 import { Alert, Badge, Card, CardContent, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { PageHeader, formatMoney } from '@/components/shared/index.jsx';
@@ -38,6 +38,7 @@ const RANGES = [
   { key: '7d', label: '7 Days', days: 6 },
   { key: '30d', label: '30 Days', days: 29 },
   { key: '90d', label: '90 Days', days: 89 },
+  { key: '12m', label: '12 Months', days: 364 },
 ];
 
 function isoDaysAgo(days) {
@@ -83,9 +84,11 @@ export function DashboardPage() {
   const [rangeKey, setRangeKey] = useState('30d');
   const [trends, setTrends] = useState(null);
   const [trendsError, setTrendsError] = useState(null);
+  const [alerts, setAlerts] = useState(null);
 
   useEffect(() => {
     adminApi.dashboard().then(setData).catch((err) => setError(normalizeError(err).message));
+    adminApi.dashboardAlerts().then(setAlerts).catch(() => setAlerts([]));
   }, []);
 
   const range = useMemo(() => {
@@ -135,6 +138,25 @@ export function DashboardPage() {
           </Link>
         }
       />
+
+      {alerts?.length > 0 && (
+        <section aria-labelledby="alerts-heading" className="space-y-2">
+          <h2 id="alerts-heading" className="flex items-center gap-2 text-base font-semibold text-[var(--text-strong)]">
+            <Bell className="h-4 w-4 text-brand-700" aria-hidden="true" /> Needs attention
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {alerts.map((alert) =>
+              alert.href ? (
+                <Link key={alert.type} to={alert.href}>
+                  <Alert tone="warning">{alert.message}</Alert>
+                </Link>
+              ) : (
+                <Alert key={alert.type} tone="warning">{alert.message}</Alert>
+              ),
+            )}
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="trends-heading" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -208,6 +230,7 @@ export function DashboardPage() {
                     </Link>
                   ))}
                 </div>
+                <Link to="/admin/reports" className="mt-3 block text-xs font-medium text-brand-700 hover:underline">View full hotel performance report →</Link>
               </Card>
             </div>
           </>

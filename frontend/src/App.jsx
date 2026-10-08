@@ -19,21 +19,30 @@ import { BookingConfirmationPage } from '@/pages/customer/booking/BookingConfirm
 import { MyTripsPage } from '@/pages/customer/booking/MyTripsPage.jsx';
 import { BookingDetailsPage } from '@/pages/customer/booking/BookingDetailsPage.jsx';
 import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/auth/AuthPages.jsx';
-import { DashboardPage } from '@/pages/admin/DashboardPage.jsx';
-import { HotelListPage } from '@/pages/admin/HotelListPage.jsx';
-import { HotelOnboardingPage } from '@/pages/admin/HotelOnboardingPage.jsx';
-import { HotelEditorPage } from '@/pages/admin/HotelEditorPage.jsx';
-import { ImportReviewPage } from '@/pages/admin/ImportReviewPage.jsx';
-import { RoomsPage } from '@/pages/admin/RoomsPage.jsx';
-import { RoomEditorPage } from '@/pages/admin/RoomEditorPage.jsx';
-import { BookingsPage } from '@/pages/admin/BookingsPage.jsx';
-import { BookingDetailPage } from '@/pages/admin/BookingDetailPage.jsx';
-import { PaymentsPage } from '@/pages/admin/PaymentsPage.jsx';
-import { RefundsPage } from '@/pages/admin/RefundsPage.jsx';
-import { CustomersPage } from '@/pages/admin/CustomersPage.jsx';
-import { CustomerDetailPage } from '@/pages/admin/CustomerDetailPage.jsx';
-import { AuditLogsPage } from '@/pages/admin/AuditLogsPage.jsx';
-import { ReviewsPage } from '@/pages/admin/ReviewsPage.jsx';
+import { lazy } from 'react';
+
+// Lazy: none of this admin code is in the customer homepage's initial bundle, and within admin each
+// module loads only when its own route is visited (the dashboard never pulls in Reports/Reviews/etc).
+const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage.jsx').then((m) => ({ default: m.DashboardPage })));
+const HotelListPage = lazy(() => import('@/pages/admin/HotelListPage.jsx').then((m) => ({ default: m.HotelListPage })));
+const HotelOnboardingPage = lazy(() => import('@/pages/admin/HotelOnboardingPage.jsx').then((m) => ({ default: m.HotelOnboardingPage })));
+const HotelEditorPage = lazy(() => import('@/pages/admin/HotelEditorPage.jsx').then((m) => ({ default: m.HotelEditorPage })));
+const ImportReviewPage = lazy(() => import('@/pages/admin/ImportReviewPage.jsx').then((m) => ({ default: m.ImportReviewPage })));
+const RoomsPage = lazy(() => import('@/pages/admin/RoomsPage.jsx').then((m) => ({ default: m.RoomsPage })));
+const RoomEditorPage = lazy(() => import('@/pages/admin/RoomEditorPage.jsx').then((m) => ({ default: m.RoomEditorPage })));
+const BookingsPage = lazy(() => import('@/pages/admin/BookingsPage.jsx').then((m) => ({ default: m.BookingsPage })));
+const BookingDetailPage = lazy(() => import('@/pages/admin/BookingDetailPage.jsx').then((m) => ({ default: m.BookingDetailPage })));
+const PaymentsPage = lazy(() => import('@/pages/admin/PaymentsPage.jsx').then((m) => ({ default: m.PaymentsPage })));
+const RefundsPage = lazy(() => import('@/pages/admin/RefundsPage.jsx').then((m) => ({ default: m.RefundsPage })));
+const CustomersPage = lazy(() => import('@/pages/admin/CustomersPage.jsx').then((m) => ({ default: m.CustomersPage })));
+const CustomerDetailPage = lazy(() => import('@/pages/admin/CustomerDetailPage.jsx').then((m) => ({ default: m.CustomerDetailPage })));
+const AuditLogsPage = lazy(() => import('@/pages/admin/AuditLogsPage.jsx').then((m) => ({ default: m.AuditLogsPage })));
+const ReviewsPage = lazy(() => import('@/pages/admin/ReviewsPage.jsx').then((m) => ({ default: m.ReviewsPage })));
+const ManagersPage = lazy(() => import('@/pages/admin/ManagersPage.jsx').then((m) => ({ default: m.ManagersPage })));
+const ManagerDetailPage = lazy(() => import('@/pages/admin/ManagerDetailPage.jsx').then((m) => ({ default: m.ManagerDetailPage })));
+const ReportsPage = lazy(() => import('@/pages/admin/ReportsPage.jsx').then((m) => ({ default: m.ReportsPage })));
+const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage.jsx').then((m) => ({ default: m.SettingsPage })));
+const AdminProfilePage = lazy(() => import('@/pages/admin/ProfilePage.jsx').then((m) => ({ default: m.AdminProfilePage })));
 
 function NotFoundPage() {
   return (
@@ -105,7 +114,12 @@ export function App() {
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
+        <Route path="managers" element={<ManagersPage />} />
+        <Route path="managers/:id" element={<ManagerDetailPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<AdminProfilePage />} />
       </Route>
     </Routes>
   );
