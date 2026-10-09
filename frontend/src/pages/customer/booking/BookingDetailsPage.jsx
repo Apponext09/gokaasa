@@ -8,7 +8,7 @@ import { EmptyState, FullPageSpinner } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
 import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
-import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, occupancyLabel } from '@/features/booking/bookingFormat.js';
+import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, occupancyFromGuests, occupancyLabel, rebookPath } from '@/features/booking/bookingFormat.js';
 import { downloadInvoice } from '@/features/booking/invoice.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { normalizeError } from '@/services/api.js';
@@ -49,6 +49,8 @@ export function BookingDetailsPage() {
   const status = BOOKING_STATUS_LABEL[booking.status] ?? BOOKING_STATUS_LABEL.PAYMENT_PENDING;
   const money = (minor) => formatMoneyMinor(minor, booking.amounts.currency);
   const canCancel = booking.status === 'CONFIRMED' && booking.cancellation.preview?.canCancel;
+  const stayIsOver = new Date(`${booking.stay.checkOut}T00:00:00Z`).getTime() < Date.now();
+  const canRebook = ['CANCELLED', 'REFUND_PENDING', 'REFUNDED'].includes(booking.status) || (booking.status === 'CONFIRMED' && stayIsOver);
   const handleInvoice = () => downloadInvoice(booking).catch((err) => toast.error(normalizeError(err).message));
 
   return (
@@ -67,7 +69,7 @@ export function BookingDetailsPage() {
           <p className="text-sm text-[var(--text-muted)]">{booking.hotel.address}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {booking.status === 'CONFIRMED' && (
+          {['CONFIRMED', 'REFUND_PENDING', 'REFUNDED'].includes(booking.status) && (
             <Button variant="secondary" size="sm" onClick={handleInvoice}>
               <Download className="h-4 w-4" aria-hidden="true" /> Invoice
             </Button>
@@ -76,6 +78,11 @@ export function BookingDetailsPage() {
             <Button variant="danger-outline" size="sm" onClick={() => setCancelOpen(true)}>
               Cancel booking
             </Button>
+          )}
+          {canRebook && (
+            <Link to={rebookPath(booking)}>
+              <Button variant="secondary" size="sm">Book Again</Button>
+            </Link>
           )}
           <ReviewCta
             bookingId={booking.id}
@@ -94,7 +101,7 @@ export function BookingDetailsPage() {
             <Field label="Dates" value={`${formatStayDate(booking.stay.checkIn)} → ${formatStayDate(booking.stay.checkOut)} (${booking.stay.nights} night${booking.stay.nights === 1 ? '' : 's'})`} />
             <Field label="Rooms" value={booking.rooms.map((room) => `${room.quantity} × ${room.name} (${room.mealPlan.replace(/_/g, ' ').toLowerCase()})`).join(', ')} />
             <Field label="Rate" value={booking.rooms[0]?.ratePlanName} />
-            <Field label="Guests" value={`${occupancyLabel(roomsFrom(booking))}`} />
+            <Field label="Guests" value={`${occupancyLabel(occupancyFromGuests(booking.guests))}`} />
           </dl>
         </Card>
 
@@ -125,11 +132,15 @@ export function BookingDetailsPage() {
         <h2 className="text-base font-semibold text-[var(--text-strong)]">Payment</h2>
         <dl className="space-y-3">
           <Field label="Subtotal" value={money(booking.amounts.subtotal)} />
-          {booking.amounts.discount > 0 && <Field label="Discount" value={`−${money(booking.amounts.discount)}`} />}
+          {booking.amounts.discount > 0 && <Field label="Rate discount" value={`−${money(booking.amounts.discount)}`} />}
           <Field label="Taxes" value={money(booking.amounts.taxes)} />
           <Field label="Fees" value={money(booking.amounts.fees)} />
+          {booking.amounts.couponDiscount > 0 && (
+            <Field label={`Coupon (${booking.amounts.couponCode})`} value={`−${money(booking.amounts.couponDiscount)}`} />
+          )}
           <Field label="Total" value={money(booking.amounts.total)} strong />
           <Field label="Paid" value={money(booking.amounts.paid)} />
+          {booking.payment?.method && <Field label="Payment method" value={booking.payment.method} />}
           {booking.payment && <Field label="Payment ID" value={booking.payment.id ?? '—'} mono />}
           {booking.refunds.map((refund) => (
             <Field key={refund.id} label={REFUND_LABEL[refund.status] ?? refund.status} value={money(refund.amount)} />
@@ -156,17 +167,6 @@ export function BookingDetailsPage() {
       />
     </div>
   );
-}
-
-function roomsFrom(booking) {
-  const rooms = new Map();
-  for (const guest of booking.guests) {
-    const room = rooms.get(guest.roomIndex) ?? { adults: 0, childAges: [] };
-    if (guest.age < 18) room.childAges.push(guest.age);
-    else room.adults += 1;
-    rooms.set(guest.roomIndex, room);
-  }
-  return [...rooms.values()];
 }
 
 function Field({ label, value, strong, mono }) {

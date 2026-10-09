@@ -43,6 +43,8 @@ export const adminCustomerListQuery = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
+export const customerStatusSchema = z.object({ isActive: z.boolean() });
+
 export const auditLogQuery = z.object({
   ...pagination,
   entity: z.string().trim().max(60).optional(),

@@ -19,7 +19,7 @@ export const adminCustomerRepository = {
 
     params.push(limit, (page - 1) * limit);
     const { rows } = await pool.query(
-      `SELECT u.id, u.email::text AS email, u.first_name, u.last_name, u.phone, u.created_at,
+      `SELECT u.id, u.email::text AS email, u.first_name, u.last_name, u.phone, u.created_at, u.is_active,
               COUNT(b.id)::int AS bookings_count,
               COALESCE(SUM(b.paid_minor), 0)::bigint AS total_spend_minor,
               MAX(b.created_at) AS last_booking_at,
@@ -53,5 +53,9 @@ export const adminCustomerRepository = {
       [customerId, hotelIds],
     );
     return rowCount > 0;
+  },
+
+  async setActive(client, userId, isActive) {
+    await client.query(`UPDATE users SET is_active = $2, updated_at = now() WHERE id = $1`, [userId, isActive]);
   },
 };

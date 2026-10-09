@@ -6,6 +6,7 @@ import { validate } from '../middleware/validate.js';
 import {
   bookingIdParam,
   cancelSchema,
+  couponApplySchema,
   createOrderSchema,
   devCheckoutSchema,
   failedPaymentSchema,
@@ -27,6 +28,9 @@ bookingRouter.get('/holds/:id', validate({ params: holdIdParam }), bookingContro
 bookingRouter.put('/holds/:id/guests', validate({ params: holdIdParam, body: guestDetailsSchema }), bookingController.saveGuests);
 bookingRouter.post('/holds/:id/requote', validate({ params: holdIdParam }), bookingController.requote);
 bookingRouter.post('/holds/:id/release', validate({ params: holdIdParam }), bookingController.releaseHold);
+bookingRouter.get('/holds/:id/coupons', validate({ params: holdIdParam }), bookingController.listHoldCoupons);
+bookingRouter.post('/holds/:id/coupon', validate({ params: holdIdParam, body: couponApplySchema }), bookingController.applyCoupon);
+bookingRouter.delete('/holds/:id/coupon', validate({ params: holdIdParam }), bookingController.removeCoupon);
 
 /** One booking, owner only. Mounted at /api/bookings. */
 export const bookingsRouter = Router();

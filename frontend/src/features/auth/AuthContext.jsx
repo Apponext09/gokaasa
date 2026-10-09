@@ -57,6 +57,13 @@ export function AuthProvider({ children }) {
     [applySession],
   );
 
+  // Feature 2: books without ever showing a login/sign-up form. Returns a completely ordinary session --
+  // from here the guest is an authenticated CUSTOMER like any other, through every existing route.
+  const guestCheckout = useCallback(
+    async (contact) => applySession(await authApi.guestCheckout(contact)),
+    [applySession],
+  );
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -74,9 +81,10 @@ export function AuthProvider({ children }) {
       isAdmin: Boolean(user?.roles?.includes('ADMIN')),
       login,
       register,
+      guestCheckout,
       logout,
     }),
-    [user, status, login, register, logout],
+    [user, status, login, register, guestCheckout, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

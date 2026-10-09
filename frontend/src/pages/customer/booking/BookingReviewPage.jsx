@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { AlertTriangle, ShieldCheck, User } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, Tag, User, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
-import { Card, Alert } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Input } from '@/components/ui/form-controls.jsx';
 import { EmptyState, FullPageSpinner } from '@/components/shared/index.jsx';
 import { BookingProgress } from '@/features/booking/components/BookingProgress.jsx';
 import { HoldCountdown } from '@/features/booking/components/HoldCountdown.jsx';
@@ -32,7 +33,12 @@ export function BookingReviewPage() {
   const [expiredMessage, setExpiredMessage] = useState(null);
   const [simOrder, setSimOrder] = useState(null);
   const [gateway, setGateway] = useState(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState(null);
+  const [availableOffers, setAvailableOffers] = useState(null);
   const repricedRef = useRef(false);
+  const autoAppliedRef = useRef(false);
 
   useDocumentMeta({ title: 'Review your booking | Gokaasa', description: 'Review your stay and pay to confirm your booking.' });
 
@@ -60,6 +66,30 @@ export function BookingReviewPage() {
         else toast.error(normalized.message);
       });
   }, [hold, setHold, reload]);
+
+  // A coupon code arriving via ?coupon= (from the Offers page's "Use Offer") is applied exactly once per
+  // hold, through the same endpoint and the same inline error UI the manual Apply form uses -- never a
+  // separate "guaranteed" path, and never a frontend-computed discount.
+  useEffect(() => {
+    if (!hold || hold.status !== 'HELD' || hold.quote.coupon || autoAppliedRef.current) return;
+    const code = params.get('coupon');
+    if (!code) return;
+    autoAppliedRef.current = true;
+    applyCoupon(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hold]);
+
+  // Offers this specific booking actually qualifies for right now -- a courtesy preview; applying still
+  // goes through the authoritative endpoint, which re-validates and reserves atomically.
+  useEffect(() => {
+    if (!hold || hold.quote.coupon) {
+      setAvailableOffers(null);
+      return;
+    }
+    let cancelled = false;
+    bookingApi.holdCoupons(hold.id).then((items) => !cancelled && setAvailableOffers(items)).catch(() => !cancelled && setAvailableOffers([]));
+    return () => { cancelled = true; };
+  }, [hold?.id, hold?.quote.coupon]);
 
   useEffect(() => {
     if (!hold) return;
@@ -179,6 +209,37 @@ export function BookingReviewPage() {
     else toast.error(normalized.message);
   };
 
+  const applyCoupon = async (eventOrCode) => {
+    const code = typeof eventOrCode === 'string' ? eventOrCode : couponCode.trim();
+    if (eventOrCode && typeof eventOrCode !== 'string') eventOrCode.preventDefault();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponError(null);
+    try {
+      const updated = await bookingApi.applyCoupon(hold.id, code);
+      setHold(updated);
+      setCouponCode('');
+      toast.success('Coupon applied');
+    } catch (err) {
+      setCouponError(normalizeError(err).message);
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
+  const removeCoupon = async () => {
+    setCouponBusy(true);
+    try {
+      const updated = await bookingApi.removeCoupon(hold.id);
+      setHold(updated);
+      toast.success('Coupon removed');
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
   const release = async () => {
     try {
       await bookingApi.release(hold.id);
@@ -237,6 +298,60 @@ export function BookingReviewPage() {
               <Button variant="link" size="sm" onClick={() => navigate(`/booking/guest-details?holdId=${hold.id}`)}>
                 Edit guest details
               </Button>
+            </Card>
+
+            <Card className="space-y-3 p-5 sm:p-6">
+              <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-strong)]">
+                <Tag className="h-4 w-4 text-brand-600" aria-hidden="true" /> Coupon
+              </h2>
+              {hold.quote.coupon ? (
+                <div className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-success-200 bg-success-50 px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <Badge tone="success">{hold.quote.coupon.code}</Badge>
+                    <span className="text-sm text-success-700">applied</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={removeCoupon} disabled={couponBusy}>
+                    <X className="h-3.5 w-3.5" aria-hidden="true" /> Remove
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={applyCoupon} className="flex items-start gap-2">
+                  <Input
+                    aria-label="Coupon code"
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChange={(e) => { setCouponCode(e.target.value); setCouponError(null); }}
+                    className="flex-1 uppercase"
+                    disabled={couponBusy}
+                  />
+                  <Button type="submit" variant="secondary" loading={couponBusy} disabled={!couponCode.trim()}>
+                    Apply
+                  </Button>
+                </form>
+              )}
+              {couponError && <p className="text-sm text-danger-600">{couponError}</p>}
+
+              {!hold.quote.coupon && availableOffers && availableOffers.length > 0 && (
+                <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3">
+                  <p className="text-sm font-medium text-[var(--text-strong)]">Available offers for this booking</p>
+                  <ul className="space-y-2">
+                    {availableOffers.map((offer) => (
+                      <li key={offer.code} className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-brand-700">{offer.code}</p>
+                          <p className="truncate text-xs text-[var(--text-muted)]">{offer.title}</p>
+                        </div>
+                        <Button type="button" variant="secondary" size="sm" loading={couponBusy} onClick={() => applyCoupon(offer.code)}>
+                          Apply
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {!hold.quote.coupon && availableOffers && availableOffers.length === 0 && (
+                <p className="text-sm text-[var(--text-muted)]">You're already getting our best available price.</p>
+              )}
             </Card>
 
             <Card className="space-y-3 p-5 sm:p-6">

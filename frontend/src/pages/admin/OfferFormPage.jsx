@@ -1,0 +1,304 @@
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { ArrowLeft, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Input, Select, Textarea, Checkbox } from '@/components/ui/form-controls.jsx';
+import { Button } from '@/components/ui/button.jsx';
+import { ConfirmDialog } from '@/components/ui/dialog.jsx';
+import { EmptyState, FormField, PageHeader, formatDateTime, formatMoney } from '@/components/shared/index.jsx';
+import { minorToRupees, rupeesToMinor } from '@/features/rooms/roomForm.js';
+import { adminApi } from '@/services/endpoints.js';
+import { normalizeError } from '@/services/api.js';
+
+const toInputDate = (iso) => (iso ? new Date(iso).toISOString().slice(0, 16) : '');
+
+function emptyForm() {
+  return {
+    code: '', discountType: 'PERCENT', discountValue: '', maxDiscountMinor: '', minAmountMinor: '0',
+    validFrom: '', validTo: '', usageLimit: '', perUserLimit: '', minNights: '', customerEligibility: 'ALL',
+    stayFrom: '', stayTo: '', description: '', hotelIds: [], cities: '',
+  };
+}
+
+function toForm(coupon) {
+  return {
+    code: coupon.code,
+    discountType: coupon.discountType,
+    discountValue: coupon.discountType === 'PERCENT' ? String(coupon.discountValue) : minorToRupees(coupon.discountValue),
+    maxDiscountMinor: coupon.maxDiscountMinor == null ? '' : minorToRupees(coupon.maxDiscountMinor),
+    minAmountMinor: minorToRupees(coupon.minAmountMinor) || '0',
+    validFrom: toInputDate(coupon.validFrom),
+    validTo: toInputDate(coupon.validTo),
+    usageLimit: coupon.usageLimit ?? '',
+    perUserLimit: coupon.perUserLimit ?? '',
+    minNights: coupon.minNights ?? '',
+    customerEligibility: coupon.customerEligibility,
+    stayFrom: coupon.stayFrom ?? '',
+    stayTo: coupon.stayTo ?? '',
+    description: coupon.description ?? '',
+    hotelIds: coupon.hotelIds ?? [],
+    cities: (coupon.cities ?? []).join(', '),
+  };
+}
+
+function toBody(form) {
+  return {
+    code: form.code.trim().toUpperCase(),
+    discountType: form.discountType,
+    discountValue: form.discountType === 'PERCENT' ? Number(form.discountValue) : rupeesToMinor(form.discountValue),
+    maxDiscountMinor: form.maxDiscountMinor === '' ? null : rupeesToMinor(form.maxDiscountMinor),
+    minAmountMinor: rupeesToMinor(form.minAmountMinor) ?? 0,
+    validFrom: new Date(form.validFrom).toISOString(),
+    validTo: new Date(form.validTo).toISOString(),
+    usageLimit: form.usageLimit === '' ? null : Number(form.usageLimit),
+    perUserLimit: form.perUserLimit === '' ? null : Number(form.perUserLimit),
+    minNights: form.minNights === '' ? null : Number(form.minNights),
+    customerEligibility: form.customerEligibility,
+    stayFrom: form.stayFrom || null,
+    stayTo: form.stayTo || null,
+    description: form.description.trim() || null,
+    hotelIds: form.hotelIds,
+    cities: form.cities.split(',').map((c) => c.trim()).filter(Boolean),
+  };
+}
+
+export function OfferFormPage() {
+  const { id } = useParams();
+  const isNew = id === undefined;
+  const navigate = useNavigate();
+  const [coupon, setCoupon] = useState(null);
+  const [hotels, setHotels] = useState([]);
+  const [form, setForm] = useState(emptyForm());
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    adminApi.listHotels({ limit: 100, sort: 'name_asc' }).then((r) => setHotels(r.items)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (isNew) {
+      setCoupon({});
+      return;
+    }
+    let cancelled = false;
+    adminApi.getCoupon(id).then((result) => {
+      if (cancelled) return;
+      setCoupon(result);
+      setForm(toForm(result));
+    }).catch((err) => !cancelled && setError(normalizeError(err).message));
+    return () => { cancelled = true; };
+  }, [id, isNew]);
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const toggleHotel = (hotelId) => setForm((f) => ({
+    ...f,
+    hotelIds: f.hotelIds.includes(hotelId) ? f.hotelIds.filter((h) => h !== hotelId) : [...f.hotelIds, hotelId],
+  }));
+
+  const save = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const body = toBody(form);
+      const saved = isNew ? await adminApi.createCoupon(body) : await adminApi.updateCoupon(id, body);
+      toast.success(isNew ? 'Coupon created' : 'Coupon updated');
+      navigate(`/admin/offers/${saved.id}`, { replace: true });
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleActive = async () => {
+    try {
+      const updated = await adminApi.setCouponStatus(id, !coupon.isActive);
+      setCoupon(updated);
+      toast.success(updated.isActive ? 'Coupon activated' : 'Coupon deactivated');
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+    }
+  };
+
+  const remove = async () => {
+    setDeleting(true);
+    try {
+      await adminApi.deleteCoupon(id);
+      toast.success('Coupon deleted');
+      navigate('/admin/offers', { replace: true });
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+      setConfirmDelete(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <Link to="/admin/offers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to offers</Link>
+        <EmptyState title="We couldn't load this coupon" description={error} />
+      </div>
+    );
+  }
+  if (!coupon) return <Skeleton className="h-96" />;
+
+  return (
+    <div className="space-y-6">
+      <Link to="/admin/offers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to offers</Link>
+      <PageHeader
+        title={isNew ? 'New coupon' : coupon.code}
+        description={isNew ? 'Create a discount code customers can apply at checkout.' : 'Edit this coupon and review how it has been used.'}
+        actions={!isNew && (
+          <>
+            <Badge tone={coupon.isActive ? 'success' : 'neutral'}>{coupon.isActive ? 'Active' : 'Inactive'}</Badge>
+            <Button variant="secondary" size="sm" onClick={toggleActive}>{coupon.isActive ? 'Deactivate' : 'Activate'}</Button>
+            <Button variant="danger-outline" size="sm" onClick={() => setConfirmDelete(true)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete</Button>
+          </>
+        )}
+      />
+
+      <form onSubmit={save} className="space-y-6">
+        <Card>
+          <CardHeader><CardTitle>Discount</CardTitle></CardHeader>
+          <CardContent className="grid gap-4 pt-0 sm:grid-cols-2">
+            <FormField id="code" label="Code">
+              <Input id="code" required value={form.code} onChange={set('code')} className="font-mono uppercase" placeholder="SUMMER25" />
+            </FormField>
+            <FormField id="discountType" label="Type">
+              <Select id="discountType" value={form.discountType} onChange={set('discountType')}>
+                <option value="PERCENT">Percentage off</option>
+                <option value="FIXED">Flat amount off</option>
+              </Select>
+            </FormField>
+            <FormField id="discountValue" label={form.discountType === 'PERCENT' ? 'Discount (%)' : 'Discount (₹)'}>
+              <Input id="discountValue" required type="number" min="1" max={form.discountType === 'PERCENT' ? 100 : undefined} value={form.discountValue} onChange={set('discountValue')} />
+            </FormField>
+            {form.discountType === 'PERCENT' && (
+              <FormField id="maxDiscountMinor" label="Maximum discount (₹)" hint="Leave blank for no cap">
+                <Input id="maxDiscountMinor" type="number" min="0" value={form.maxDiscountMinor} onChange={set('maxDiscountMinor')} />
+              </FormField>
+            )}
+            <FormField id="minAmountMinor" label="Minimum booking amount (₹)">
+              <Input id="minAmountMinor" type="number" min="0" value={form.minAmountMinor} onChange={set('minAmountMinor')} />
+            </FormField>
+            <FormField id="description" label="Description (internal note)" className="sm:col-span-2">
+              <Textarea id="description" value={form.description} onChange={set('description')} rows={2} />
+            </FormField>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Validity &amp; limits</CardTitle></CardHeader>
+          <CardContent className="grid gap-4 pt-0 sm:grid-cols-2">
+            <FormField id="validFrom" label="Valid from">
+              <Input id="validFrom" required type="datetime-local" value={form.validFrom} onChange={set('validFrom')} />
+            </FormField>
+            <FormField id="validTo" label="Valid to">
+              <Input id="validTo" required type="datetime-local" value={form.validTo} onChange={set('validTo')} />
+            </FormField>
+            <FormField id="usageLimit" label="Total usage limit" hint="Leave blank for unlimited">
+              <Input id="usageLimit" type="number" min="1" value={form.usageLimit} onChange={set('usageLimit')} />
+            </FormField>
+            <FormField id="perUserLimit" label="Per-customer usage limit" hint="Leave blank for unlimited">
+              <Input id="perUserLimit" type="number" min="1" value={form.perUserLimit} onChange={set('perUserLimit')} />
+            </FormField>
+            <FormField id="minNights" label="Minimum nights" hint="Leave blank for no minimum">
+              <Input id="minNights" type="number" min="1" value={form.minNights} onChange={set('minNights')} />
+            </FormField>
+            <FormField id="customerEligibility" label="Customer eligibility">
+              <Select id="customerEligibility" value={form.customerEligibility} onChange={set('customerEligibility')}>
+                <option value="ALL">All customers</option>
+                <option value="NEW_CUSTOMERS">New customers only</option>
+              </Select>
+            </FormField>
+            <FormField id="stayFrom" label="Stay dates from" hint="Restricts which stay dates qualify, leave blank for any">
+              <Input id="stayFrom" type="date" value={form.stayFrom} onChange={set('stayFrom')} />
+            </FormField>
+            <FormField id="stayTo" label="Stay dates to">
+              <Input id="stayTo" type="date" value={form.stayTo} onChange={set('stayTo')} />
+            </FormField>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Restrictions</CardTitle></CardHeader>
+          <CardContent className="space-y-4 pt-0">
+            <FormField id="cities" label="Destination (city) restriction" hint="Comma-separated city names. Leave blank for every destination.">
+              <Input id="cities" value={form.cities} onChange={set('cities')} placeholder="Goa, Jaipur" />
+            </FormField>
+            <div>
+              <p className="mb-2 text-sm font-medium text-[var(--text-strong)]">Hotel restriction</p>
+              <p className="mb-2 text-xs text-[var(--text-muted)]">Leave every hotel unchecked to allow this coupon at all hotels.</p>
+              <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3">
+                {hotels.map((hotel) => (
+                  <Checkbox key={hotel.id} label={`${hotel.name} (${hotel.city})`} checked={form.hotelIds.includes(hotel.id)} onChange={() => toggleHotel(hotel.id)} />
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" loading={saving}>{isNew ? 'Create coupon' : 'Save changes'}</Button>
+        </div>
+      </form>
+
+      {!isNew && (
+        <Card>
+          <CardHeader><CardTitle>Usage analytics</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <div className="mb-4 grid grid-cols-3 gap-4">
+              <div className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3">
+                <p className="text-xs text-[var(--text-muted)]">Confirmed uses</p>
+                <p className="text-xl font-semibold text-[var(--text-strong)]">{coupon.usage.confirmedCount}</p>
+              </div>
+              <div className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3">
+                <p className="text-xs text-[var(--text-muted)]">In progress</p>
+                <p className="text-xl font-semibold text-[var(--text-strong)]">{coupon.usage.pendingCount}</p>
+              </div>
+              <div className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3">
+                <p className="text-xs text-[var(--text-muted)]">Total discount given</p>
+                <p className="text-xl font-semibold text-[var(--text-strong)]">{formatMoney(coupon.usage.totalDiscountMinor)}</p>
+              </div>
+            </div>
+            {coupon.recentUsages.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)]">Not used yet.</p>
+            ) : (
+              <div className="divide-y divide-[var(--border-subtle)]">
+                {coupon.recentUsages.map((u) => (
+                  <div key={u.id} className="flex items-center justify-between py-2.5 text-sm">
+                    <div>
+                      <p className="font-medium text-[var(--text-strong)]">{u.customerName || u.customerEmail}</p>
+                      <p className="text-xs text-[var(--text-muted)]">{u.bookingRef ?? 'Checkout not completed'} · {formatDateTime(u.createdAt)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-[var(--text-strong)]">{formatMoney(u.discountMinor)}</p>
+                      <Badge tone={u.status === 'CONFIRMED' ? 'success' : u.status === 'PENDING' ? 'warning' : 'neutral'}>{u.status}</Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title={`Delete ${coupon.code}?`}
+        description="This cannot be undone. A coupon that has already been used cannot be deleted -- deactivate it instead."
+        confirmLabel="Delete coupon"
+        tone="danger"
+        loading={deleting}
+        onConfirm={remove}
+        onCancel={() => setConfirmDelete(false)}
+      />
+    </div>
+  );
+}

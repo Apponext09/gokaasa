@@ -2,12 +2,14 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
+  Bell,
   Building2,
   CalendarCheck,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   FileBarChart,
+  FileText,
   LogOut,
   Menu,
   ReceiptText,
@@ -15,6 +17,7 @@ import {
   Search,
   Settings,
   Star,
+  Tag,
   UserCog,
   UserRound,
   Users,
@@ -45,6 +48,8 @@ const NAV = [
       { to: '/admin/bookings', label: 'Bookings', icon: CalendarCheck },
       { to: '/admin/payments', label: 'Payments', icon: Wallet },
       { to: '/admin/refunds', label: 'Refunds', icon: ReceiptText },
+      { to: '/admin/invoices', label: 'Invoices', icon: FileText },
+      { to: '/admin/offers', label: 'Offers & Coupons', icon: Tag },
       { to: '/admin/customers', label: 'Customers', icon: Users },
       { to: '/admin/reviews', label: 'Reviews', icon: Star },
     ],
@@ -56,6 +61,7 @@ const NAV = [
   {
     section: 'Settings',
     items: [
+      { to: '/admin/notifications', label: 'Notifications', icon: Bell },
       { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText, adminOnly: true },
       { to: '/admin/settings', label: 'Settings', icon: Settings },
     ],

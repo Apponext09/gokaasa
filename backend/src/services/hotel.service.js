@@ -1,4 +1,5 @@
 import { withTransaction, pool } from '../db/pool.js';
+import { config } from '../config/index.js';
 import { hotelRepository } from '../repositories/hotel.repository.js';
 import { auditService } from './audit.service.js';
 import { getPublishBlockers } from '../domain/hotelPublishRules.js';
@@ -43,6 +44,9 @@ function toColumns(input) {
 
 /** Publish requirements for a snake_case hotel row plus its loaded images and amenities. */
 function publishBlockersFor(row, images, amenities) {
+  // Outside the pilot flag, an illustrative placeholder is invisible to the publish gate -- exactly as
+  // if the hotel had no image at all. Nothing about an existing real photo's handling changes.
+  const countable = config.features.allowIllustrativeHotelImages ? images : images.filter((image) => image.image_type !== 'ILLUSTRATIVE');
   return getPublishBlockers(
     {
       name: row.name,
@@ -54,7 +58,7 @@ function publishBlockersFor(row, images, amenities) {
       description: row.description,
       starRating: row.star_rating,
     },
-    { imageCount: images.length, amenityCount: amenities.length, hasCover: images.some((image) => image.is_cover) },
+    { imageCount: countable.length, amenityCount: amenities.length, hasCover: countable.some((image) => image.is_cover) },
   );
 }
 

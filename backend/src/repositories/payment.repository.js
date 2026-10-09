@@ -2,7 +2,7 @@ import { pool } from '../db/pool.js';
 
 const PAYMENT_COLUMNS = `
   p.id, p.booking_id, p.provider, p.provider_order_id, p.provider_payment_id, p.amount_minor, p.currency, p.status,
-  p.failure_reason, p.paid_at, p.attempt, p.gateway_mode, p.created_at, p.updated_at
+  p.failure_reason, p.paid_at, p.attempt, p.gateway_mode, p.provider_payload, p.created_at, p.updated_at
 `;
 
 const REFUND_COLUMNS = `

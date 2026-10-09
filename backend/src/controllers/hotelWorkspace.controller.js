@@ -44,6 +44,11 @@ export const hotelWorkspaceController = {
     return res.status(201).json({ image });
   },
 
+  async addImageFromUrl(req, res) {
+    const image = await hotelImageService.addFromUrl(req.validated.params.id, req.validated.body, actorOf(req));
+    return res.status(201).json({ image });
+  },
+
   async updateImage(req, res) {
     const image = await hotelImageService.updateDetails(
       req.validated.params.id,

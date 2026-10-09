@@ -3,6 +3,7 @@ import { bookingRepository } from '../repositories/booking.repository.js';
 import { paymentRepository } from '../repositories/payment.repository.js';
 import { inventoryRepository } from '../repositories/inventory.repository.js';
 import { quoteStay, quoteView } from './quote.service.js';
+import { couponService } from './coupon.service.js';
 import { config } from '../config/index.js';
 import { HOLD_STATUS, isHoldLive } from '../domain/holdStatus.js';
 import { BOOKING_STATUS, assertTransition } from '../domain/bookingStatus.js';
@@ -14,8 +15,6 @@ import { auditService } from './audit.service.js';
 const log = createLogger('hold');
 
 export const HOLD_EXPIRED_MESSAGE = 'Your room hold has expired. Please search again.';
-
-const ADULT_AGE = 18;
 
 /** Visual countdown only. The server decides expiry; the client re-fetches when this reaches zero. */
 const secondsLeft = (expiresAt) => Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
@@ -62,6 +61,9 @@ async function requireOwnedHold(client, userId, holdId, { lock = true } = {}) {
 export async function closeHoldInTx(client, hold, { holdStatus, bookingStatus, reason }) {
   await bookingRepository.setHoldStatus(client, hold.id, holdStatus);
   await bookingRepository.setReservationsForHold(client, hold.id, 'RELEASED');
+  // Mirrors the inventory release just above: a coupon's reserved usage slot is given back the same way,
+  // at the same point, whenever a hold ends without becoming a paid booking.
+  await couponService.releaseUsageForHold(client, hold.id);
 
   const booking = await bookingRepository.findBookingByHold(hold.id, client);
   if (booking && booking.status === BOOKING_STATUS.PAYMENT_PENDING) {
@@ -173,8 +175,11 @@ export const holdService = {
   },
 
   /**
-   * Saves the guest details for a hold. Counts must match the rooms: each room's guests are its adults (18+)
-   * and children (under 18), exactly as the search requested. Locked once a booking exists for the hold.
+   * Saves the guest details for a hold. `hold.occupancy` (set at hold creation, drives pricing and
+   * inventory) remains the sole source of truth for how many adults/children are staying -- naming every
+   * guest is optional beyond the required primaryContact (Feature 3: the hotel can collect any missing
+   * occupant's name at check-in), so a room's named-guest list may be shorter than its occupancy, never
+   * longer. Locked once a booking exists for the hold.
    */
   async saveGuests(userId, holdId, details) {
     await withTransaction(async (client) => {
@@ -189,12 +194,11 @@ export const holdService = {
       const problems = [];
       for (const room of details.rooms) {
         const expected = hold.occupancy[room.roomIndex];
-        const children = room.guests.filter((guest) => guest.age < ADULT_AGE).length;
-        const adults = room.guests.length - children;
-        if (adults !== expected.adults || children !== expected.childAges.length) {
+        const capacity = expected.adults + expected.childAges.length;
+        if (room.guests.length > capacity) {
           problems.push({
             field: `rooms.${room.roomIndex}`,
-            message: `Room ${room.roomIndex + 1} needs ${expected.adults} adult(s) and ${expected.childAges.length} child(ren)`,
+            message: `Room ${room.roomIndex + 1} only has ${capacity} guest(s) booked`,
           });
         }
       }
@@ -215,8 +219,14 @@ export const holdService = {
       if (!isHoldLive(hold)) throw AppError.conflict(HOLD_EXPIRED_MESSAGE, { code: 'HOLD_EXPIRED' });
       if (hold.booking_id) throw AppError.conflict('This booking has already started payment and can no longer be re-priced.');
 
+      const previousTotal = Number(hold.total_minor); // may already include a coupon discount
+      // The hold's own pre-coupon total, derived from its stored columns -- compared against the fresh
+      // quote so that an already-applied coupon never looks like a "room price changed" event.
+      const preCouponTotal = Number(hold.subtotal_minor) - Number(hold.discount_minor) + Number(hold.taxes_minor) + Number(hold.fees_minor);
+
       const quote = await quoteStay(client, inputFromHold(hold), { checkAvailability: false });
-      const changed = quote.total !== Number(hold.total_minor) || quote.subtotal !== Number(hold.subtotal_minor);
+      const changed = quote.total !== preCouponTotal || quote.subtotal !== Number(hold.subtotal_minor);
+      let newTotal = previousTotal;
       if (changed) {
         await bookingRepository.updateHoldQuote(client, hold.id, {
           subtotal: quote.subtotal,
@@ -226,16 +236,18 @@ export const holdService = {
           total: quote.total,
           quoteSnapshot: quote.snapshot,
         });
+        const reapplied = await couponService.reapplyOnRequote(client, hold, quote.total);
+        newTotal = reapplied.total;
         await auditService.record(client, {
           actor: { id: userId },
           action: 'booking_hold.repriced',
           entity: 'booking_hold',
           entityId: hold.id,
-          oldValue: { total: Number(hold.total_minor) },
-          newValue: { total: quote.total },
+          oldValue: { total: previousTotal },
+          newValue: { total: newTotal },
         });
       }
-      return { changed, previousTotal: Number(hold.total_minor), holdId: hold.id };
+      return { changed: changed && newTotal !== previousTotal, previousTotal, holdId: hold.id };
     });
     const hold = await this.get(userId, holdId);
     return { ...result, hold };

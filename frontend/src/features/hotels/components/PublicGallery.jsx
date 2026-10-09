@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Expand, Images, X } from 'lucide-react';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { cn } from '@/lib/utils.js';
+import { isIllustrativeImage } from '@/features/hotels/imageDisclaimer.js';
+
+function IllustrativeTag() {
+  return (
+    <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white/90">
+      Illustrative
+    </span>
+  );
+}
 
 /**
  * Guest-facing photo gallery. Desktop: a large hero with a grid behind it. Mobile: a swipeable strip.
@@ -73,6 +82,7 @@ export function PublicGallery({ images, name }) {
           {images.map((image, i) => (
             <button key={image.url + i} type="button" onClick={() => setIndex(i)} className="relative aspect-[4/3] w-full shrink-0 snap-center" aria-label={`Open photo ${i + 1} of ${count}`}>
               <SafeImage src={image.url} alt={image.altText ?? name} eager={i === 0} className="h-full w-full" sizes="100vw" fallbackLabel={`${name}: photo ${i + 1}`} />
+              {isIllustrativeImage(image) && <IllustrativeTag />}
             </button>
           ))}
         </div>
@@ -85,12 +95,14 @@ export function PublicGallery({ images, name }) {
       <div className="hidden h-[26rem] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl md:grid">
         <button type="button" onClick={() => setIndex(0)} className="relative col-span-2 row-span-2 focus-visible:outline-2 focus-visible:outline-brand-500" aria-label={`Open photo 1 of ${count}`}>
           <SafeImage src={hero.url} alt={hero.altText ?? name} eager className="h-full w-full" sizes="50vw" fallbackLabel={`${name}: main photo`} />
+          {isIllustrativeImage(hero) && <IllustrativeTag />}
         </button>
         {gridImages.map((image, i) => {
           const isLast = i === gridImages.length - 1 && remaining > 0;
           return (
             <button key={image.url + i} type="button" onClick={() => setIndex(i + 1)} className="relative focus-visible:outline-2 focus-visible:outline-brand-500" aria-label={`Open photo ${i + 2} of ${count}`}>
               <SafeImage src={image.url} alt={image.altText ?? name} className="h-full w-full" sizes="25vw" fallbackLabel={`${name}: photo ${i + 2}`} />
+              {isIllustrativeImage(image) && !isLast && <IllustrativeTag />}
               {isLast && (
                 <span className="absolute inset-0 grid place-items-center bg-black/45 text-sm font-semibold text-white">+{remaining} more</span>
               )}
@@ -125,12 +137,19 @@ export function PublicGallery({ images, name }) {
             <button type="button" onClick={() => setIndex((index - 1 + count) % count)} className="absolute left-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Previous photo">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <img
-              src={images[index].url}
-              alt={images[index].altText ?? name}
-              className="max-h-full max-w-full object-contain"
-              decoding="async"
-            />
+            <div className="relative max-h-full max-w-full">
+              <img
+                src={images[index].url}
+                alt={images[index].altText ?? name}
+                className="max-h-full max-w-full object-contain"
+                decoding="async"
+              />
+              {isIllustrativeImage(images[index]) && (
+                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white/90">
+                  Illustrative -- not an actual photo of this property
+                </span>
+              )}
+            </div>
             <button type="button" onClick={() => setIndex((index + 1) % count)} className="absolute right-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Next photo">
               <ChevronRight className="h-5 w-5" />
             </button>

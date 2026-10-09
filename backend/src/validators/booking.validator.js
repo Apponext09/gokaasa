@@ -65,6 +65,20 @@ const optionalText = (max) =>
 const personName = (label) =>
   z.string().trim().min(1, `${label} is required`).max(60, `${label} must be at most 60 characters`);
 
+// A named guest is optional per room beyond the primaryContact (the required lead/booking contact
+// below): the hotel can collect any missing occupant's details at check-in (Feature 3). When a guest
+// entry IS given, both names must be given together -- a half-named entry (e.g. first name only, no age)
+// is ambiguous rather than genuinely "not provided yet", so it is rejected rather than silently stored.
+const optionalGuest = z
+  .object({
+    firstName: personName('First name').optional(),
+    lastName: personName('Last name').optional(),
+    age: z.number().int().min(0, 'Age must be 0 or more').max(120, 'Age must be 120 or less').optional(),
+  })
+  .refine((value) => (value.firstName == null) === (value.lastName == null), {
+    message: 'Enter both the first and last name, or leave this guest blank to add their details at check-in',
+  });
+
 export const guestDetailsSchema = z.object({
   primaryContact: z.object({
     firstName: personName('First name'),
@@ -79,15 +93,9 @@ export const guestDetailsSchema = z.object({
     .array(
       z.object({
         roomIndex: z.number().int().min(0),
-        guests: z
-          .array(
-            z.object({
-              firstName: personName('First name'),
-              lastName: personName('Last name'),
-              age: z.number().int().min(0, 'Age must be 0 or more').max(120, 'Age must be 120 or less'),
-            }),
-          )
-          .min(1, 'Add the guests for this room'),
+        // Capped at the room's own occupancy at hold-creation time (see hold.service.js#saveGuests); never
+        // required to reach it. hold.occupancy stays the sole, authoritative source of adult/child counts.
+        guests: z.array(optionalGuest).max(LIMITS.maxAdults + LIMITS.maxChildrenPerRoom).default([]),
       }),
     )
     .min(1),
@@ -103,6 +111,8 @@ export const guestDetailsSchema = z.object({
 });
 
 export const holdIdParam = z.object({ id: positiveId });
+
+export const couponApplySchema = z.object({ code: z.string().trim().min(3).max(40) });
 
 export const bookingIdParam = z.object({ id: positiveId });
 

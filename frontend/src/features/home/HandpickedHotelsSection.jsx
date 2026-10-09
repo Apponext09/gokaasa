@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button.jsx';
 import { Carousel, CarouselItem } from '@/components/ui/carousel.jsx';
 import { EmptyState } from '@/components/shared/index.jsx';
+import { StaggeredReveal } from '@/components/shared/StaggeredReveal.jsx';
 import { CuratedHotelCard, CuratedHotelCardSkeleton } from './CuratedHotelCard.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -54,10 +55,12 @@ export function HandpickedHotelsSection() {
       )}
 
       {!error && hotels?.length > 0 && (
-        <Carousel aria-label="Handpicked hotels">
-          {hotels.map((hotel) => (
+        <Carousel aria-label="Handpicked hotels" autoScroll>
+          {hotels.map((hotel, index) => (
             <CarouselItem key={hotel.id} className="w-64 sm:w-72">
-              <CuratedHotelCard hotel={hotel} />
+              <StaggeredReveal index={index} className="h-full">
+                <CuratedHotelCard hotel={hotel} />
+              </StaggeredReveal>
             </CarouselItem>
           ))}
         </Carousel>

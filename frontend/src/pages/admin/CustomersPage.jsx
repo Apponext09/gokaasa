@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Download, Search, Users } from 'lucide-react';
-import { Card, Skeleton, Alert } from '@/components/ui/surfaces.jsx';
+import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney } from '@/components/shared/index.jsx';
@@ -95,7 +95,10 @@ export function CustomersPage() {
                 {data?.items.map((c) => (
                   <tr key={c.id} className="hover:bg-[var(--surface-muted)]/50">
                     <td className="px-4 py-3">
-                      <Link to={`/admin/customers/${c.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{c.name || c.email}</Link>
+                      <div className="flex items-center gap-2">
+                        <Link to={`/admin/customers/${c.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{c.name || c.email}</Link>
+                        {!c.isActive && <Badge tone="danger">Inactive</Badge>}
+                      </div>
                       <p className="text-xs text-[var(--text-muted)]">{c.email}</p>
                     </td>
                     <td className="px-4 py-3 text-[var(--text-body)]">{c.bookingsCount}</td>

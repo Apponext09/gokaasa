@@ -1,6 +1,7 @@
 import { holdService } from '../services/hold.service.js';
 import { bookingService } from '../services/booking.service.js';
 import { invoiceService } from '../services/invoice.service.js';
+import { couponService } from '../services/coupon.service.js';
 
 /** Customer booking flow: holds, guest details, bookings, My Trips and cancellation. Every call is owner-scoped. */
 export const bookingController = {
@@ -26,6 +27,20 @@ export const bookingController = {
 
   async releaseHold(req, res) {
     return res.json({ hold: await holdService.release(req.user.id, req.validated.params.id) });
+  },
+
+  async listHoldCoupons(req, res) {
+    return res.json({ items: await couponService.applicableForHold(req.user.id, req.validated.params.id) });
+  },
+
+  async applyCoupon(req, res) {
+    await couponService.applyToHold(req.user.id, req.validated.params.id, req.validated.body.code);
+    return res.json({ hold: await holdService.get(req.user.id, req.validated.params.id) });
+  },
+
+  async removeCoupon(req, res) {
+    await couponService.removeFromHold(req.user.id, req.validated.params.id);
+    return res.json({ hold: await holdService.get(req.user.id, req.validated.params.id) });
   },
 
   async getBooking(req, res) {

@@ -14,6 +14,11 @@ export const adminCustomerController = {
     return res.json({ customer: await adminCustomerService.detail(req.validated.params.id, actorOf(req)) });
   },
 
+  async setStatus(req, res) {
+    const customer = await adminCustomerService.setStatus(req.validated.params.id, req.validated.body.isActive, actorOf(req));
+    return res.json({ customer });
+  },
+
   async exportCsv(req, res) {
     const csv = await adminCustomerService.exportCustomers(req.validated.query, actorOf(req));
     return sendCsv(res, 'customers.csv', csv);

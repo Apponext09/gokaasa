@@ -1,5 +1,7 @@
 /** Display helpers for booking screens. Dates are calendar days, so they are formatted in UTC to avoid a day shift. */
 
+import { formatOccupancy, slugifyPlace } from '../search/searchParams.js';
+
 export const STEPS = [
   { key: 'search', label: 'Search' },
   { key: 'room', label: 'Room' },
@@ -41,3 +43,29 @@ export const occupancyLabel = (occupancy = []) => {
 };
 
 export const EXPIRED_MESSAGE = 'Your room hold has expired. Please search again.';
+
+/** Reconstructs each room's occupancy from the booking's own guest list (age < 18 counts as a child). */
+export function occupancyFromGuests(guests = []) {
+  const rooms = new Map();
+  for (const guest of guests) {
+    const room = rooms.get(guest.roomIndex) ?? { adults: 0, childAges: [] };
+    if (guest.age < 18) room.childAges.push(guest.age);
+    else room.adults += 1;
+    rooms.set(guest.roomIndex, room);
+  }
+  return [...rooms.entries()].sort(([a], [b]) => a - b).map(([, room]) => room);
+}
+
+/**
+ * "Book Again": the hotel and the original party size, nothing else. Deliberately carries no dates, no
+ * price and no old hold/booking reference -- the hotel page's own live availability and pricing decide
+ * everything from here, exactly as a fresh visit would.
+ */
+export function rebookPath(booking) {
+  if (!booking.hotel?.slug || !booking.hotel?.city) return '/destinations';
+  const occupancy = occupancyFromGuests(booking.guests);
+  const params = new URLSearchParams();
+  if (occupancy.length > 0) params.set('occ', formatOccupancy(occupancy));
+  const query = params.toString();
+  return `/hotels/${slugifyPlace(booking.hotel.city)}/${booking.hotel.slug}${query ? `?${query}` : ''}`;
+}

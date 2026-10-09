@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
 import { config } from '../config/index.js';
-import { withTransaction } from '../db/pool.js';
+import { pool, withTransaction } from '../db/pool.js';
 import { authRepository } from '../repositories/auth.repository.js';
 import { userRepository } from '../repositories/user.repository.js';
+import { bookingRepository } from '../repositories/booking.repository.js';
 import { tokenService } from './token.service.js';
 import { mailService } from './mail.service.js';
 import { AppError } from '../utils/AppError.js';
@@ -24,6 +25,7 @@ function toPublicUser(user) {
     lastName: user.lastName,
     phone: user.phone,
     roles: user.roles,
+    isGuest: user.isGuest,
   };
 }
 
@@ -60,6 +62,62 @@ export const authService = {
         lastName: input.lastName,
         phone: input.phone,
         roleCode: 'CUSTOMER',
+      });
+      const user = await userRepository.findById(userId, client);
+      return issueSession(client, user, meta);
+    });
+  },
+
+  /**
+   * Feature 2: lets a visitor book without creating an account or seeing a sign-up form. A real `users`
+   * row is still required (bookings.user_id is NOT NULL, FK'd to users), so one is created -- or, for a
+   * repeat guest checkout with the same email and no booking history yet, reused -- with an unusable
+   * random password hash (never shared, never derivable). From here the guest is a completely ordinary
+   * authenticated CUSTOMER: every existing ownership check, hold/payment/webhook/invoice/cancellation
+   * path applies unchanged.
+   *
+   * SECURITY: an email is refused outright (never reused, never attached to) whenever it already has
+   * real history to protect:
+   *   - a REAL registered account (has its own password) -- refused so no one can book "as" that
+   *     customer merely by knowing their email.
+   *   - a GUEST account that has ever had a booking of any kind -- refused for the same reason: once
+   *     there is real history (a trip, an attempted payment, PII), knowing the email is not proof of
+   *     being that person, and reusing the account would hand a stranger that history with no password
+   *     or verification at all.
+   * An existing guest account is only reused while it is still genuinely empty (e.g. a same-visit retry
+   * of an abandoned checkout form) -- the lowest-risk case, since nothing sensitive exists on it yet.
+   * Setting a real password via the existing, email-verified "forgot password" flow (which also clears
+   * is_guest, see userRepository#updatePassword) is the one secure way a guest later gets normal login
+   * access to their own account and its bookings from another device.
+   */
+  async guestCheckout(input, meta) {
+    const existing = await userRepository.findByEmail(input.email);
+    if (existing) {
+      const hasRealHistory = !existing.isGuest || (await bookingRepository.hasAnyBooking(existing.id));
+      if (hasRealHistory) {
+        throw AppError.conflict(
+          'An account already exists with this email. Please log in, or use "Forgot password" if you checked out as a guest before.',
+        );
+      }
+      await userRepository.updateGuestContact(pool, existing.id, {
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.mobile,
+      });
+      const refreshed = await userRepository.findById(existing.id);
+      return withTransaction((client) => issueSession(client, refreshed, meta));
+    }
+
+    const passwordHash = await bcrypt.hash(generateToken(), config.auth.bcryptRounds);
+    return withTransaction(async (client) => {
+      const userId = await userRepository.create(client, {
+        email: input.email,
+        passwordHash,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.mobile,
+        roleCode: 'CUSTOMER',
+        isGuest: true,
       });
       const user = await userRepository.findById(userId, client);
       return issueSession(client, user, meta);

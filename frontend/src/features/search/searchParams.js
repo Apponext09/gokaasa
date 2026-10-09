@@ -23,6 +23,10 @@ export const SORT_OPTIONS = [
 
 const SORTS = SORT_OPTIONS.map((o) => o.value);
 const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
+// The customer-facing filter only offers "Dinner Included" (half board / full board, the only plans that
+// include dinner by definition). A URL carrying an older BREAKFAST/ROOM_ONLY value has no UI control to
+// show or clear it, so it is dropped here rather than silently filtering results the visible filter can't explain.
+export const DINNER_INCLUDED_MEAL_PLANS = Object.freeze(['HALF_BOARD', 'FULL_BOARD']);
 const PROPERTY_TYPES = ['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE'];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -91,6 +95,12 @@ const csvList = (value, isValid) => {
 const oneOf = (values) => (item) => values.includes(item);
 const AMENITY_CODE = /^[A-Z][A-Z0-9_]{1,40}$/;
 
+function dinnerOnly(mealPlans) {
+  if (!mealPlans) return undefined;
+  const kept = mealPlans.filter((plan) => DINNER_INCLUDED_MEAL_PLANS.includes(plan));
+  return kept.length ? kept : undefined;
+}
+
 /**
  * Reads the URL into a search state. Unknown or invalid values fall back to safe defaults rather than
  * producing an error page: the URL is user-editable and the results always reflect what is shown.
@@ -130,7 +140,7 @@ export function parseSearchParams(params) {
       propertyTypes: csvList(get('propertyTypes'), oneOf(PROPERTY_TYPES)),
       amenities: csvList(get('amenities'), (code) => AMENITY_CODE.test(code)),
       freeCancellation: get('freeCancellation') === 'true',
-      mealPlans: csvList(get('mealPlans'), oneOf(MEAL_PLANS)),
+      mealPlans: dinnerOnly(csvList(get('mealPlans'), oneOf(MEAL_PLANS))),
     },
   };
 }

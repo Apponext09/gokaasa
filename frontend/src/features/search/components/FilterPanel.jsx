@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button.jsx';
 import { Checkbox, Input } from '@/components/ui/form-controls.jsx';
 import { useDebounce } from '@/hooks/useDebounce.js';
+import { DINNER_INCLUDED_MEAL_PLANS } from '@/features/search/searchParams.js';
 
 const PROPERTY_TYPES = [
   { value: 'HOTEL', label: 'Hotel' },
@@ -10,13 +11,6 @@ const PROPERTY_TYPES = [
   { value: 'APARTMENT', label: 'Apartment' },
   { value: 'GUEST_HOUSE', label: 'Guest house' },
   { value: 'HOSTEL', label: 'Hostel' },
-];
-
-const MEAL_PLANS = [
-  { value: 'ROOM_ONLY', label: 'Room only' },
-  { value: 'BREAKFAST', label: 'Breakfast included' },
-  { value: 'HALF_BOARD', label: 'Half board' },
-  { value: 'FULL_BOARD', label: 'Full board' },
 ];
 
 const GUEST_RATINGS = [
@@ -204,14 +198,11 @@ export function FilterPanel({ filters, priceBounds, onChange, onClear, disabled 
       </Section>
 
       <Section title="Meal plan">
-        {MEAL_PLANS.map((meal) => (
-          <Checkbox
-            key={meal.value}
-            label={meal.label}
-            checked={filters.mealPlans?.includes(meal.value) ?? false}
-            onChange={() => set({ mealPlans: toggle(filters.mealPlans, meal.value) })}
-          />
-        ))}
+        <Checkbox
+          label="Dinner Included"
+          checked={DINNER_INCLUDED_MEAL_PLANS.every((plan) => filters.mealPlans?.includes(plan)) ?? false}
+          onChange={(event) => set({ mealPlans: event.target.checked ? [...DINNER_INCLUDED_MEAL_PLANS] : undefined })}
+        />
       </Section>
     </div>
   );

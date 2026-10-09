@@ -15,6 +15,7 @@ export function toImage(row) {
     byteSize: row.byte_size ?? null,
     sortOrder: row.sort_order,
     isCover: row.is_cover,
+    imageType: row.image_type ?? 'REAL_PROPERTY',
   };
 }
 

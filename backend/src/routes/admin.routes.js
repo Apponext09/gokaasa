@@ -32,6 +32,7 @@ import {
   imagePatchSchema,
   imageUploadFields,
   providerImageSchema,
+  imageFromUrlSchema,
   verifyFieldsSchema,
 } from '../validators/verification.validator.js';
 import {
@@ -52,6 +53,8 @@ import {
   roomTypeUpdateSchema,
 } from '../validators/inventory.validator.js';
 import { managerAssignSchema, managerIdParam, managerListQuery } from '../validators/manager.validator.js';
+import { couponController } from '../controllers/coupon.controller.js';
+import { couponCreateSchema, couponIdParam, couponListQuery, couponStatusSchema, couponUpdateSchema } from '../validators/coupon.validator.js';
 import { adminSearchController } from '../controllers/adminSearch.controller.js';
 import { adminSearchQuery } from '../validators/adminSearch.validator.js';
 import { settingsController } from '../controllers/settings.controller.js';
@@ -69,6 +72,7 @@ import {
   adminRefundListQuery,
   adminCustomerIdParam,
   adminCustomerListQuery,
+  customerStatusSchema,
   auditLogQuery,
   dashboardTrendsQuery,
   hotelPerformanceQuery,
@@ -135,6 +139,14 @@ adminRouter.delete(
 adminRouter.get('/managers', validate({ query: managerListQuery }), authorize('ADMIN'), managerController.listManagers);
 adminRouter.get('/managers/:userId', validate({ params: managerIdParam }), authorize('ADMIN'), managerController.detail);
 
+// Coupons / offers. ADMIN-only throughout: a platform-wide pricing lever, same policy as settings and audit logs.
+adminRouter.get('/coupons', validate({ query: couponListQuery }), authorize('ADMIN'), couponController.list);
+adminRouter.post('/coupons', validate({ body: couponCreateSchema }), authorize('ADMIN'), couponController.create);
+adminRouter.get('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.detail);
+adminRouter.patch('/coupons/:id', validate({ params: couponIdParam, body: couponUpdateSchema }), authorize('ADMIN'), couponController.update);
+adminRouter.patch('/coupons/:id/status', validate({ params: couponIdParam, body: couponStatusSchema }), authorize('ADMIN'), couponController.setStatus);
+adminRouter.delete('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.remove);
+
 // Verification and provider reconciliation
 adminRouter.post(
   '/hotels/:id/verify-fields',
@@ -176,6 +188,14 @@ adminRouter.post(
   validate({ params: idParam, body: providerImageSchema }),
   requireHotelAccess(hotelIdFromParam),
   hotelWorkspaceController.addProviderImage,
+);
+// Attaches a real image fetched from a free/public source (e.g. Wikimedia Commons), ADMIN or the
+// hotel's own manager -- same access rule as every other image-management action.
+adminRouter.post(
+  '/hotels/:id/images/from-url',
+  validate({ params: idParam, body: imageFromUrlSchema }),
+  requireHotelAccess(hotelIdFromParam),
+  hotelWorkspaceController.addImageFromUrl,
 );
 adminRouter.put(
   '/hotels/:id/images/order',
@@ -362,6 +382,13 @@ adminRouter.get('/exports/refunds', validate({ query: adminRefundListQuery }), a
 adminRouter.get('/customers', validate({ query: adminCustomerListQuery }), adminCustomerController.list);
 adminRouter.get('/exports/customers', validate({ query: adminCustomerListQuery }), adminCustomerController.exportCsv);
 adminRouter.get('/customers/:id', validate({ params: adminCustomerIdParam }), adminCustomerController.detail);
+// Deactivating a guest account is a platform-wide, sensitive action -- ADMIN only, unlike the read routes above.
+adminRouter.patch(
+  '/customers/:id/status',
+  validate({ params: adminCustomerIdParam, body: customerStatusSchema }),
+  authorize('ADMIN'),
+  adminCustomerController.setStatus,
+);
 
 // Audit log viewer. ADMIN only — it can reveal other staff members' actions across every hotel.
 adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), authorize('ADMIN'), auditLogController.list);

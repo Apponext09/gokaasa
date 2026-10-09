@@ -168,8 +168,14 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
   };
 }
 
-/** The customer-facing view of a quote or a stored snapshot. Same shape from both sources. */
+/**
+ * The customer-facing view of a quote or a stored snapshot. Same shape from both sources. The snapshot's
+ * own `totals.total` is frozen at quote time and never knows about a coupon applied afterwards, so when a
+ * live hold is passed, its current `total_minor`/`coupon_discount_minor` columns (which DO reflect any
+ * applied coupon) override the snapshot's total rather than being read from it.
+ */
 export function quoteView(snapshot, hold = null) {
+  const couponDiscount = hold ? Number(hold.coupon_discount_minor ?? 0) : 0;
   return {
     hotel: { ...snapshot.hotel },
     room: { ...snapshot.room },
@@ -184,7 +190,13 @@ export function quoteView(snapshot, hold = null) {
     },
     stay: { ...snapshot.stay },
     nightly: snapshot.nightly.map((row) => ({ date: row.date, final: row.final })),
-    totals: { ...snapshot.totals, currency: snapshot.ratePlan.currency },
+    totals: {
+      ...snapshot.totals,
+      currency: snapshot.ratePlan.currency,
+      couponDiscount,
+      total: hold ? Number(hold.total_minor) : snapshot.totals.total,
+    },
+    coupon: hold?.coupon_code ? { code: hold.coupon_code, discountMinor: couponDiscount } : null,
     ...(hold ? { holdId: hold.id } : {}),
   };
 }

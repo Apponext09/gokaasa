@@ -8,13 +8,15 @@ export const ADULT_AGE = 18;
 
 const personName = (label) => z.string().trim().min(1, `${label} is required`).max(60, `${label} must be at most 60 characters`);
 
+// Genuinely optional: left blank, a guest's age is simply not provided yet (collected at check-in).
 const optionalAge = z.preprocess(
   (value) => (value === '' || value == null ? undefined : Number(value)),
   z
-    .number({ error: 'Enter the age of each guest' })
+    .number()
     .int('Age must be a whole number')
     .min(0, 'Age must be 0 or more')
-    .max(120, 'Age must be 120 or less'),
+    .max(120, 'Age must be 120 or less')
+    .optional(),
 );
 
 export const primaryContactSchema = z.object({
@@ -27,44 +29,34 @@ export const primaryContactSchema = z.object({
   ),
 });
 
-const guestSchema = z.object({
-  firstName: personName('First name'),
-  lastName: personName('Last name'),
-  age: optionalAge,
-});
+// Beyond the required lead guest above (primaryContact), naming each room occupant is optional -- the
+// hotel can collect whatever is missing at check-in. A name is still all-or-nothing when given: a first
+// name with no last name is ambiguous, not "not provided yet", so that pairing is still enforced.
+const guestSchema = z
+  .object({
+    firstName: z.string().trim().max(60, 'First name must be at most 60 characters'),
+    lastName: z.string().trim().max(60, 'Last name must be at most 60 characters'),
+    age: optionalAge,
+  })
+  .refine((value) => Boolean(value.firstName) === Boolean(value.lastName), {
+    message: 'Enter both first and last name, or leave both blank to add this guest at check-in',
+    path: ['lastName'],
+  });
 
-/**
- * Builds the form schema for one stay. Each room must have exactly the adults and children the search asked for:
- * guests aged under 18 count as children, everyone else as adults.
- */
-export function buildGuestFormSchema(occupancy) {
-  return z
-    .object({
-      primaryContact: primaryContactSchema,
-      rooms: z.array(z.object({ guests: z.array(guestSchema) })),
-      gstNumber: z
-        .string()
-        .trim()
-        .toUpperCase()
-        .refine((value) => value === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(value), 'Enter a valid 15-character GSTIN'),
-      companyName: z.string().trim().max(120, 'Company name must be at most 120 characters'),
-      billingAddress: z.string().trim().max(300, 'Keep the billing address to 300 characters or fewer'),
-      specialRequest: z.string().trim().max(500, 'Keep special requests to 500 characters or fewer'),
-    })
-    .superRefine((value, ctx) => {
-      occupancy.forEach((expected, roomIndex) => {
-        const guests = value.rooms[roomIndex]?.guests ?? [];
-        const children = guests.filter((guest) => guest.age !== undefined && guest.age < ADULT_AGE).length;
-        const adults = guests.length - children;
-        if (adults !== expected.adults || children !== expected.childAges.length) {
-          ctx.addIssue({
-            code: 'custom',
-            path: ['rooms', roomIndex, 'guests'],
-            message: `Room ${roomIndex + 1} needs ${expected.adults} adult${expected.adults === 1 ? '' : 's'} and ${expected.childAges.length} child${expected.childAges.length === 1 ? '' : 'ren'}. Check the ages.`,
-          });
-        }
-      });
-    });
+/** Builds the form schema for one stay. Occupancy itself (adults/children per room) was already fixed when the room was selected; this form never changes or re-validates it. */
+export function buildGuestFormSchema() {
+  return z.object({
+    primaryContact: primaryContactSchema,
+    rooms: z.array(z.object({ guests: z.array(guestSchema) })),
+    gstNumber: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .refine((value) => value === '' || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(value), 'Enter a valid 15-character GSTIN'),
+    companyName: z.string().trim().max(120, 'Company name must be at most 120 characters'),
+    billingAddress: z.string().trim().max(300, 'Keep the billing address to 300 characters or fewer'),
+    specialRequest: z.string().trim().max(500, 'Keep special requests to 500 characters or fewer'),
+  });
 }
 
 /**
@@ -101,17 +93,22 @@ export function defaultGuestValues(occupancy, saved = null) {
   };
 }
 
-/** The request body for PUT /api/booking/holds/:id/guests. */
+/**
+ * The request body for PUT /api/booking/holds/:id/guests. A slot the guest left entirely blank is
+ * dropped rather than sent as an empty-named guest -- it is genuinely not provided, not "Guest 2"/"Unknown".
+ */
 export function toGuestDetailsPayload(values) {
   return {
     primaryContact: { ...values.primaryContact },
     rooms: values.rooms.map((room, roomIndex) => ({
       roomIndex,
-      guests: room.guests.map((guest) => ({
-        firstName: guest.firstName.trim(),
-        lastName: guest.lastName.trim(),
-        age: Number(guest.age),
-      })),
+      guests: room.guests
+        .filter((guest) => guest.firstName.trim() && guest.lastName.trim())
+        .map((guest) => ({
+          firstName: guest.firstName.trim(),
+          lastName: guest.lastName.trim(),
+          ...(guest.age !== undefined && guest.age !== '' ? { age: Number(guest.age) } : {}),
+        })),
     })),
     gstNumber: values.gstNumber || undefined,
     companyName: values.companyName || undefined,

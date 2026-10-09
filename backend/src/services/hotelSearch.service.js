@@ -2,14 +2,39 @@ import { hotelSearchRepository } from '../repositories/hotelSearch.repository.js
 import { destinationRepository } from '../repositories/destination.repository.js';
 import { hotelRepository } from '../repositories/hotel.repository.js';
 import { bookingRepository } from '../repositories/booking.repository.js';
+import { couponRepository } from '../repositories/coupon.repository.js';
 import { getStorage } from '../storage/index.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
 import { addDays, nightsBetween } from '../domain/pricing.js';
 import { localToday } from '../domain/businessDate.js';
 import { LIVE_BOOKING_STATUSES } from '../domain/bookingStatus.js';
+import { bestDisplayOffer } from '../domain/coupon.js';
 import { config } from '../config/index.js';
 import { toPage } from './presenters.js';
 import { AppError } from '../utils/AppError.js';
+
+/**
+ * Every active, in-date coupon with its hotel/city restrictions attached, fetched once per request (not
+ * once per hotel) -- the same batched pattern couponRepository.restrictionsFor already uses for the
+ * public /api/offers list. Feeds bestDisplayOffer() for every card in the result set.
+ */
+async function offersForBadges() {
+  const coupons = await couponRepository.listActive();
+  if (coupons.length === 0) return [];
+  const { hotelsByCoupon, citiesByCoupon } = await couponRepository.restrictionsFor(coupons.map((c) => c.id));
+  return coupons.map((c) => ({
+    ...c,
+    hotel_ids: (hotelsByCoupon.get(c.id) ?? []).map((h) => h.id),
+    cities: citiesByCoupon.get(c.id) ?? [],
+  }));
+}
+
+/** The {code, discountPercent} badge for a card, or null. `row` must carry id/city and the price fields named. */
+function offerBadgeFor(row, offers, { subtotalMinor, nights = null, checkIn = null, checkOut = null }) {
+  if (!offers.length) return null;
+  const best = bestDisplayOffer(offers, { subtotalMinor, hotelId: row.id, city: row.city, nights, checkIn, checkOut });
+  return best ? { code: best.code, discountPercent: best.discountPercent } : null;
+}
 
 /** "Taj Lands End Mumbai" -> "taj-lands-end-mumbai". The same rule is used for URLs and for matching. */
 export function slugifyPlace(value) {
@@ -45,11 +70,11 @@ async function resolveNames(slug, field) {
 function imageFor(cover) {
   if (!cover) return null;
   const url = cover.storageKey ? getStorage().publicUrl(cover.storageKey) : cover.sourceUrl;
-  return url ? { url, altText: cover.altText ?? null } : null;
+  return url ? { url, altText: cover.altText ?? null, isIllustrative: cover.imageType === 'ILLUSTRATIVE' } : null;
 }
 
 /** One hotel card. Every figure comes from the database; nothing is estimated or invented. */
-export function toHotelCard(row) {
+export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null } = {}) {
   const nights = row.nights;
   const freeCancellation = Boolean(row.is_refundable && !row.is_non_refundable && row.refund_percent === 100);
   return {
@@ -70,6 +95,9 @@ export function toHotelCard(row) {
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),
+    // The admin coupon/offer system's best generally-available discount for this hotel at this real
+    // price -- see domain/coupon.js#bestDisplayOffer. null when nothing safely qualifies.
+    offer: row.final_total != null ? offerBadgeFor(row, offers, { subtotalMinor: Number(row.final_total), nights, checkIn, checkOut }) : null,
     bestOffer: {
       roomTypeId: row.room_type_id,
       roomName: row.room_name,
@@ -103,7 +131,7 @@ export function toHotelCard(row) {
  * A homepage hotel teaser: no stay/occupancy context, so no bestOffer/cancellation -- just enough to
  * decide whether to tap through. `distanceKm` is null for a handpicked (non-geo) card.
  */
-function toCuratedCard(row) {
+function toCuratedCard(row, { offers = [] } = {}) {
   return {
     id: row.id,
     slug: row.slug,
@@ -120,6 +148,9 @@ function toCuratedCard(row) {
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),
+    // No stay context exists yet on a homepage teaser, so bestDisplayOffer only considers coupons with no
+    // min-nights/stay-date restriction -- see its own doc comment for the full, deliberately conservative rule.
+    offer: row.final_price_minor == null ? null : offerBadgeFor(row, offers, { subtotalMinor: Number(row.final_price_minor) }),
     price: row.final_price_minor == null
       ? null
       : {
@@ -176,7 +207,8 @@ export const hotelSearchService = {
     });
 
     const total = rows[0]?.total_count ?? 0;
-    const items = rows.map((row) => toHotelCard({ ...row, nights: nights.length }));
+    const offers = await offersForBadges();
+    const items = rows.map((row) => toHotelCard({ ...row, nights: nights.length }, { offers, checkIn, checkOut }));
     const priceBounds = rows[0]?.price_floor == null
       ? null
       : { minPerNightMinor: Number(rows[0].price_floor), maxPerNightMinor: Number(rows[0].price_ceiling) };
@@ -206,20 +238,22 @@ export const hotelSearchService = {
   async nearby(query, { userId = null } = {}) {
     const { lat, lng, radiusKm, page, limit } = query;
     const referenceDate = addDays(localToday(config.booking.businessTimezone), 1);
-    const { rows, total } = await hotelSearchRepository.curated({
-      lat, lng, radiusKm, referenceDate, userId, limit, offset: (page - 1) * limit,
-    });
-    return toPage(rows.map(toCuratedCard), total, page, limit);
+    const [{ rows, total }, offers] = await Promise.all([
+      hotelSearchRepository.curated({ lat, lng, radiusKm, referenceDate, userId, limit, offset: (page - 1) * limit }),
+      offersForBadges(),
+    ]);
+    return toPage(rows.map((row) => toCuratedCard(row, { offers })), total, page, limit);
   },
 
   /** The same teaser shape as `nearby`, but every published hotel is a candidate, ranked by rating. */
   async handpicked(query, { userId = null } = {}) {
     const { page, limit } = query;
     const referenceDate = addDays(localToday(config.booking.businessTimezone), 1);
-    const { rows, total } = await hotelSearchRepository.curated({
-      referenceDate, userId, limit, offset: (page - 1) * limit,
-    });
-    return toPage(rows.map(toCuratedCard), total, page, limit);
+    const [{ rows, total }, offers] = await Promise.all([
+      hotelSearchRepository.curated({ referenceDate, userId, limit, offset: (page - 1) * limit }),
+      offersForBadges(),
+    ]);
+    return toPage(rows.map((row) => toCuratedCard(row, { offers })), total, page, limit);
   },
 
   /** Destination suggestions for the search box. The caller debounces; this only answers one request. */

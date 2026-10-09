@@ -29,6 +29,11 @@ export const authController = {
     return sendSession(res, 201, session);
   },
 
+  async guestCheckout(req, res) {
+    const session = await authService.guestCheckout(req.validated.body, requestMeta(req));
+    return sendSession(res, 200, session);
+  },
+
   async login(req, res) {
     const session = await authService.login(req.validated.body, requestMeta(req));
     return sendSession(res, 200, session);

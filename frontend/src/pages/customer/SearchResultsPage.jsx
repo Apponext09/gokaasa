@@ -4,6 +4,7 @@ import { Filter, Search, SlidersHorizontal, X } from 'lucide-react';
 import { Alert } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, Pagination } from '@/components/shared/index.jsx';
+import { StaggeredReveal } from '@/components/shared/StaggeredReveal.jsx';
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
 import { FilterPanel } from '@/features/search/components/FilterPanel.jsx';
 import { HotelCard, HotelCardSkeleton } from '@/features/search/components/HotelCard.jsx';
@@ -264,7 +265,11 @@ export function SearchResultsPage() {
                 </div>
               )}
 
-              {status !== 'error' && data?.items.map((hotel) => <HotelCard key={hotel.id} hotel={hotel} state={state} />)}
+              {status !== 'error' && data?.items.map((hotel, index) => (
+                <StaggeredReveal key={hotel.id} index={index}>
+                  <HotelCard hotel={hotel} state={state} />
+                </StaggeredReveal>
+              ))}
 
               {status === 'loading' && data && <p className="text-center text-xs text-[var(--text-muted)]">Updating results…</p>}
             </div>

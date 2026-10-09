@@ -65,6 +65,9 @@ export async function ensureBookingForHold(client, hold) {
     taxes_minor: Number(hold.taxes_minor),
     fees_minor: Number(hold.fees_minor),
     discount_minor: Number(hold.discount_minor),
+    coupon_id: hold.coupon_id ?? null,
+    coupon_code: hold.coupon_code ?? null,
+    coupon_discount_minor: Number(hold.coupon_discount_minor ?? 0),
     total_minor: Number(hold.total_minor),
     cancellation_policy: JSON.stringify(snapshot.cancellationPolicy),
     cancellation_deadline_at: snapshot.cancellationPolicy.cancellation_deadline_hours == null
@@ -111,19 +114,23 @@ export async function ensureBookingForHold(client, hold) {
     total: Number(hold.total_minor),
   });
 
-  let guestIndex = 0;
+  // Additional guest names are optional (Feature 3) -- a room's `guests` entries may be shorter than its
+  // occupancy, and an entry with no name at all is never stored as a fabricated "Guest 2"/"Unknown" row.
+  // The hotel collects whatever is still missing at check-in; see adminBooking.service.js's detail view.
+  let isFirstNamedGuest = true;
   for (const [roomIndex, room] of details.rooms.entries()) {
     for (const guest of room.guests) {
+      if (!guest.firstName || !guest.lastName) continue;
       await bookingRepository.insertBookingGuest(client, {
         bookingId,
         roomIndex: room.roomIndex ?? roomIndex,
         fullName: `${guest.firstName} ${guest.lastName}`,
         firstName: guest.firstName,
         lastName: guest.lastName,
-        age: guest.age,
-        isPrimary: guestIndex === 0 && roomIndex === 0,
+        age: guest.age ?? null,
+        isPrimary: isFirstNamedGuest,
       });
-      guestIndex += 1;
+      isFirstNamedGuest = false;
     }
   }
 
@@ -231,6 +238,8 @@ export async function buildBookingDto(client, booking, { includePreview = true }
       currency: booking.currency,
       subtotal: Number(booking.subtotal_minor),
       discount: Number(booking.discount_minor),
+      couponCode: booking.coupon_code,
+      couponDiscount: Number(booking.coupon_discount_minor ?? 0),
       taxes: Number(booking.taxes_minor),
       fees: Number(booking.fees_minor),
       total: Number(booking.total_minor),
@@ -242,6 +251,7 @@ export async function buildBookingDto(client, booking, { includePreview = true }
         id: paid?.provider_payment_id ?? null,
         orderId: latestPayment.provider_order_id,
         status: latestPayment.status,
+        method: paid?.provider_payload?.method ?? null,
         paidAt: paid?.paid_at ?? null,
         attempts: payments.length,
       }
@@ -405,11 +415,13 @@ async function performCancel(client, booking, { reason, actor }) {
     entityId: booking.id,
     newValue: { refundMinor: preview.refundMinor, reason: preview.reason },
   });
-  return { booking, refundId, idempotent: false };
+  return { booking, refundId, refundAmountMinor: preview.refundMinor, idempotent: false };
 }
 
 async function finishCancel(bookingId, outcome) {
   if (outcome.refundId) {
+    const freshForRefundNotice = await bookingRepository.findBooking(bookingId);
+    await notificationService.sendRefundInitiated(freshForRefundNotice, { amount_minor: outcome.refundAmountMinor }).catch(() => {});
     await processRefund(outcome.refundId);
   }
   log.info('booking cancelled', { bookingId, refund: Boolean(outcome.refundId), idempotent: outcome.idempotent });

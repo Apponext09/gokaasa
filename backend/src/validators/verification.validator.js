@@ -37,3 +37,11 @@ export const imageUploadFields = z.object({
 export const providerImageSchema = z.object({
   sourceUrl: z.url({ message: 'Provide the image URL from the provider record' }).max(2000),
 });
+
+export const imageFromUrlSchema = z.object({
+  sourceUrl: z.url({ message: 'Provide a direct image URL' }).max(2000),
+  category: z.enum(['EXTERIOR', 'LOBBY', 'ROOM', 'BATHROOM', 'RESTAURANT', 'POOL', 'GYM', 'SPA', 'OTHER']).default('OTHER'),
+  altText: z.string().trim().max(300).optional(),
+  sourceProvider: z.string().trim().max(60).default('manual'),
+  imageType: z.enum(['REAL_PROPERTY', 'ILLUSTRATIVE']).default('REAL_PROPERTY'),
+});

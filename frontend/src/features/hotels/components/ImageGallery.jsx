@@ -171,6 +171,9 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
                         {image.origin === 'UPLOADED' ? 'Uploaded' : `From ${image.sourceProvider ?? 'provider'}`}
                       </Badge>
                     )}
+                    <Badge tone={image.imageType === 'ILLUSTRATIVE' ? 'warning' : 'success'}>
+                      {image.imageType === 'ILLUSTRATIVE' ? 'Illustrative' : 'Real property'}
+                    </Badge>
                   </div>
                   {categories && adapter.setCategory && (
                     <Select

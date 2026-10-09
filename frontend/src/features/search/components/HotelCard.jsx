@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
-import { Check, MapPin, ShieldCheck, Star, Undo2, UtensilsCrossed } from 'lucide-react';
+import { Check, MapPin, ShieldCheck, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
 import { Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { WishlistButton } from '@/components/shared/WishlistButton.jsx';
 import { formatMoney } from '@/components/shared/index.jsx';
 import { stayParams, slugifyPlace } from '@/features/search/searchParams.js';
+import { normalizeAmenities } from '@/features/search/amenities.js';
+import { discountDisplay } from '@/features/search/discountDisplay.js';
+import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
 
 const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HALF_BOARD: 'Half board', FULL_BOARD: 'Full board' };
 const PROPERTY_LABEL = { HOTEL: 'Hotel', RESORT: 'Resort', VILLA: 'Villa', APARTMENT: 'Apartment', HOSTEL: 'Hostel', GUEST_HOUSE: 'Guest house' };
@@ -20,23 +23,22 @@ export function hotelPath(hotel, state) {
 /** One hotel in the results. Every value shown comes from the search response; nothing is estimated. */
 export function HotelCard({ hotel, state }) {
   const offer = hotel.bestOffer;
+  const couponOffer = hotel.offer;
   const place = [hotel.area, hotel.city, hotel.country].filter(Boolean).join(', ');
-  const hasDiscount = offer?.discountTotalMinor > 0;
-  const originalPerNightMinor = hasDiscount ? Math.round(offer.baseTotalMinor / offer.nights) : null;
-  const discountPercent = hasDiscount ? Math.round((offer.discountTotalMinor / offer.baseTotalMinor) * 100) : null;
-  // Amenities can repeat if a hotel was tagged with the same amenity under more than one provider label.
-  const amenities = [...new Set(hotel.amenities)].slice(0, 3);
+  const { originalPerNightMinor, discountPercent } = discountDisplay(offer);
+  const { shown: amenities, moreCount: moreAmenityCount } = normalizeAmenities(hotel.amenities, 3);
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-shadow hover:shadow-md md:flex-row">
-      <div className="relative aspect-[4/3] w-full shrink-0 md:aspect-auto md:w-72 lg:w-80">
+    <article className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row">
+      <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden md:aspect-auto md:w-72 lg:w-80">
         <SafeImage
           src={hotel.image?.url}
           alt={hotel.image?.altText ?? hotel.name}
-          className="absolute inset-0 transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+          className="absolute inset-0 transition-transform duration-[650ms] ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 100vw"
           fallbackLabel={`${hotel.name}: photos coming soon`}
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/0 to-transparent transition-colors duration-500 group-hover:from-slate-950/15" />
         {/* A fixed top-left slot, always the same badge, so the discount never competes for space with the other badges below. */}
         {discountPercent > 0 && (
           <div className="absolute left-3 top-3">
@@ -46,6 +48,11 @@ export function HotelCard({ hotel, state }) {
         <div className="absolute right-3 top-3">
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
+        {isIllustrativeCover(hotel.image) && (
+          <p className="absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
+            Images for illustration
+          </p>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 md:p-5">
@@ -94,6 +101,7 @@ export function HotelCard({ hotel, state }) {
                 <Check className="h-3.5 w-3.5 text-success-600" aria-hidden="true" /> {name}
               </li>
             ))}
+            {moreAmenityCount > 0 && <li className="text-[var(--text-muted)]">+{moreAmenityCount} more</li>}
           </ul>
         )}
 
@@ -115,6 +123,13 @@ export function HotelCard({ hotel, state }) {
                 </Badge>
               )}
               {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <Badge tone="warning">Only {offer.roomsLeft} left</Badge>}
+              {/* Server-computed from the admin's real, active offers against this exact price -- see
+                  hotelSearch.service.js#offerBadgeFor. Never a vague pointer, never a frontend guess. */}
+              {couponOffer && (
+                <Badge tone="premium">
+                  <Tag className="h-3 w-3" aria-hidden="true" /> {couponOffer.discountPercent}% OFF with code {couponOffer.code}
+                </Badge>
+              )}
             </div>
 
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -133,7 +148,7 @@ export function HotelCard({ hotel, state }) {
                 </p>
               </div>
               <Link to={hotelPath(hotel, state)}>
-                <Button>View Rooms</Button>
+                <Button>View Hotel</Button>
               </Link>
             </div>
           </div>

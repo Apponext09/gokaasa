@@ -6,6 +6,8 @@ import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { WishlistButton } from '@/components/shared/WishlistButton.jsx';
 import { formatMoney } from '@/components/shared/index.jsx';
 import { slugifyPlace } from '@/features/search/searchParams.js';
+import { normalizeAmenities } from '@/features/search/amenities.js';
+import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
 
 /**
  * A homepage teaser card for Hotels Near You / Handpicked Hotels -- no stay/occupancy context, so no
@@ -14,19 +16,20 @@ import { slugifyPlace } from '@/features/search/searchParams.js';
  */
 export function CuratedHotelCard({ hotel }) {
   const place = [hotel.area, hotel.city].filter(Boolean).join(', ');
-  const amenities = [...new Set(hotel.amenities)].slice(0, 2);
+  const { shown: amenities, moreCount } = normalizeAmenities(hotel.amenities, 2);
   const detailsPath = `/hotels/${slugifyPlace(hotel.city)}/${hotel.slug}`;
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-shadow hover:shadow-md">
-      <div className="relative aspect-[16/10] w-full">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl">
+      <div className="relative aspect-[16/10] w-full overflow-hidden">
         <SafeImage
           src={hotel.image?.url}
           alt={hotel.image?.altText ?? hotel.name}
-          className="absolute inset-0 transition-transform duration-300 hover:scale-105 motion-reduce:transition-none motion-reduce:hover:scale-100"
+          className="absolute inset-0 transition-transform duration-[650ms] ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           sizes="320px"
           fallbackLabel={`${hotel.name}: photos coming soon`}
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/0 to-transparent transition-colors duration-500 group-hover:from-slate-950/15" />
         {hotel.price?.discountPercent > 0 && (
           <div className="absolute left-3 top-3">
             <Badge tone="premium">{hotel.price.discountPercent}% OFF</Badge>
@@ -35,6 +38,11 @@ export function CuratedHotelCard({ hotel }) {
         <div className="absolute right-3 top-3">
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
+        {isIllustrativeCover(hotel.image) && (
+          <p className="absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
+            Images for illustration
+          </p>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
@@ -70,6 +78,7 @@ export function CuratedHotelCard({ hotel }) {
                 <Check className="h-3 w-3 text-success-600" aria-hidden="true" /> {name}
               </li>
             ))}
+            {moreCount > 0 && <li className="text-[var(--text-muted)]">+{moreCount} more</li>}
           </ul>
         )}
 
@@ -82,6 +91,11 @@ export function CuratedHotelCard({ hotel }) {
               <span className="block text-base font-semibold text-[var(--text-strong)]">
                 {formatMoney(hotel.price.amountMinor)} <span className="text-xs font-normal text-[var(--text-muted)]">/ night</span>
               </span>
+              {hotel.offer && (
+                <span className="block text-xs font-medium text-accent-700">
+                  Extra {hotel.offer.discountPercent}% off with {hotel.offer.code}
+                </span>
+              )}
             </p>
           ) : (
             <span className="text-xs text-[var(--text-muted)]">See rates</span>
@@ -99,10 +113,14 @@ export function CuratedHotelCardSkeleton() {
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)]" aria-hidden="true">
       <div className="aspect-[16/10] w-full animate-pulse bg-[var(--surface-muted)]" />
-      <div className="space-y-2 p-4">
+      <div className="space-y-2.5 p-4">
         <div className="h-4 w-3/4 animate-pulse rounded bg-[var(--surface-muted)]" />
         <div className="h-3 w-1/2 animate-pulse rounded bg-[var(--surface-muted)]" />
         <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--surface-muted)]" />
+        <div className="flex items-end justify-between pt-2">
+          <div className="h-5 w-16 animate-pulse rounded bg-[var(--surface-muted)]" />
+          <div className="h-8 w-20 animate-pulse rounded-[var(--radius-control)] bg-[var(--surface-muted)]" />
+        </div>
       </div>
     </div>
   );

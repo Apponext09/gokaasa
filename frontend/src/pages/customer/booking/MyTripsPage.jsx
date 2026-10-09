@@ -10,12 +10,12 @@ import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
 import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
 import { downloadInvoice } from '@/features/booking/invoice.js';
-import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
+import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, rebookPath } from '@/features/booking/bookingFormat.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { normalizeError } from '@/services/api.js';
 import { bookingApi } from '@/services/endpoints.js';
 
-const INVOICEABLE_STATUSES = ['CONFIRMED', 'REFUNDED'];
+const INVOICEABLE_STATUSES = ['CONFIRMED', 'REFUND_PENDING', 'REFUNDED'];
 
 const TABS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -115,6 +115,11 @@ export function MyTripsPage() {
                             setState((s) => ({ ...s, items: s.items.map((item) => (item.id === trip.id ? { ...item, review } : item)) }))
                           }
                         />
+                      )}
+                      {(tab === 'completed' || tab === 'cancelled') && (
+                        <Link to={rebookPath(trip)}>
+                          <Button variant="secondary" size="sm">Book Again</Button>
+                        </Link>
                       )}
                     </div>
                   </div>

@@ -2,7 +2,7 @@ import { pool } from '../db/pool.js';
 
 const IMAGE_COLUMNS = `
   id, hotel_id, category, storage_key, source_url, source_provider, alt_text, mime_type,
-  byte_size, origin, sort_order, is_cover, created_at
+  byte_size, origin, sort_order, is_cover, image_type, created_at
 `;
 
 export const hotelImageRepository = {

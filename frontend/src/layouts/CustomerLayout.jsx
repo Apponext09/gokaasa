@@ -1,6 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Outlet } from 'react-router-dom';
-import { Heart, Menu, X } from 'lucide-react';
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+} from 'react-router-dom';
+
+import {
+  Heart,
+  Menu,
+  X,
+  ChevronRight,
+  MapPin,
+  ShieldCheck,
+  Headphones,
+  Sparkles,
+} from 'lucide-react';
+
 import { Logo } from '@/components/shared/index.jsx';
 import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
@@ -9,13 +25,127 @@ import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
 import { cn } from '@/lib/utils.js';
 
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
 const NAV_LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/destinations', label: 'Hotels' },
-  { to: '/destinations', label: 'Top Destinations', key: 'top-destinations' },
+  {
+    to: '/destinations',
+    label: 'Top Destinations',
+    key: 'top-destinations',
+  },
+  { to: '/offers', label: 'Offers' },
   { to: '/about', label: 'About Us' },
   { to: '/contact', label: 'Contact Us' },
 ];
+
+/* =========================================================
+   SOCIAL ICONS
+   Inline SVGs so lucide-react is not used for brand icons.
+========================================================= */
+
+function InstagramIcon({ size = 18 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle
+        cx="17.5"
+        cy="6.5"
+        r="1"
+        fill="currentColor"
+        stroke="none"
+      />
+    </svg>
+  );
+}
+
+function FacebookIcon({ size = 18 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M14 8h3V4h-3c-2.76 0-5 2.24-5 5v3H6v4h3v4h4v-4h3.2l.8-4H13V9c0-.55.45-1 1-1Z" />
+    </svg>
+  );
+}
+
+function LinkedInIcon({ size = 18 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M6.5 8.5A2.25 2.25 0 1 0 6.5 4a2.25 2.25 0 0 0 0 4.5ZM4.5 10h4v10h-4V10Zm6 0h3.84v1.37h.05c.53-1 1.84-2.05 3.79-2.05 4.05 0 4.82 2.66 4.82 6.12V20h-4v-4.03c0-.96-.02-2.2-1.34-2.2-1.34 0-1.55 1.05-1.55 2.13V20h-4V10Z" />
+    </svg>
+  );
+}
+
+function YouTubeIcon({ size = 18 }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M23.5 6.2a3.01 3.01 0 0 0-2.12-2.13C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.38.57A3.01 3.01 0 0 0 .5 6.2 31.3 31.3 0 0 0 0 12a31.3 31.3 0 0 0 .5 5.8 3.01 3.01 0 0 0 2.12 2.13c1.88.57 9.38.57 9.38.57s7.5 0 9.38-.57a3.01 3.01 0 0 0 2.12-2.13A31.3 31.3 0 0 0 24 12a31.3 31.3 0 0 0-.5-5.8ZM9.6 15.9V8.1l6.5 3.9-6.5 3.9Z" />
+    </svg>
+  );
+}
+
+/* =========================================================
+   SOCIAL BUTTON
+========================================================= */
+
+function SocialButton({ label, children }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={`${label} - Coming soon`}
+      className="
+        flex h-10 w-10 items-center justify-center
+        rounded-full
+        border border-white/15
+        bg-white/[0.06]
+        text-white
+        transition-all duration-300
+        hover:-translate-y-1
+        hover:border-[#F2C66D]
+        hover:bg-[#F2C66D]/15
+        hover:text-[#F2C66D]
+      "
+    >
+      {children}
+    </button>
+  );
+}
+
+/* =========================================================
+   NAV LINKS
+========================================================= */
 
 function NavLinks({ className, onNavigate }) {
   return (
@@ -27,28 +157,98 @@ function NavLinks({ className, onNavigate }) {
           end={link.end}
           onClick={onNavigate}
           className={({ isActive }) =>
-            cn(className, 'transition-colors hover:text-brand-600', isActive ? 'text-brand-700' : 'text-[var(--text-body)]')
+            cn(
+              className,
+              `
+                relative
+                transition-all
+                duration-300
+                hover:text-brand-600
+              `,
+              isActive
+                ? 'text-brand-700'
+                : 'text-[var(--text-body)]',
+            )
           }
         >
-          {link.label}
+          {({ isActive }) => (
+            <>
+              {link.label}
+
+              <span
+                className={cn(
+                  `
+                    absolute
+                    -bottom-[7px]
+                    left-0
+                    h-[2px]
+                    rounded-full
+                    bg-gradient-to-r
+                    from-brand-600
+                    to-[#E7BD62]
+                    transition-all
+                    duration-300
+                  `,
+                  isActive
+                    ? 'w-full opacity-100'
+                    : 'w-0 opacity-0',
+                )}
+              />
+            </>
+          )}
         </NavLink>
       ))}
     </>
   );
 }
 
+/* =========================================================
+   GUEST LINKS
+========================================================= */
+
 function GuestLinks() {
   return (
     <div className="flex items-center gap-2">
       <Link
         to="/login"
-        className="inline-flex h-8 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]"
+        className="
+          inline-flex
+          h-9
+          items-center
+          rounded-full
+          px-4
+          text-sm
+          font-medium
+          text-[var(--text-body)]
+          transition-all
+          duration-300
+          hover:bg-[var(--surface-muted)]
+          hover:text-brand-700
+        "
       >
         Login
       </Link>
+
       <Link
         to="/register"
-        className="inline-flex h-8 items-center rounded-[var(--radius-control)] bg-brand-600 px-3 text-sm font-medium text-white hover:bg-brand-700"
+        className="
+          inline-flex
+          h-9
+          items-center
+          rounded-full
+          bg-gradient-to-r
+          from-brand-600
+          to-brand-700
+          px-5
+          text-sm
+          font-semibold
+          text-white
+          shadow-sm
+          transition-all
+          duration-300
+          hover:-translate-y-0.5
+          hover:shadow-lg
+        "
       >
         Sign Up
       </Link>
@@ -56,21 +256,35 @@ function GuestLinks() {
   );
 }
 
-/** Body-scroll lock while the mobile drawer is open. */
+/* =========================================================
+   BODY SCROLL LOCK
+========================================================= */
+
 function useBodyScrollLock(locked) {
   useEffect(() => {
     if (!locked) return undefined;
+
     const previous = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
     return () => {
       document.body.style.overflow = previous;
     };
   }, [locked]);
 }
 
+/* =========================================================
+   MOBILE DRAWER
+========================================================= */
+
 function MobileDrawer({ open, onClose }) {
   useBodyScrollLock(open);
-  const { isAuthenticated, isStaff, logout } = useAuth();
+
+  const {
+    isAuthenticated,
+    isStaff,
+    logout,
+  } = useAuth();
 
   const handleLogout = async () => {
     onClose();
@@ -80,52 +294,438 @@ function MobileDrawer({ open, onClose }) {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-40 md:hidden transition-opacity duration-300 motion-reduce:transition-none',
-        open ? 'opacity-100' : 'pointer-events-none opacity-0',
+        `
+          fixed
+          inset-0
+          z-50
+          md:hidden
+          transition-opacity
+          duration-300
+        `,
+        open
+          ? 'opacity-100'
+          : 'pointer-events-none opacity-0',
       )}
     >
-      <button aria-label="Close menu" className="absolute inset-0 bg-black/40" onClick={onClose} tabIndex={open ? 0 : -1} />
+      {/* Backdrop */}
+
+      <button
+        aria-label="Close menu"
+        className="
+          absolute
+          inset-0
+          bg-[#07111F]/60
+          backdrop-blur-sm
+        "
+        onClick={onClose}
+        tabIndex={open ? 0 : -1}
+      />
+
+      {/* Drawer */}
+
       <aside
         inert={!open}
         aria-label="Main"
         className={cn(
-          'absolute inset-y-0 right-0 flex w-80 max-w-[85vw] flex-col gap-1 overflow-y-auto bg-[var(--surface-card)] p-5 shadow-xl shadow-black/10 transition-transform duration-300 motion-reduce:transition-none',
-          open ? 'translate-x-0' : 'translate-x-full',
+          `
+            absolute
+            inset-y-0
+            right-0
+            flex
+            w-[min(88vw,390px)]
+            flex-col
+            overflow-y-auto
+            bg-[var(--surface-card)]
+            shadow-2xl
+            transition-transform
+            duration-300
+          `,
+          open
+            ? 'translate-x-0'
+            : 'translate-x-full',
         )}
       >
-        <div className="mb-4 flex items-center justify-between">
+        {/* Drawer Header */}
+
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            border-b
+            border-[var(--border-subtle)]
+            px-5
+            py-5
+          "
+        >
           <Logo />
-          <Button variant="ghost" size="icon" aria-label="Close menu" onClick={onClose}>
-            <X className="h-4 w-4" aria-hidden="true" />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Close menu"
+            onClick={onClose}
+            className="rounded-full"
+          >
+            <X
+              className="h-5 w-5"
+              aria-hidden="true"
+            />
           </Button>
         </div>
-        <NavLinks className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium" onNavigate={onClose} />
+
+        {/* Premium Drawer Intro */}
+
+        <div className="px-5 pt-5">
+          <div
+            className="
+              overflow-hidden
+              rounded-2xl
+              bg-gradient-to-br
+              from-[#0B1422]
+              via-[#14243B]
+              to-[#233B5E]
+              p-5
+              text-white
+              shadow-xl
+            "
+          >
+            <div
+              className="
+                mb-3
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-white/10
+                bg-white/10
+              "
+            >
+              <Sparkles
+                size={18}
+                className="text-[#F2C66D]"
+              />
+            </div>
+
+            <h3 className="text-lg font-semibold">
+              Your next stay awaits.
+            </h3>
+
+            <p className="mt-1.5 text-xs leading-5 text-white/70">
+              Discover beautiful stays and memorable
+              experiences with Gokaasa.
+            </p>
+
+            <Link
+              to="/destinations"
+              onClick={onClose}
+              className="
+                mt-4
+                inline-flex
+                items-center
+                gap-2
+                rounded-full
+                bg-white
+                px-4
+                py-2
+                text-xs
+                font-semibold
+                text-[#0B1422]
+                transition-all
+                hover:bg-[#F2C66D]
+              "
+            >
+              Explore Hotels
+              <ChevronRight size={14} />
+            </Link>
+          </div>
+        </div>
+
+        {/* Navigation */}
+
+        <div className="px-5 py-5">
+          <p
+            className="
+              mb-2
+              px-2
+              text-[10px]
+              font-bold
+              uppercase
+              tracking-[0.18em]
+              text-[var(--text-muted)]
+            "
+          >
+            Explore
+          </p>
+
+          <nav className="flex flex-col gap-1">
+            <NavLinks
+              className="
+                rounded-xl
+                px-3
+                py-3
+                text-base
+                font-medium
+              "
+              onNavigate={onClose}
+            />
+          </nav>
+        </div>
+
+        {/* Account */}
+
         {isAuthenticated && (
           <>
-            <div className="my-2 border-t border-[var(--border-subtle)]" />
-            <Link to="/my-trips" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">My Trips</Link>
-            <Link to="/wishlist" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">Wishlist</Link>
-            <Link to="/profile" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">My Profile</Link>
-            <Link to="/notifications" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">Notifications</Link>
-            {isStaff && (
-              <Link to="/admin/dashboard" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-brand-700 hover:bg-[var(--surface-muted)]">Admin</Link>
-            )}
-            <button type="button" onClick={handleLogout} className="mt-2 rounded-[var(--radius-control)] border-t border-[var(--border-subtle)] px-3 py-2.5 text-left text-base font-medium text-danger-600 hover:bg-danger-50">
-              Logout
-            </button>
+            <div className="mx-5 border-t border-[var(--border-subtle)]" />
+
+            <div className="px-5 py-5">
+              <p
+                className="
+                  mb-2
+                  px-2
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.18em]
+                  text-[var(--text-muted)]
+                "
+              >
+                Account
+              </p>
+
+              <div className="flex flex-col gap-1">
+                <Link
+                  to="/my-trips"
+                  onClick={onClose}
+                  className="
+                    flex
+                    items-center
+                    justify-between
+                    rounded-xl
+                    px-3
+                    py-3
+                    text-base
+                    font-medium
+                    text-[var(--text-body)]
+                    transition-colors
+                    hover:bg-[var(--surface-muted)]
+                  "
+                >
+                  My Trips
+                  <ChevronRight size={16} />
+                </Link>
+
+                <Link
+                  to="/wishlist"
+                  onClick={onClose}
+                  className="
+                    flex
+                    items-center
+                    justify-between
+                    rounded-xl
+                    px-3
+                    py-3
+                    text-base
+                    font-medium
+                    text-[var(--text-body)]
+                    transition-colors
+                    hover:bg-[var(--surface-muted)]
+                  "
+                >
+                  Wishlist
+                  <Heart size={16} />
+                </Link>
+
+                <Link
+                  to="/profile"
+                  onClick={onClose}
+                  className="
+                    flex
+                    items-center
+                    justify-between
+                    rounded-xl
+                    px-3
+                    py-3
+                    text-base
+                    font-medium
+                    text-[var(--text-body)]
+                    transition-colors
+                    hover:bg-[var(--surface-muted)]
+                  "
+                >
+                  My Profile
+                  <ChevronRight size={16} />
+                </Link>
+
+                <Link
+                  to="/notifications"
+                  onClick={onClose}
+                  className="
+                    flex
+                    items-center
+                    justify-between
+                    rounded-xl
+                    px-3
+                    py-3
+                    text-base
+                    font-medium
+                    text-[var(--text-body)]
+                    transition-colors
+                    hover:bg-[var(--surface-muted)]
+                  "
+                >
+                  Notifications
+                  <ChevronRight size={16} />
+                </Link>
+
+                {isStaff && (
+                  <Link
+                    to="/admin/dashboard"
+                    onClick={onClose}
+                    className="
+                      mt-1
+                      flex
+                      items-center
+                      justify-between
+                      rounded-xl
+                      bg-brand-50
+                      px-3
+                      py-3
+                      text-base
+                      font-semibold
+                      text-brand-700
+                    "
+                  >
+                    Admin
+                    <ChevronRight size={16} />
+                  </Link>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="
+                    mt-3
+                    border-t
+                    border-[var(--border-subtle)]
+                    px-3
+                    pt-4
+                    text-left
+                    text-base
+                    font-medium
+                    text-danger-600
+                  "
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
           </>
         )}
+
+        {/* Guest */}
+
         {!isAuthenticated && (
-          <>
-            <div className="my-2 border-t border-[var(--border-subtle)]" />
-            <Link to="/login" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-[var(--text-body)] hover:bg-[var(--surface-muted)]">Login</Link>
-            <Link to="/register" onClick={onClose} className="rounded-[var(--radius-control)] px-3 py-2.5 text-base font-medium text-brand-700 hover:bg-[var(--surface-muted)]">Sign Up</Link>
-          </>
+          <div className="px-5 pb-5">
+            <div className="border-t border-[var(--border-subtle)] pt-5">
+              <div className="flex flex-col gap-2">
+                <Link
+                  to="/login"
+                  onClick={onClose}
+                  className="
+                    rounded-xl
+                    border
+                    border-[var(--border-subtle)]
+                    px-4
+                    py-3
+                    text-center
+                    text-sm
+                    font-semibold
+                    text-[var(--text-body)]
+                  "
+                >
+                  Login
+                </Link>
+
+                <Link
+                  to="/register"
+                  onClick={onClose}
+                  className="
+                    rounded-xl
+                    bg-brand-700
+                    px-4
+                    py-3
+                    text-center
+                    text-sm
+                    font-semibold
+                    text-white
+                  "
+                >
+                  Create Account
+                </Link>
+              </div>
+            </div>
+          </div>
         )}
+
+        {/* Mobile Trust */}
+
+        <div className="mt-auto px-5 pb-6 pt-2">
+          <div
+            className="
+              grid
+              grid-cols-3
+              gap-2
+              rounded-2xl
+              border
+              border-[var(--border-subtle)]
+              bg-[var(--surface-muted)]
+              p-3
+            "
+          >
+            <div className="text-center">
+              <ShieldCheck
+                size={17}
+                className="mx-auto text-brand-600"
+              />
+              <p className="mt-1 text-[9px] font-semibold text-[var(--text-muted)]">
+                Secure
+              </p>
+            </div>
+
+            <div className="text-center">
+              <MapPin
+                size={17}
+                className="mx-auto text-brand-600"
+              />
+              <p className="mt-1 text-[9px] font-semibold text-[var(--text-muted)]">
+                Great stays
+              </p>
+            </div>
+
+            <div className="text-center">
+              <Headphones
+                size={17}
+                className="mx-auto text-brand-600"
+              />
+              <p className="mt-1 text-[9px] font-semibold text-[var(--text-muted)]">
+                Support
+              </p>
+            </div>
+          </div>
+        </div>
       </aside>
     </div>
   );
 }
+
+/* =========================================================
+   FOOTER
+   Existing API calls are preserved.
+========================================================= */
 
 function Footer() {
   const [stats, setStats] = useState(null);
@@ -133,137 +733,813 @@ function Footer() {
 
   useEffect(() => {
     let cancelled = false;
-    discoveryApi.stats().then((data) => !cancelled && setStats(data)).catch(() => {});
-    discoveryApi.popularDestinations({ limit: 5 }).then((items) => !cancelled && setDestinations(items)).catch(() => {});
+
+    discoveryApi
+      .stats()
+      .then((data) => {
+        if (!cancelled) {
+          setStats(data);
+        }
+      })
+      .catch(() => {});
+
+    discoveryApi
+      .popularDestinations({ limit: 5 })
+      .then((items) => {
+        if (!cancelled) {
+          setDestinations(items);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       cancelled = true;
     };
   }, []);
 
+  /* =======================================================
+     EXISTING TRUST LINE LOGIC
+  ======================================================= */
+
   const trustLine = (() => {
     const parts = [];
-    if (stats?.destinations?.countries > 0) parts.push(`${stats.destinations.countries} countr${stats.destinations.countries === 1 ? 'y' : 'ies'}`);
-    if (stats?.hotels?.published > 0) parts.push(`${stats.hotels.published} hotel${stats.hotels.published === 1 ? '' : 's'}`);
-    return parts.length === 0 ? 'Verified hotels, secure payments, support when you need it.' : `Trusted stays across ${parts.join(' and ')}.`;
+
+    if (stats?.destinations?.countries > 0) {
+      parts.push(
+        `${stats.destinations.countries} countr${
+          stats.destinations.countries === 1
+            ? 'y'
+            : 'ies'
+        }`,
+      );
+    }
+
+    if (stats?.hotels?.published > 0) {
+      parts.push(
+        `${stats.hotels.published} hotel${
+          stats.hotels.published === 1 ? '' : 's'
+        }`,
+      );
+    }
+
+    return parts.length === 0
+      ? 'Verified hotels, secure payments, support when you need it.'
+      : `Trusted stays across ${parts.join(' and ')}.`;
   })();
 
-  const linkClass = 'text-sm text-brand-100/80 hover:text-white hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-400 rounded-sm';
+  /* =======================================================
+     DIRECT COLORS
+     No dependency on custom brand text colors.
+  ======================================================= */
+
+  const linkClass = `
+    inline-block
+    text-sm
+    font-medium
+    text-[#CBD5E1]
+    transition-all
+    duration-300
+    hover:translate-x-1
+    hover:text-[#F2C66D]
+    focus-visible:outline-2
+    focus-visible:outline-offset-2
+    focus-visible:outline-[#F2C66D]
+    rounded-sm
+  `;
 
   return (
-    <footer className="bg-brand-900 text-brand-50">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-3">
-            <Logo className="text-white" />
-            <p className="text-sm text-brand-100/80">{trustLine}</p>
+    <footer className="bg-[#0B1422] text-white">
+      {/* =====================================================
+          PREMIUM CTA
+      ===================================================== */}
+
+      <section className="border-b border-white/10 bg-gradient-to-r from-[#0B1422] via-[#12223A] to-[#1B3150]">
+        <div
+          className="
+            mx-auto
+            flex
+            max-w-7xl
+            flex-col
+            gap-6
+            px-4
+            py-11
+            sm:px-6
+            lg:flex-row
+            lg:items-center
+            lg:justify-between
+            lg:py-14
+          "
+        >
+          <div className="max-w-2xl">
+            <div className="mb-3 flex items-center gap-2">
+              <Sparkles
+                size={16}
+                className="text-[#F2C66D]"
+              />
+
+              <span
+                className="
+                  text-[10px]
+                  font-bold
+                  uppercase
+                  tracking-[0.22em]
+                  text-[#F2C66D]
+                "
+              >
+                GOKAASA
+              </span>
+            </div>
+
+            <h2
+              className="
+                text-2xl
+                font-bold
+                tracking-tight
+                text-white
+                sm:text-3xl
+              "
+            >
+              Your perfect stay is waiting.
+            </h2>
+
+            <p
+              className="
+                mt-3
+                max-w-xl
+                text-sm
+                leading-7
+                text-[#CBD5E1]
+              "
+            >
+              Discover beautiful hotels, premium stays and
+              unforgettable experiences with Gokaasa.
+            </p>
           </div>
 
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-white">About</h3>
-            <ul className="space-y-2">
-              <li><Link to="/about" className={linkClass}>About Us</Link></li>
-              <li><Link to="/about#blog" className={linkClass}>Blog</Link></li>
-              <li><Link to="/about#careers" className={linkClass}>Career</Link></li>
-              <li><Link to="/about#partner" className={linkClass}>Partner With Us</Link></li>
+          <Link
+            to="/destinations"
+            className="
+              inline-flex
+              w-fit
+              shrink-0
+              items-center
+              gap-2
+              rounded-full
+              bg-white
+              px-6
+              py-3.5
+              text-sm
+              font-bold
+              text-[#0B1422]
+              shadow-lg
+              transition-all
+              duration-300
+              hover:-translate-y-1
+              hover:bg-[#F2C66D]
+              hover:shadow-xl
+            "
+          >
+            Explore Hotels
+            <ChevronRight size={17} />
+          </Link>
+        </div>
+      </section>
+
+      {/* =====================================================
+          MAIN FOOTER
+      ===================================================== */}
+
+      <div
+        className="
+          mx-auto
+          max-w-7xl
+          px-4
+          py-12
+          sm:px-6
+          lg:py-14
+        "
+      >
+        <div
+          className="
+            grid
+            gap-10
+            sm:grid-cols-2
+            lg:grid-cols-[1.45fr_1fr_1fr_1fr]
+          "
+        >
+          {/* =================================================
+              BRAND
+          ================================================= */}
+
+          <div className="space-y-5">
+            {/* Logo container */}
+
+            <div
+              className="
+                inline-flex
+                w-fit
+                items-center
+                rounded-xl
+                bg-white
+                px-4
+                py-3
+                shadow-lg
+              "
+            >
+              <Logo />
+            </div>
+
+            <p
+              className="
+                max-w-sm
+                text-sm
+                leading-7
+                text-[#CBD5E1]
+              "
+            >
+              {trustLine}
+            </p>
+
+            {/* Trust Badges */}
+
+            <div className="flex flex-wrap gap-3">
+              <span
+                className="
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  border
+                  border-white/15
+                  bg-white/[0.06]
+                  px-4
+                  py-2
+                  text-xs
+                  font-medium
+                  text-white
+                "
+              >
+                <ShieldCheck
+                  size={15}
+                  className="text-[#F2C66D]"
+                />
+                Secure Booking
+              </span>
+
+              <span
+                className="
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-full
+                  border
+                  border-white/15
+                  bg-white/[0.06]
+                  px-4
+                  py-2
+                  text-xs
+                  font-medium
+                  text-white
+                "
+              >
+                <Headphones
+                  size={15}
+                  className="text-[#F2C66D]"
+                />
+                24/7 Support
+              </span>
+            </div>
+
+            {/* Social */}
+
+            <div className="pt-2">
+              <h3
+                className="
+                  mb-3
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-[0.18em]
+                  text-white
+                "
+              >
+                Follow Us
+              </h3>
+
+              <div className="flex gap-2">
+                <SocialButton label="Instagram">
+                  <InstagramIcon />
+                </SocialButton>
+
+                <SocialButton label="Facebook">
+                  <FacebookIcon />
+                </SocialButton>
+
+                <SocialButton label="LinkedIn">
+                  <LinkedInIcon />
+                </SocialButton>
+
+                <SocialButton label="YouTube">
+                  <YouTubeIcon />
+                </SocialButton>
+              </div>
+
+              <p
+                className="
+                  mt-2
+                  text-[11px]
+                  text-[#94A3B8]
+                "
+              >
+                Social channels coming soon
+              </p>
+            </div>
+          </div>
+
+          {/* =================================================
+              ABOUT
+          ================================================= */}
+
+          <div className="space-y-4">
+            <h3
+              className="
+                text-sm
+                font-bold
+                uppercase
+                tracking-[0.12em]
+                text-white
+              "
+            >
+              About
+            </h3>
+
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  to="/about"
+                  className={linkClass}
+                >
+                  About Us
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/about#blog"
+                  className={linkClass}
+                >
+                  Blog
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/about#careers"
+                  className={linkClass}
+                >
+                  Career
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/about#partner"
+                  className={linkClass}
+                >
+                  Partner With Us
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-white">Explore</h3>
-            <ul className="space-y-2">
+          {/* =================================================
+              EXPLORE
+          ================================================= */}
+
+          <div className="space-y-4">
+            <h3
+              className="
+                text-sm
+                font-bold
+                uppercase
+                tracking-[0.12em]
+                text-white
+              "
+            >
+              Explore
+            </h3>
+
+            <ul className="space-y-3">
               {destinations?.map((place) => (
-                <li key={place.destination}><Link to={`/hotels/${place.destination}`} className={linkClass}>{place.label}</Link></li>
+                <li key={place.destination}>
+                  <Link
+                    to={`/hotels/${place.destination}`}
+                    className={linkClass}
+                  >
+                    {place.label}
+                  </Link>
+                </li>
               ))}
-              <li><Link to="/destinations" className={cn(linkClass, 'font-medium text-accent-300')}>View All</Link></li>
+
+              <li>
+                <Link
+                  to="/destinations"
+                  className="
+                    inline-flex
+                    items-center
+                    gap-1
+                    text-sm
+                    font-bold
+                    text-[#F2C66D]
+                    transition-all
+                    duration-300
+                    hover:translate-x-1
+                    hover:text-white
+                  "
+                >
+                  View All
+                  <ChevronRight size={14} />
+                </Link>
+              </li>
             </ul>
           </div>
 
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-white">Other Links</h3>
-            <ul className="space-y-2">
-              <li><Link to="/contact" className={linkClass}>Contact Us</Link></li>
-              <li><Link to="/contact#faqs" className={linkClass}>FAQs</Link></li>
-              <li><Link to="/contact#terms" className={linkClass}>Terms &amp; Conditions</Link></li>
-              <li><Link to="/contact#privacy" className={linkClass}>Privacy Policy</Link></li>
-              <li><Link to="/contact#refunds" className={linkClass}>Refund Policy</Link></li>
-            </ul>
-            <h3 className="pt-2 text-sm font-semibold uppercase tracking-wide text-white">Follow Us</h3>
-            {/* No social accounts are configured yet, so these are shown as inert labels rather than fake links. */}
-            <ul className="flex flex-wrap gap-3 text-sm text-brand-100/60" aria-label="Follow us (coming soon)">
-              {['Instagram', 'Facebook', 'LinkedIn', 'YouTube'].map((name) => (
-                <li key={name} aria-disabled="true" title="Coming soon">{name}</li>
-              ))}
+          {/* =================================================
+              OTHER LINKS
+          ================================================= */}
+
+          <div className="space-y-4">
+            <h3
+              className="
+                text-sm
+                font-bold
+                uppercase
+                tracking-[0.12em]
+                text-white
+              "
+            >
+              Other Links
+            </h3>
+
+            <ul className="space-y-3">
+              <li>
+                <Link
+                  to="/contact"
+                  className={linkClass}
+                >
+                  Contact Us
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/contact#faqs"
+                  className={linkClass}
+                >
+                  FAQs
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/contact#terms"
+                  className={linkClass}
+                >
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/contact#privacy"
+                  className={linkClass}
+                >
+                  Privacy Policy
+                </Link>
+              </li>
+
+              <li>
+                <Link
+                  to="/contact#refunds"
+                  className={linkClass}
+                >
+                  Refund Policy
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
       </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-brand-100/70 sm:px-6">
-          Copyright © {new Date().getFullYear()} GOKAASA. All rights reserved.
+
+      {/* =====================================================
+          COPYRIGHT
+      ===================================================== */}
+
+      <div
+        className="
+          border-t
+          border-white/15
+          bg-[#080F1A]
+        "
+      >
+        <div
+          className="
+            mx-auto
+            flex
+            max-w-7xl
+            flex-col
+            gap-3
+            px-4
+            py-5
+            text-xs
+            text-[#CBD5E1]
+            sm:px-6
+            md:flex-row
+            md:items-center
+            md:justify-between
+          "
+        >
+          <p>
+            Copyright © {new Date().getFullYear()} GOKAASA.
+            All rights reserved.
+          </p>
+
+          <div
+            className="
+              flex
+              items-center
+              gap-2
+              font-medium
+              text-[#CBD5E1]
+            "
+          >
+            <ShieldCheck
+              size={14}
+              className="text-[#F2C66D]"
+            />
+
+            <span>Secure hotel booking</span>
+          </div>
         </div>
       </div>
     </footer>
   );
 }
 
+/* =========================================================
+   CUSTOMER LAYOUT
+========================================================= */
+
 export function CustomerLayout() {
   const { isAuthenticated, status } = useAuth();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const location = useLocation();
+
+  /* Close mobile drawer after navigation */
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--surface-card)]/95 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex items-center gap-8">
+    <div
+      className="
+        flex
+        min-h-screen
+        flex-col
+        bg-[var(--surface-page)]
+      "
+    >
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+
+      <header
+        className="
+          sticky
+          top-0
+          z-30
+          border-b
+          border-[var(--border-subtle)]
+          bg-[var(--surface-card)]/90
+          backdrop-blur-xl
+          supports-[backdrop-filter]:bg-[var(--surface-card)]/75
+        "
+      >
+        <div
+          className="
+            mx-auto
+            flex
+            h-[72px]
+            max-w-7xl
+            items-center
+            justify-between
+            gap-4
+            px-4
+            sm:px-6
+          "
+        >
+          {/* Logo + Desktop Navigation */}
+
+          <div className="flex min-w-0 items-center gap-8">
             <Logo />
-            <nav aria-label="Main" className="hidden items-center gap-6 md:flex">
+
+            <nav
+              aria-label="Main"
+              className="
+                hidden
+                items-center
+                gap-7
+                md:flex
+              "
+            >
               <NavLinks className="text-sm font-medium" />
             </nav>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Right Actions */}
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Wishlist */}
+
             {isAuthenticated && (
               <Link
                 to="/wishlist"
                 aria-label="Wishlist"
                 title="Wishlist"
-                className="hidden h-9 w-9 items-center justify-center rounded-full text-[var(--text-body)] hover:bg-[var(--surface-muted)] md:inline-flex"
+                className="
+                  hidden
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  border-transparent
+                  text-[var(--text-body)]
+                  transition-all
+                  duration-300
+                  hover:-translate-y-0.5
+                  hover:border-[var(--border-subtle)]
+                  hover:bg-[var(--surface-muted)]
+                  hover:text-brand-600
+                  md:inline-flex
+                "
               >
-                <Heart className="h-4 w-4" aria-hidden="true" />
+                <Heart
+                  className="h-[18px] w-[18px]"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
               </Link>
             )}
+
+            {/* My Trips */}
+
             {isAuthenticated && (
-              <Link to="/my-trips" className="hidden text-sm font-medium text-[var(--text-body)] hover:text-brand-600 md:inline-flex">
+              <Link
+                to="/my-trips"
+                className="
+                  hidden
+                  rounded-full
+                  px-3
+                  py-2
+                  text-sm
+                  font-medium
+                  text-[var(--text-body)]
+                  transition-colors
+                  hover:bg-[var(--surface-muted)]
+                  hover:text-brand-600
+                  md:inline-flex
+                "
+              >
                 My Trips
               </Link>
             )}
-            {isAuthenticated && <div className="hidden md:block"><NotificationBell /></div>}
-            <div className="hidden md:block">{status !== 'loading' && (isAuthenticated ? <ProfileMenu /> : <GuestLinks />)}</div>
+
+            {/* Notification */}
+
             {isAuthenticated && (
-              <Link to="/wishlist" aria-label="Wishlist" className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-body)] hover:bg-[var(--surface-muted)] md:hidden">
-                <Heart className="h-4 w-4" aria-hidden="true" />
+              <div className="hidden md:block">
+                <NotificationBell />
+              </div>
+            )}
+
+            {/* Profile / Guest */}
+
+            <div className="hidden md:block">
+              {status !== 'loading' &&
+                (isAuthenticated ? (
+                  <ProfileMenu />
+                ) : (
+                  <GuestLinks />
+                ))}
+            </div>
+
+            {/* Mobile Wishlist */}
+
+            {isAuthenticated && (
+              <Link
+                to="/wishlist"
+                aria-label="Wishlist"
+                title="Wishlist"
+                className="
+                  inline-flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  text-[var(--text-body)]
+                  transition-all
+                  hover:bg-[var(--surface-muted)]
+                  hover:text-brand-600
+                  md:hidden
+                "
+              >
+                <Heart
+                  className="h-[18px] w-[18px]"
+                  aria-hidden="true"
+                />
               </Link>
             )}
-            {isAuthenticated && <div className="md:hidden"><NotificationBell /></div>}
+
+            {/* Mobile Notification */}
+
+            {isAuthenticated && (
+              <div className="md:hidden">
+                <NotificationBell />
+              </div>
+            )}
+
+            {/* Mobile Menu */}
+
             <button
               type="button"
-              aria-label={drawerOpen ? 'Close menu' : 'Open menu'}
+              aria-label={
+                drawerOpen
+                  ? 'Close menu'
+                  : 'Open menu'
+              }
               aria-expanded={drawerOpen}
-              onClick={() => setDrawerOpen((open) => !open)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-[var(--text-body)] hover:bg-[var(--surface-muted)] md:hidden"
+              onClick={() =>
+                setDrawerOpen((open) => !open)
+              }
+              className="
+                inline-flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-full
+                border
+                border-[var(--border-subtle)]
+                text-[var(--text-body)]
+                transition-all
+                duration-300
+                hover:bg-[var(--surface-muted)]
+                hover:text-brand-600
+                md:hidden
+              "
             >
-              {drawerOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
+              {drawerOpen ? (
+                <X
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Menu
+                  className="h-5 w-5"
+                  aria-hidden="true"
+                />
+              )}
             </button>
           </div>
         </div>
       </header>
 
-      <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      {/* Mobile Drawer */}
 
-      <main id="main" className="flex-1">
+      <MobileDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
+
+      {/* Main */}
+
+      <main
+        id="main"
+        className="flex-1"
+      >
         <Outlet />
       </main>
+
+      {/* Footer */}
 
       <Footer />
     </div>
   );
 }
+

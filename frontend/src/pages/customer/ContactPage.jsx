@@ -1,75 +1,345 @@
-import { Mail, Phone } from 'lucide-react';
+import {
+  ArrowRight,
+  ChevronDown,
+  Clock3,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/index.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 
 const FAQS = [
-  { q: 'How do I cancel a booking?', a: "Open My Trips, select the booking, and use Cancel Booking. The refund you'll receive is shown before you confirm, based on the policy you booked under." },
-  { q: 'When is my card charged?', a: 'Payment is collected at the time of booking, through our payment partner. You never need to pay anything extra at the hotel beyond what was shown at booking, unless you add paid extras on site.' },
-  { q: 'Can I change my dates after booking?', a: "Date changes aren't available directly yet -- cancel (subject to the policy you booked) and make a new booking for your new dates." },
+  {
+    q: 'How do I cancel a booking?',
+    a: "Open My Trips, select the booking, and use Cancel Booking. The refund you'll receive is shown before you confirm, based on the policy you booked under.",
+  },
+  {
+    q: 'When is my card charged?',
+    a: 'Payment is collected at the time of booking, through our payment partner. You never need to pay anything extra at the hotel beyond what was shown at booking, unless you add paid extras on site.',
+  },
+  {
+    q: 'Can I change my dates after booking?',
+    a: "Date changes aren't available directly yet -- cancel (subject to the policy you booked) and make a new booking for your new dates.",
+  },
 ];
 
+const POLICIES = [
+  {
+    id: 'terms',
+    icon: ShieldCheck,
+    title: 'Terms & Conditions',
+    text: 'By booking through Gokaasa you agree to the rate, cancellation policy and guest details shown at checkout for that booking. Full terms are available on request from support.',
+  },
+  {
+    id: 'privacy',
+    icon: ShieldCheck,
+    title: 'Privacy Policy',
+    text: "We use your details only to process bookings, process payments and provide support. We never sell your data. Card details are handled entirely by our payment partner and never stored on Gokaasa's servers.",
+  },
+  {
+    id: 'refunds',
+    icon: ArrowRight,
+    title: 'Refund Policy',
+    text: 'Refunds follow the cancellation policy shown at the time of booking. Approved refunds are returned to your original payment method; timing depends on your bank or card issuer.',
+  },
+];
+
+function FAQItem({ question, answer, isOpen, onClick }) {
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
+        isOpen
+          ? 'border-brand-200 bg-brand-50/40 shadow-sm'
+          : 'border-[var(--border-subtle)] bg-white hover:border-brand-100 hover:shadow-sm'
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left sm:px-6"
+        aria-expanded={isOpen}
+      >
+        <span className="text-sm font-semibold leading-6 text-[var(--text-strong)] sm:text-base">
+          {question}
+        </span>
+
+        <span
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+            isOpen
+              ? 'bg-brand-700 text-white'
+              : 'bg-[var(--surface-muted)] text-[var(--text-muted)]'
+          }`}
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform duration-300 ${
+              isOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </span>
+      </button>
+
+      <div
+        className={`grid transition-all duration-300 ${
+          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="px-5 pb-5 text-sm leading-7 text-[var(--text-muted)] sm:px-6 sm:pb-6">
+            {answer}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ContactPage() {
+  const [openFaq, setOpenFaq] = useState(0);
+
   useDocumentMeta({
     title: 'Contact Us | Gokaasa',
-    description: 'Get in touch with Gokaasa support, or find answers to common questions.',
+    description:
+      'Get in touch with Gokaasa support, or find answers to common questions.',
     canonicalPath: '/contact',
   });
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-10 px-4 py-12 sm:px-6">
-      <PageHeader title="Contact Us" description="We're here to help, before and after you book." />
+    <div className="min-h-screen bg-[var(--surface-page)]">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-50/80 via-white to-amber-50/50" />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <a href="tel:+919876543210" className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 hover:shadow-md">
-          <Phone className="h-5 w-5 text-brand-700" aria-hidden="true" />
-          <div>
-            <p className="text-sm font-medium text-[var(--text-strong)]">Call support</p>
-            <p className="text-sm text-[var(--text-muted)]">+91-9876543210</p>
-          </div>
-        </a>
-        <a href="mailto:support@gokaasa.com" className="flex items-center gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 hover:shadow-md">
-          <Mail className="h-5 w-5 text-brand-700" aria-hidden="true" />
-          <div>
-            <p className="text-sm font-medium text-[var(--text-strong)]">Email support</p>
-            <p className="text-sm text-[var(--text-muted)]">support@gokaasa.com</p>
-          </div>
-        </a>
-      </div>
+        <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-brand-200/30 blur-3xl" />
 
-      <section id="faqs" className="space-y-4 border-t border-[var(--border-subtle)] pt-8">
-        <h2 className="text-lg font-semibold text-[var(--text-strong)]">Frequently asked questions</h2>
-        <dl className="space-y-4">
-          {FAQS.map(({ q, a }) => (
-            <div key={q}>
-              <dt className="text-sm font-medium text-[var(--text-strong)]">{q}</dt>
-              <dd className="mt-1 text-sm text-[var(--text-muted)]">{a}</dd>
+        <div className="absolute -left-32 top-40 h-72 w-72 rounded-full bg-amber-200/20 blur-3xl" />
+
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-16 pt-12 sm:px-6 lg:px-8 lg:pb-20 lg:pt-16">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 shadow-sm backdrop-blur">
+              <Sparkles className="h-4 w-4" />
+              Gokaasa Support
             </div>
-          ))}
-        </dl>
+
+            <PageHeader
+              title="We're here to help."
+              description="Whether you have a question about a booking, need help with a cancellation, or simply want to talk to us — our support team is here for you."
+            />
+          </div>
+        </div>
       </section>
 
-      <section id="terms" className="space-y-2 border-t border-[var(--border-subtle)] pt-8">
-        <h2 className="text-lg font-semibold text-[var(--text-strong)]">Terms &amp; Conditions</h2>
-        <p className="text-sm text-[var(--text-muted)]">
-          By booking through Gokaasa you agree to the rate, cancellation policy and guest details shown at checkout
-          for that booking. Full terms are available on request from support.
-        </p>
+      {/* Contact cards */}
+      <section className="relative z-10 mx-auto -mt-7 w-full max-w-5xl px-4 sm:px-6">
+        <div className="grid gap-5 md:grid-cols-2">
+          <a
+            href="tel:+919876543210"
+            className="group relative overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:p-7"
+          >
+            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand-50 blur-2xl transition-all duration-300 group-hover:bg-brand-100" />
+
+            <div className="relative flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100 transition-transform duration-300 group-hover:scale-105">
+                <Phone className="h-5 w-5" aria-hidden="true" />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-brand-700">
+                  Phone support
+                </p>
+
+                <h2 className="mt-1 text-lg font-semibold text-[var(--text-strong)]">
+                  Call us directly
+                </h2>
+
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  +91-9876543210
+                </p>
+
+                <div className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-brand-700">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  Support available for booking assistance
+                </div>
+              </div>
+            </div>
+          </a>
+
+          <a
+            href="mailto:support@gokaasa.com"
+            className="group relative overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:p-7"
+          >
+            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-50 blur-2xl transition-all duration-300 group-hover:bg-amber-100" />
+
+            <div className="relative flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100 transition-transform duration-300 group-hover:scale-105">
+                <Mail className="h-5 w-5" aria-hidden="true" />
+              </div>
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
+                  Email support
+                </p>
+
+                <h2 className="mt-1 text-lg font-semibold text-[var(--text-strong)]">
+                  Send us an email
+                </h2>
+
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  support@gokaasa.com
+                </p>
+
+                <div className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-amber-700">
+                  <Mail className="h-3.5 w-3.5" />
+                  We&apos;re happy to help
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
       </section>
 
-      <section id="privacy" className="space-y-2 border-t border-[var(--border-subtle)] pt-8">
-        <h2 className="text-lg font-semibold text-[var(--text-strong)]">Privacy Policy</h2>
-        <p className="text-sm text-[var(--text-muted)]">
-          We use your details only to process bookings, process payments and provide support. We never sell your
-          data. Card details are handled entirely by our payment partner and never stored on Gokaasa's servers.
-        </p>
+      {/* FAQ */}
+      <section
+        id="faqs"
+        className="mx-auto w-full max-w-5xl px-4 py-20 sm:px-6 lg:py-24"
+      >
+        <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+              Need answers?
+            </span>
+
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--text-strong)] sm:text-4xl">
+              Frequently asked questions
+            </h2>
+
+            <p className="mt-4 text-sm leading-7 text-[var(--text-muted)]">
+              Find quick answers to some of the most common questions about
+              bookings, payments and cancellations.
+            </p>
+
+            <div className="mt-8 hidden rounded-2xl border border-brand-100 bg-brand-50/60 p-5 lg:block">
+              <div className="flex gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-strong)]">
+                    Need more help?
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                    Our support team can help you with booking-specific
+                    questions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {FAQS.map(({ q, a }, index) => (
+              <FAQItem
+                key={q}
+                question={q}
+                answer={a}
+                isOpen={openFaq === index}
+                onClick={() =>
+                  setOpenFaq(openFaq === index ? -1 : index)
+                }
+              />
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section id="refunds" className="space-y-2 border-t border-[var(--border-subtle)] pt-8">
-        <h2 className="text-lg font-semibold text-[var(--text-strong)]">Refund Policy</h2>
-        <p className="text-sm text-[var(--text-muted)]">
-          Refunds follow the cancellation policy shown at the time of booking. Approved refunds are returned to your
-          original payment method; timing depends on your bank or card issuer.
-        </p>
+      {/* Policies */}
+      <section className="border-y border-[var(--border-subtle)] bg-white/60">
+        <div className="mx-auto w-full max-w-5xl px-4 py-20 sm:px-6 lg:py-24">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+              Important information
+            </span>
+
+            <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--text-strong)] sm:text-4xl">
+              Policies you can understand
+            </h2>
+
+            <p className="mt-4 text-sm leading-7 text-[var(--text-muted)] sm:text-base">
+              We keep important booking information clear and accessible so
+              you know what to expect.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-5 md:grid-cols-3">
+            {POLICIES.map(({ id, icon: Icon, title, text }) => (
+              <section
+                key={id}
+                id={id}
+                className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg"
+              >
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+                  <Icon className="h-5 w-5" />
+                </div>
+
+                <h2 className="mt-5 text-lg font-semibold text-[var(--text-strong)]">
+                  {title}
+                </h2>
+
+                <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
+                  {text}
+                </p>
+              </section>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Support CTA */}
+      <section className="px-4 py-20 sm:px-6 lg:py-24">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 px-6 py-12 shadow-[0_25px_70px_rgba(15,23,42,0.18)] sm:px-10 sm:py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
+              <Sparkles className="h-6 w-6 text-amber-300" />
+            </div>
+
+            <h2 className="mt-5 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              Still need help?
+            </h2>
+
+            <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
+              Reach out to our support team and we&apos;ll help you find the
+              right answer.
+            </p>
+
+            <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+              <a
+                href="mailto:support@gokaasa.com"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-slate-900 shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-100"
+              >
+                <Mail className="h-4 w-4" />
+                Email support
+              </a>
+
+              <Link
+                to="/destinations"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-6 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/15"
+              >
+                Explore hotels
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400">
+              <MapPin className="h-3.5 w-3.5" />
+              Gokaasa — making every stay simpler
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   );

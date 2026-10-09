@@ -1,6 +1,7 @@
 import { pool } from './pool.js';
 import { seedAmenities } from '../../seeds/001_amenities.js';
 import { seedAdminUser } from '../../seeds/002_admin_user.js';
+import { seedNaviMumbaiHotels } from '../../seeds/003_navi_mumbai_hotels.js';
 
 /** Idempotent seed runner. Safe to run on every deploy. */
 async function main() {
@@ -17,8 +18,14 @@ async function main() {
     throw error;
   } finally {
     client.release();
-    await pool.end();
   }
+
+  // Runs after the admin-user transaction commits: it needs to look up that admin (via the plain pool,
+  // a separate connection) and each hotel/room/rate/inventory call manages its own transaction, the same
+  // way the admin API itself does.
+  const hotels = await seedNaviMumbaiHotels();
+  console.log(Array.isArray(hotels) ? hotels.map((line) => `[seed] ${line}`).join('\n') : `[seed] hotels: ${hotels}`);
+  await pool.end();
 }
 
 main().catch((error) => {

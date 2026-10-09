@@ -5,7 +5,7 @@ export const wishlistRepository = {
     const { rows } = await pool.query(
       `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type, h.star_rating, h.guest_rating,
               h.review_count, w.created_at AS saved_at,
-              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text)
+              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
               ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id

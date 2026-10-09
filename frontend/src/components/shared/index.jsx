@@ -4,16 +4,25 @@ import { Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Label } from '@/components/ui/form-controls.jsx';
 import { cn } from '@/lib/utils.js';
+import logo from '@/assets/logo.png';
+
 import { ADMIN_ROLES, useAuth } from '@/features/auth/AuthContext.jsx';
 
 export function Logo({ className, to = '/' }) {
   return (
-    <Link to={to} className={cn('inline-flex items-center gap-2 font-semibold text-[var(--text-strong)]', className)}>
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-600 text-sm font-bold text-white" aria-hidden="true">
-        G
-      </span>
-      <span className="text-[17px] tracking-tight">Gokaasa</span>
-    </Link>
+    <Link
+  to={to}
+  className={cn(
+    'inline-flex items-center gap-2 font-semibold text-[var(--text-strong)]',
+    className
+  )}
+>
+  <img
+    src={logo}
+    alt="Logo"
+    className="h-10 w-auto object-contain"
+  />
+</Link>
   );
 }
 

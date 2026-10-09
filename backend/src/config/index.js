@@ -30,6 +30,7 @@ const schema = z.object({
   MAIL_FROM: z.string().default('Gokaasa <no-reply@gokaasa.com>'),
 
   HOTEL_PROVIDERS: z.string().default('openstreetmap,google_places,mock'),
+  ALLOW_ILLUSTRATIVE_HOTEL_IMAGES: booleanFromEnv,
   OSM_USER_AGENT: z.string().default('GokaasaHotelOnboarding/0.1 (ops@gokaasa.com)'),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   HOTEL_API_KEY: z.string().optional(),
@@ -88,6 +89,11 @@ export const config = Object.freeze({
     osmUserAgent: env.OSM_USER_AGENT,
     googleMapsApiKey: env.GOOGLE_MAPS_API_KEY,
     concurrency: env.IMPORT_JOB_CONCURRENCY,
+  },
+  features: {
+    // Hard-gated on NODE_ENV, not just the env var's own default: even a mistaken `true` in a
+    // production .env can never let an illustrative-only hotel satisfy the publish gate.
+    allowIllustrativeHotelImages: env.NODE_ENV !== 'production' && env.ALLOW_ILLUSTRATIVE_HOTEL_IMAGES,
   },
   seed: {
     adminEmail: env.ADMIN_EMAIL,

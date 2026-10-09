@@ -47,3 +47,17 @@ export const resetPasswordSchema = z.object({
   token: z.string().min(20).max(200),
   password,
 });
+
+// Mirrors booking.validator.js's primaryContact.mobile rule exactly -- the same "is this a real mobile
+// number" bar applies whether the contact is collected mid-checkout or, as here, at guest-checkout time.
+const mobile = z.preprocess(
+  (value) => (typeof value === 'string' ? value.replace(/[\s-]/g, '') : value),
+  z.string().regex(/^\+?[0-9]{10,15}$/, 'Enter a valid mobile number'),
+);
+
+export const guestCheckoutSchema = z.object({
+  email,
+  firstName: name('First name'),
+  lastName: name('Last name'),
+  mobile,
+});

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Bell, Check } from 'lucide-react';
 import { Card, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, PageHeader, Pagination, formatDateTime } from '@/components/shared/index.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { notificationApi } from '@/services/endpoints.js';
+import { notificationPath } from '@/features/notifications/notificationPath.js';
 import { normalizeError } from '@/services/api.js';
 
 export function NotificationsPage() {
@@ -60,22 +62,27 @@ export function NotificationsPage() {
           <EmptyState icon={Bell} title="No notifications yet" description="Updates about your bookings will show up here." />
         ) : (
           <ul className="divide-y divide-[var(--border-subtle)]">
-            {data?.items.map((notification) => (
-              <li key={notification.id}>
-                <button
-                  type="button"
-                  onClick={() => markOneRead(notification.id)}
-                  className="flex w-full items-start gap-3 px-5 py-4 text-left hover:bg-[var(--surface-muted)]"
-                >
-                  <span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.read ? 'bg-transparent' : 'bg-brand-600'}`} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-[var(--text-strong)]">{notification.title}</span>
-                    <span className="block text-sm text-[var(--text-muted)]">{notification.message}</span>
-                    <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatDateTime(notification.createdAt)}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
+            {data?.items.map((notification) => {
+              const path = notificationPath(notification);
+              const Item = path ? Link : 'button';
+              return (
+                <li key={notification.id}>
+                  <Item
+                    type={path ? undefined : 'button'}
+                    to={path ?? undefined}
+                    onClick={() => markOneRead(notification.id)}
+                    className="flex w-full items-start gap-3 px-5 py-4 text-left hover:bg-[var(--surface-muted)]"
+                  >
+                    <span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.read ? 'bg-transparent' : 'bg-brand-600'}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-[var(--text-strong)]">{notification.title}</span>
+                      <span className="block text-sm text-[var(--text-muted)]">{notification.message}</span>
+                      <span className="mt-1 block text-xs text-[var(--text-muted)]">{formatDateTime(notification.createdAt)}</span>
+                    </span>
+                  </Item>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

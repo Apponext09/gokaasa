@@ -4,6 +4,7 @@ import { api } from './api.js';
 export const authApi = {
   register: (body) => api.post('/auth/register', body).then((r) => r.data),
   login: (body) => api.post('/auth/login', body).then((r) => r.data),
+  guestCheckout: (body) => api.post('/auth/guest-checkout', body).then((r) => r.data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me').then((r) => r.data.user),
   forgotPassword: (body) => api.post('/auth/forgot-password', body).then((r) => r.data),
@@ -74,6 +75,7 @@ export const adminApi = {
   // Customers
   listCustomers: (params) => api.get('/admin/customers', { params }).then((r) => r.data),
   getCustomer: (id) => api.get(`/admin/customers/${id}`).then((r) => r.data.customer),
+  setCustomerStatus: (id, isActive) => api.patch(`/admin/customers/${id}/status`, { isActive }).then((r) => r.data.customer),
 
   // Audit log (ADMIN only; the backend enforces this)
   listAuditLogs: (params) => api.get('/admin/audit-logs', { params }).then((r) => r.data),
@@ -93,6 +95,14 @@ export const adminApi = {
   // Settings (ADMIN can write; HOTEL_MANAGER can read)
   getSettings: () => api.get('/admin/settings').then((r) => r.data),
   updateSettings: (body) => api.patch('/admin/settings', body).then((r) => r.data),
+
+  // Coupons / offers (ADMIN only)
+  listCoupons: (params) => api.get('/admin/coupons', { params }).then((r) => r.data),
+  getCoupon: (id) => api.get(`/admin/coupons/${id}`).then((r) => r.data.coupon),
+  createCoupon: (body) => api.post('/admin/coupons', body).then((r) => r.data.coupon),
+  updateCoupon: (id, body) => api.patch(`/admin/coupons/${id}`, body).then((r) => r.data.coupon),
+  setCouponStatus: (id, isActive) => api.patch(`/admin/coupons/${id}/status`, { isActive }).then((r) => r.data.coupon),
+  deleteCoupon: (id) => api.delete(`/admin/coupons/${id}`),
 };
 
 /** Room inventory: room types, room images, rate plans, cancellation policies, calendar and blocks. */
@@ -157,6 +167,11 @@ export const discoveryApi = {
   removeWishlist: (hotelId) => api.delete(`/wishlist/${hotelId}`),
 };
 
+/** Public offer/coupon discovery -- no auth required, nothing customer-specific. */
+export const offerApi = {
+  list: () => api.get('/offers').then((r) => r.data.items),
+};
+
 /** Customer booking flow: holds, guest details, the booking itself, My Trips and cancellation. */
 export const bookingApi = {
   createHold: (input) => api.post('/booking/holds', input).then((r) => r.data.hold),
@@ -165,6 +180,9 @@ export const bookingApi = {
   saveGuests: (id, body) => api.put(`/booking/holds/${id}/guests`, body).then((r) => r.data.hold),
   requote: (id) => api.post(`/booking/holds/${id}/requote`).then((r) => r.data),
   release: (id) => api.post(`/booking/holds/${id}/release`).then((r) => r.data.hold),
+  holdCoupons: (id) => api.get(`/booking/holds/${id}/coupons`).then((r) => r.data.items),
+  applyCoupon: (id, code) => api.post(`/booking/holds/${id}/coupon`, { code }).then((r) => r.data.hold),
+  removeCoupon: (id) => api.delete(`/booking/holds/${id}/coupon`).then((r) => r.data.hold),
   booking: (id) => api.get(`/bookings/${id}`).then((r) => r.data.booking),
   cancellationPreview: (id) => api.get(`/bookings/${id}/cancellation-preview`).then((r) => r.data.preview),
   cancel: (id, body = {}) => api.post(`/bookings/${id}/cancel`, body).then((r) => r.data.booking),

@@ -93,6 +93,9 @@ function renderInvoicePdf(booking) {
   if (booking.amounts.discount > 0) totalsRow('Discount', `-${money(booking.amounts.discount, booking.amounts.currency)}`);
   totalsRow('Taxes', money(booking.amounts.taxes, booking.amounts.currency));
   totalsRow('Fees', money(booking.amounts.fees, booking.amounts.currency));
+  if (booking.amounts.couponDiscount > 0) {
+    totalsRow(`Coupon (${booking.amounts.couponCode})`, `-${money(booking.amounts.couponDiscount, booking.amounts.currency)}`);
+  }
   totalsRow('Total', money(booking.amounts.total, booking.amounts.currency), { strong: true });
   totalsRow('Paid', money(booking.amounts.paid, booking.amounts.currency));
   if (booking.amounts.refunded > 0) totalsRow('Refunded', money(booking.amounts.refunded, booking.amounts.currency));

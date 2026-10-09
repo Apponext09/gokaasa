@@ -29,6 +29,78 @@ async function requireImage(client, hotelId, imageId) {
   return image;
 }
 
+/**
+ * The common path for turning real image bytes into a stored, recorded hotel image: validates the
+ * actual file contents (never the caller's claimed type), rejects a duplicate by content hash, stores
+ * the bytes, and inserts the row. Shared by `upload` (bytes from a multipart file) and `addFromUrl`
+ * (bytes downloaded from an external source) so the two never validate or persist differently.
+ */
+async function storeAndInsertImage(hotelId, { buffer, mimetype, category, altText, origin, sourceUrl = null, sourceProvider = null, imageType = 'REAL_PROPERTY' }, actor) {
+  if (!buffer?.length) throw AppError.badRequest('No image data was received');
+
+  const detected = detectImageType(buffer);
+  if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+  if (mimetype && detected.mime !== mimetype) {
+    throw AppError.unsupportedMediaType('The file contents do not match its declared type');
+  }
+
+  const contentHash = createHash('sha256').update(buffer).digest('hex');
+  const storageKey = `hotels/${hotelId}/${randomUUID()}.${detected.ext}`;
+  const storage = getStorage();
+
+  await storage.put(storageKey, buffer);
+  try {
+    const row = await withTransaction(async (client) => {
+      await requireEditableHotel(client, hotelId);
+
+      const { rows: countRows } = await client.query(
+        `SELECT COUNT(*)::int AS count FROM hotel_images WHERE hotel_id = $1 AND deleted_at IS NULL`,
+        [hotelId],
+      );
+      if (countRows[0].count >= config.media.maxImagesPerHotel) {
+        throw AppError.conflict(`A hotel can have at most ${config.media.maxImagesPerHotel} images`);
+      }
+
+      const { rowCount: duplicate } = await client.query(
+        `SELECT 1 FROM hotel_images WHERE hotel_id = $1 AND content_hash = $2 AND deleted_at IS NULL`,
+        [hotelId, contentHash],
+      );
+      if (duplicate > 0) throw AppError.conflict('This image has already been added to the hotel');
+
+      const sortOrder = await hotelImageRepository.nextSortOrder(client, hotelId);
+      const id = await hotelImageRepository.insert(client, {
+        hotel_id: hotelId,
+        category,
+        storage_key: storageKey,
+        source_url: sourceUrl,
+        source_provider: sourceProvider,
+        origin,
+        mime_type: detected.mime,
+        byte_size: buffer.length,
+        content_hash: contentHash,
+        alt_text: altText,
+        image_type: imageType,
+        sort_order: sortOrder,
+        is_cover: false,
+        created_by: actor.id,
+      });
+      await auditService.record(client, {
+        actor,
+        action: origin === 'UPLOADED' ? 'hotel.image_uploaded' : 'hotel.image_imported',
+        entity: 'hotel',
+        entityId: hotelId,
+        newValue: { imageId: id, category, byteSize: buffer.length, mimeType: detected.mime, sourceUrl, imageType },
+      });
+      return hotelImageRepository.findActive(hotelId, id, client);
+    });
+    return toImage(row);
+  } catch (error) {
+    // The database rejected the record, so the bytes must not stay behind as orphans.
+    await storage.remove(storageKey).catch((cleanupError) => log.error('orphan cleanup failed', { storageKey, message: cleanupError.message }));
+    throw error;
+  }
+}
+
 export const hotelImageService = {
   async list(hotelId) {
     const rows = await hotelImageRepository.listActive(hotelId);
@@ -41,65 +113,45 @@ export const hotelImageService = {
    */
   async upload(hotelId, file, { category = 'OTHER', altText = null }, actor) {
     if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
+    return storeAndInsertImage(hotelId, { buffer: file.buffer, mimetype: file.mimetype, category, altText, origin: 'UPLOADED' }, actor);
+  },
 
-    const detected = detectImageType(file.buffer);
-    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
-    if (detected.mime !== file.mimetype) {
-      throw AppError.unsupportedMediaType('The file contents do not match its declared type');
-    }
+  /**
+   * Downloads a real image from a public, freely-licensed source (e.g. Wikimedia Commons) and runs it
+   * through the exact same validation and storage path as a direct upload. `sourceProvider`/`sourceUrl`
+   * are recorded so the image's origin and license status stay traceable -- this never invents a photo,
+   * it only persists one that was actually fetched and verified as a real image.
+   */
+  async addFromUrl(hotelId, { sourceUrl, category = 'OTHER', altText = null, sourceProvider = 'manual', imageType = 'REAL_PROPERTY' }, actor) {
+    const hotel = await hotelRepository.findById(hotelId);
+    if (!hotel) throw AppError.notFound('Hotel not found');
+    if (hotel.status === 'ARCHIVED') throw AppError.conflict('Archived hotels are read-only');
 
-    const contentHash = createHash('sha256').update(file.buffer).digest('hex');
-    const storageKey = `hotels/${hotelId}/${randomUUID()}.${detected.ext}`;
-    const storage = getStorage();
-
-    await storage.put(storageKey, file.buffer);
+    let response;
     try {
-      const row = await withTransaction(async (client) => {
-        await requireEditableHotel(client, hotelId);
-
-        const { rows: countRows } = await client.query(
-          `SELECT COUNT(*)::int AS count FROM hotel_images WHERE hotel_id = $1 AND deleted_at IS NULL`,
-          [hotelId],
-        );
-        if (countRows[0].count >= config.media.maxImagesPerHotel) {
-          throw AppError.conflict(`A hotel can have at most ${config.media.maxImagesPerHotel} images`);
-        }
-
-        const { rowCount: duplicate } = await client.query(
-          `SELECT 1 FROM hotel_images WHERE hotel_id = $1 AND content_hash = $2 AND deleted_at IS NULL`,
-          [hotelId, contentHash],
-        );
-        if (duplicate > 0) throw AppError.conflict('This image has already been added to the hotel');
-
-        const sortOrder = await hotelImageRepository.nextSortOrder(client, hotelId);
-        const id = await hotelImageRepository.insert(client, {
-          hotel_id: hotelId,
-          category,
-          storage_key: storageKey,
-          origin: 'UPLOADED',
-          mime_type: detected.mime,
-          byte_size: file.buffer.length,
-          content_hash: contentHash,
-          alt_text: altText,
-          sort_order: sortOrder,
-          is_cover: false,
-          created_by: actor.id,
-        });
-        await auditService.record(client, {
-          actor,
-          action: 'hotel.image_uploaded',
-          entity: 'hotel',
-          entityId: hotelId,
-          newValue: { imageId: id, category, byteSize: file.buffer.length, mimeType: detected.mime },
-        });
-        return hotelImageRepository.findActive(hotelId, id, client);
-      });
-      return toImage(row);
-    } catch (error) {
-      // The database rejected the record, so the bytes must not stay behind as orphans.
-      await storage.remove(storageKey).catch((cleanupError) => log.error('orphan cleanup failed', { storageKey, message: cleanupError.message }));
-      throw error;
+      response = await fetch(sourceUrl, { signal: AbortSignal.timeout(8000), headers: { 'User-Agent': config.hotelImport.osmUserAgent } });
+    } catch {
+      throw AppError.badRequest('Could not download an image from that URL. Check the address and try again.');
     }
+    if (!response.ok) throw AppError.badRequest('That URL did not return an image.');
+    const contentType = (response.headers.get('content-type') ?? '').split(';')[0].trim();
+    if (!contentType.startsWith('image/')) {
+      throw AppError.unsupportedMediaType('That URL is not an image (it looks like a web page or another file type).');
+    }
+    const declaredLength = Number(response.headers.get('content-length') ?? 0);
+    if (declaredLength > config.media.maxUploadBytes) {
+      throw AppError.unsupportedMediaType(`The image is larger than the ${Math.round(config.media.maxUploadBytes / 1024 / 1024)}MB limit`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > config.media.maxUploadBytes) {
+      throw AppError.unsupportedMediaType(`The image is larger than the ${Math.round(config.media.maxUploadBytes / 1024 / 1024)}MB limit`);
+    }
+
+    return storeAndInsertImage(
+      hotelId,
+      { buffer: Buffer.from(arrayBuffer), mimetype: contentType, category, altText, origin: 'IMPORTED', sourceUrl, sourceProvider, imageType },
+      actor,
+    );
   },
 
   /**

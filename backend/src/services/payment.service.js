@@ -8,6 +8,7 @@ import { ensureBookingForHold, buildBookingDto } from './booking.service.js';
 import { quoteStay } from './quote.service.js';
 import { processRefund } from './refund.service.js';
 import { closeHoldInTx, HOLD_EXPIRED_MESSAGE, requireOwnedHold } from './hold.service.js';
+import { couponService } from './coupon.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { auditService } from './audit.service.js';
 import { HOLD_STATUS, isHoldLive } from '../domain/holdStatus.js';
@@ -90,6 +91,7 @@ async function settlePayment({ orderId, paymentId, amountMinor, currency, provid
       await bookingRepository.setBookingStatus(client, booking.id, BOOKING_STATUS.CONFIRMED);
       await bookingRepository.setHoldStatus(client, hold.id, HOLD_STATUS.CONVERTED);
       await bookingRepository.setReservationsForHold(client, hold.id, 'CONFIRMED', booking.id);
+      await couponService.confirmUsageForHold(client, hold.id, booking.id);
       await auditService.record(client, {
         actor: null,
         action: 'booking.confirmed',
@@ -223,9 +225,13 @@ export const paymentService = {
           rooms: hold.rooms,
           occupancy: hold.occupancy,
         }, { checkAvailability: false });
+        // Compared against the hold's own pre-coupon total: hold.total_minor may already have a coupon
+        // discount baked in, and quoteStay here has no idea a coupon exists, so comparing against
+        // hold.total_minor directly would misreport "price changed" on every coupon-discounted hold.
+        const preCouponTotal = Number(hold.subtotal_minor) - Number(hold.discount_minor) + Number(hold.taxes_minor) + Number(hold.fees_minor);
         // The new price is reported but not stored here: the guest must accept it with an explicit re-quote.
-        if (quote.total !== Number(hold.total_minor)) {
-          return { kind: 'PRICE_CHANGED', previousTotal: Number(hold.total_minor), total: quote.total };
+        if (quote.total !== preCouponTotal) {
+          return { kind: 'PRICE_CHANGED', previousTotal: Number(hold.total_minor), total: quote.total - Number(hold.coupon_discount_minor) };
         }
       }
 

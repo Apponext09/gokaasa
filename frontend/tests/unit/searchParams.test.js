@@ -9,6 +9,7 @@ import {
   addDays,
   validateStay,
   slugifyPlace,
+  DINNER_INCLUDED_MEAL_PLANS,
 } from '../../src/features/search/searchParams.js';
 
 test('a shared URL restores the same search after a reload', () => {
@@ -34,6 +35,18 @@ test('invalid URL values fall back to safe defaults instead of breaking the page
   assert.equal(state.filters.minPrice, undefined, 'a reversed price range is dropped');
   assert.equal(state.filters.guestRating, undefined);
   assert.equal(state.filters.amenities, undefined, 'lowercase amenity codes are not valid');
+});
+
+test('mealPlans keeps only the dinner-included plans the filter UI can show (half board, full board)', () => {
+  const state = parseSearchParams(new URLSearchParams('mealPlans=HALF_BOARD,FULL_BOARD'));
+  assert.deepEqual(state.filters.mealPlans, DINNER_INCLUDED_MEAL_PLANS);
+});
+
+test('mealPlans drops a stale breakfast/room-only value from an old shared link entirely', () => {
+  const state = parseSearchParams(new URLSearchParams('mealPlans=BREAKFAST'));
+  assert.equal(state.filters.mealPlans, undefined);
+  const mixed = parseSearchParams(new URLSearchParams('mealPlans=BREAKFAST,HALF_BOARD'));
+  assert.deepEqual(mixed.filters.mealPlans, ['HALF_BOARD']);
 });
 
 test('occupancy round-trips and enforces limits', () => {

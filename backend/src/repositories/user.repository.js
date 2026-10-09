@@ -2,7 +2,7 @@ import { pool } from '../db/pool.js';
 
 const USER_COLUMNS = `
   u.id, u.email::text AS email, u.password_hash, u.first_name, u.last_name,
-  u.phone, u.is_active, u.email_verified_at, u.created_at
+  u.phone, u.is_active, u.email_verified_at, u.created_at, u.is_guest
 `;
 
 function toUser(row, roles) {
@@ -16,6 +16,7 @@ function toUser(row, roles) {
     isActive: row.is_active,
     emailVerifiedAt: row.email_verified_at,
     createdAt: row.created_at,
+    isGuest: row.is_guest,
     roles,
   };
 }
@@ -55,12 +56,12 @@ export const userRepository = {
   },
 
   /** Inserts the user and grants a role, both inside the caller's transaction. */
-  async create(client, { email, passwordHash, firstName, lastName, phone, roleCode }) {
+  async create(client, { email, passwordHash, firstName, lastName, phone, roleCode, isGuest = false }) {
     const { rows } = await client.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, phone)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO users (email, password_hash, first_name, last_name, phone, is_guest)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      [email, passwordHash, firstName, lastName, phone ?? null],
+      [email, passwordHash, firstName, lastName, phone ?? null, isGuest],
     );
     await client.query(
       `INSERT INTO user_roles (user_id, role_id)
@@ -70,10 +71,21 @@ export const userRepository = {
     return rows[0].id;
   },
 
+  // The only caller is the email-verified "reset password" flow, so setting a real password here always
+  // means this is now a genuinely verified account -- clears is_guest so a later guest-checkout call
+  // for this email can never again bypass the password that was just set.
   async updatePassword(client, userId, passwordHash) {
     await client.query(
-      `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+      `UPDATE users SET password_hash = $2, is_guest = FALSE, updated_at = now() WHERE id = $1`,
       [userId, passwordHash],
+    );
+  },
+
+  /** Refreshes a guest's contact details for a new checkout, reusing their existing account rather than creating a duplicate. */
+  async updateGuestContact(client, userId, { firstName, lastName, phone }) {
+    await client.query(
+      `UPDATE users SET first_name = $2, last_name = $3, phone = $4, updated_at = now() WHERE id = $1 AND is_guest`,
+      [userId, firstName, lastName, phone ?? null],
     );
   },
 

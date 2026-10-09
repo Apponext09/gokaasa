@@ -3,13 +3,14 @@ import { pool } from '../db/pool.js';
 const HOLD_COLUMNS = `
   h.id, h.user_id, h.hotel_id, h.room_type_id, h.rate_plan_id, h.check_in::text AS check_in, h.check_out::text AS check_out,
   h.nights, h.rooms, h.occupancy, h.currency, h.subtotal_minor, h.discount_minor, h.taxes_minor, h.fees_minor,
-  h.total_minor, h.quote_snapshot, h.guest_details, h.status, h.expires_at, h.booking_id, h.converted_at, h.released_at,
-  h.created_at, h.updated_at, (h.expires_at <= now()) AS is_expired_now
+  h.total_minor, h.coupon_id, h.coupon_code, h.coupon_discount_minor, h.quote_snapshot, h.guest_details, h.status,
+  h.expires_at, h.booking_id, h.converted_at, h.released_at, h.created_at, h.updated_at, (h.expires_at <= now()) AS is_expired_now
 `;
 
 const BOOKING_COLUMNS = `
   b.id, b.booking_ref, b.user_id, b.hotel_id, b.hold_id, b.status, b.check_in::text AS check_in, b.check_out::text AS check_out,
   b.adults, b.children, b.rooms_count, b.currency, b.subtotal_minor, b.taxes_minor, b.fees_minor, b.discount_minor,
+  b.coupon_id, b.coupon_code, b.coupon_discount_minor,
   b.total_minor, b.paid_minor, b.refunded_minor, b.cancellation_policy, b.cancellation_deadline_at, b.check_in_at,
   b.primary_first_name, b.primary_last_name, b.primary_email::text AS primary_email, b.primary_phone,
   b.gst_number, b.company_name, b.billing_address, b.special_request, b.hotel_name, b.hotel_slug, b.hotel_address, b.hotel_city,
@@ -18,6 +19,17 @@ const BOOKING_COLUMNS = `
 `;
 
 export const bookingRepository = {
+  /**
+   * True if this user has ever had a booking attempt of any kind -- CONFIRMED, cancelled, or even a
+   * payment that never completed. Used to decide whether a guest account is still "empty" and safe to
+   * reuse by email alone, or has real history that must never be handed to a caller based only on
+   * knowing the email address (see auth.service.js#guestCheckout).
+   */
+  async hasAnyBooking(userId, client = pool) {
+    const { rowCount } = await client.query(`SELECT 1 FROM bookings WHERE user_id = $1 LIMIT 1`, [userId]);
+    return rowCount > 0;
+  },
+
   /** A published hotel and the facts a quote needs: time zone, check-in time, and cover image. */
   async publishedHotel(hotelId, client = pool) {
     const { rows } = await client.query(
@@ -100,6 +112,15 @@ export const bookingRepository = {
               total_minor = $6, quote_snapshot = $7, updated_at = now()
         WHERE id = $1`,
       [id, values.subtotal, values.discount, values.taxes, values.fees, values.total, JSON.stringify(values.quoteSnapshot)],
+    );
+  },
+
+  /** Applies, replaces or clears the coupon on a hold and updates its total to match in one statement. */
+  async applyCouponToHold(client, id, { couponId, couponCode, couponDiscount, total }) {
+    await client.query(
+      `UPDATE booking_holds SET coupon_id = $2, coupon_code = $3, coupon_discount_minor = $4, total_minor = $5, updated_at = now()
+        WHERE id = $1`,
+      [id, couponId, couponCode, couponDiscount, total],
     );
   },
 

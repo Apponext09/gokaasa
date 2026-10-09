@@ -292,3 +292,48 @@ describe('audit log upgrades: entityId filter, actor search, role on each row', 
     assert.equal((await request(app).get('/api/admin/audit-logs').set(bearer(managerAToken))).status, 403);
   });
 });
+
+describe('customer activation: ADMIN-only, idempotent, revokes sessions on deactivate', () => {
+  let guestId;
+  before(async () => {
+    guestId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['admin8.guest@example.com'])).rows[0].id;
+  });
+
+  it('a HOTEL_MANAGER cannot change account status', async () => {
+    const res = await request(app).patch(`/api/admin/customers/${guestId}/status`).set(bearer(managerAToken)).send({ isActive: false });
+    assert.equal(res.status, 403);
+  });
+
+  it('ADMIN deactivates the account, the login API and refresh cookie then both reject it, and reactivating restores login', async () => {
+    const guestLogin = await request(app).post('/api/auth/login').send({ email: 'admin8.guest@example.com', password: PASSWORD });
+    const guestCookie = guestLogin.headers['set-cookie'].find((v) => v.startsWith('gk_refresh=')).split(';')[0];
+
+    const deactivated = await request(app).patch(`/api/admin/customers/${guestId}/status`).set(bearer(adminToken)).send({ isActive: false });
+    assert.equal(deactivated.status, 200, JSON.stringify(deactivated.body));
+    assert.equal(deactivated.body.customer.isActive, false);
+
+    const blockedLogin = await request(app).post('/api/auth/login').send({ email: 'admin8.guest@example.com', password: PASSWORD });
+    assert.equal(blockedLogin.status, 401);
+
+    const refreshDenied = await request(app).post('/api/auth/refresh').set('Cookie', guestCookie);
+    assert.equal(refreshDenied.status, 401, 'deactivating must revoke the existing refresh session too');
+
+    const reactivated = await request(app).patch(`/api/admin/customers/${guestId}/status`).set(bearer(adminToken)).send({ isActive: true });
+    assert.equal(reactivated.status, 200);
+    assert.equal(reactivated.body.customer.isActive, true);
+
+    const allowedLogin = await request(app).post('/api/auth/login').send({ email: 'admin8.guest@example.com', password: PASSWORD });
+    assert.equal(allowedLogin.status, 200);
+    guestToken = allowedLogin.body.accessToken;
+  });
+
+  it('setting the same status twice is a no-op, not an error', async () => {
+    const res = await request(app).patch(`/api/admin/customers/${guestId}/status`).set(bearer(adminToken)).send({ isActive: true });
+    assert.equal(res.status, 200);
+  });
+
+  it('404s for a user id that does not exist', async () => {
+    const res = await request(app).patch(`/api/admin/customers/999999/status`).set(bearer(adminToken)).send({ isActive: false });
+    assert.equal(res.status, 404);
+  });
+});

@@ -83,12 +83,24 @@ export const notificationService = {
     });
   },
 
+  /** Sent as soon as a cancellation creates a refund (before the gateway has necessarily settled it). */
+  async sendRefundInitiated(booking, refund) {
+    const bookingRef = booking.booking_ref ?? booking.bookingRef;
+    const amount = rupees(refund.amount_minor);
+    await notify(
+      // entityType/entityId point at the booking, not the refund, since there is no standalone refund
+      // viewer page to deep-link to -- My Trips' booking detail is where this is actually shown.
+      { userId: booking.user_id, type: 'refund.initiated', title: 'Refund initiated', message: `Your refund of ${amount} for booking ${bookingRef} has been initiated.`, entityType: 'booking', entityId: booking.id },
+      { to: booking.primary_email, subject: `Refund initiated: ${bookingRef}`, text: `Your refund of ${amount} has been initiated to your original payment method.` },
+    );
+  },
+
   /** Sent once a refund actually reaches SUCCESS at the gateway. */
   async sendRefundCompleted(booking, refund) {
     const bookingRef = booking.booking_ref ?? booking.bookingRef;
     const amount = rupees(refund.amount_minor);
     await notify(
-      { userId: booking.user_id, type: 'refund.completed', title: 'Refund completed', message: `Your refund of ${amount} for booking ${bookingRef} has been processed.`, entityType: 'refund', entityId: refund.id },
+      { userId: booking.user_id, type: 'refund.completed', title: 'Refund completed', message: `Your refund of ${amount} for booking ${bookingRef} has been processed.`, entityType: 'booking', entityId: booking.id },
       { to: booking.primary_email, subject: `Refund processed: ${bookingRef}`, text: `Your refund of ${amount} has been processed.` },
     );
   },

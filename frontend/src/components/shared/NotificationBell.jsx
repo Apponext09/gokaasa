@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, Check } from 'lucide-react';
 import { notificationApi } from '@/services/endpoints.js';
+import { notificationPath } from '@/features/notifications/notificationPath.js';
 
 const POLL_MS = 60_000;
 
@@ -100,25 +101,33 @@ export function NotificationBell() {
           <div className="max-h-80 overflow-y-auto">
             {items === null && <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Loading…</p>}
             {items?.length === 0 && <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">No notifications yet.</p>}
-            {items?.map((notification) => (
-              <button
-                key={notification.id}
-                role="menuitem"
-                type="button"
-                onClick={() => markOneRead(notification)}
-                className="flex w-full items-start gap-2.5 border-b border-[var(--border-subtle)] px-4 py-3 text-left last:border-0 hover:bg-[var(--surface-muted)]"
-              >
-                <span
-                  aria-hidden="true"
-                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.read ? 'bg-transparent' : 'bg-brand-600'}`}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-[var(--text-strong)]">{notification.title}</span>
-                  <span className="block text-xs text-[var(--text-muted)]">{notification.message}</span>
-                  <span className="mt-0.5 block text-[11px] text-[var(--text-muted)]">{timeAgo(notification.createdAt)}</span>
-                </span>
-              </button>
-            ))}
+            {items?.map((notification) => {
+              const path = notificationPath(notification);
+              const Item = path ? Link : 'button';
+              return (
+                <Item
+                  key={notification.id}
+                  role="menuitem"
+                  type={path ? undefined : 'button'}
+                  to={path ?? undefined}
+                  onClick={() => {
+                    markOneRead(notification);
+                    if (path) setOpen(false);
+                  }}
+                  className="flex w-full items-start gap-2.5 border-b border-[var(--border-subtle)] px-4 py-3 text-left last:border-0 hover:bg-[var(--surface-muted)]"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.read ? 'bg-transparent' : 'bg-brand-600'}`}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-[var(--text-strong)]">{notification.title}</span>
+                    <span className="block text-xs text-[var(--text-muted)]">{notification.message}</span>
+                    <span className="mt-0.5 block text-[11px] text-[var(--text-muted)]">{timeAgo(notification.createdAt)}</span>
+                  </span>
+                </Item>
+              );
+            })}
           </div>
 
           <Link

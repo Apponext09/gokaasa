@@ -1,23 +1,44 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Star } from 'lucide-react';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { ConfirmDialog } from '@/components/ui/dialog.jsx';
 import { EmptyState, PageHeader, formatMoney } from '@/components/shared/index.jsx';
 import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 
 export function CustomerDetailPage() {
   const { id } = useParams();
+  const { isAdmin } = useAuth();
   const [customer, setCustomer] = useState(null);
   const [error, setError] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
 
   const load = () => {
     setError(null);
     adminApi.getCustomer(id).then(setCustomer).catch((err) => setError(normalizeError(err).message));
   };
   useEffect(load, [id]);
+
+  const toggleStatus = async () => {
+    setStatusBusy(true);
+    try {
+      const next = !customer.isActive;
+      const updated = await adminApi.setCustomerStatus(id, next);
+      setCustomer(updated);
+      setConfirmOpen(false);
+      toast.success(next ? 'Account reactivated' : 'Account deactivated');
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+    } finally {
+      setStatusBusy(false);
+    }
+  };
 
   if (error) {
     return (
@@ -32,7 +53,20 @@ export function CustomerDetailPage() {
   return (
     <div className="space-y-6">
       <Link to="/admin/customers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to customers</Link>
-      <PageHeader title={customer.name || customer.email} description={customer.email} actions={!customer.isActive && <Badge tone="danger">Inactive</Badge>} />
+      <PageHeader
+        title={customer.name || customer.email}
+        description={customer.email}
+        actions={
+          <>
+            {!customer.isActive && <Badge tone="danger">Inactive</Badge>}
+            {isAdmin && (
+              <Button variant={customer.isActive ? 'danger-outline' : 'secondary'} size="sm" onClick={() => setConfirmOpen(true)}>
+                {customer.isActive ? 'Deactivate account' : 'Reactivate account'}
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Bookings</p><p className="text-xl font-semibold text-[var(--text-strong)]">{customer.bookings.length}</p></Card>
@@ -114,6 +148,17 @@ export function CustomerDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={customer.isActive ? `Deactivate ${customer.name || customer.email}?` : `Reactivate ${customer.name || customer.email}?`}
+        description={customer.isActive ? 'They will be signed out everywhere and unable to sign in again until reactivated. Existing bookings are not affected.' : 'They will be able to sign in again.'}
+        confirmLabel={customer.isActive ? 'Deactivate account' : 'Reactivate account'}
+        tone={customer.isActive ? 'danger' : 'primary'}
+        loading={statusBusy}
+        onConfirm={toggleStatus}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

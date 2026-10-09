@@ -26,7 +26,7 @@ export const hotelSearchRepository = {
     const { rows } = await pool.query(
       `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type, h.star_rating, h.guest_rating,
               h.review_count, FALSE AS wishlisted,
-              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text)
+              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
               ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
@@ -88,7 +88,7 @@ export const hotelSearchRepository = {
        SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
               w.distance_km,
               c.base_price_minor, c.discount_minor, c.final_price_minor,
-              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text)
+              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
               ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
@@ -198,7 +198,7 @@ export const hotelSearchRepository = {
                 hb.base_total, hb.discount_total, hb.tax_total, hb.fee_total, hb.final_total,
                 hb.available_rooms AS rooms_left,
                 ROUND(hb.final_total::numeric / $8::int)::bigint AS per_night,
-                (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text)
+                (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                    FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                   ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
                 ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id

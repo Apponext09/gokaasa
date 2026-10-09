@@ -150,7 +150,7 @@ export const hotelRepository = {
   async listImages(hotelId, client = pool) {
     const { rows } = await client.query(
       `SELECT id, category, source_url, source_provider, storage_key, alt_text, width, height, sort_order, is_cover,
-              origin, mime_type, byte_size
+              origin, mime_type, byte_size, image_type
          FROM hotel_images
         WHERE hotel_id = $1 AND deleted_at IS NULL
         ORDER BY is_cover DESC, sort_order ASC, id ASC`,

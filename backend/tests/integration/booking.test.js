@@ -463,14 +463,26 @@ describe('holds: creation, server-side quote, expiry', () => {
 });
 
 describe('guest details and quotes', () => {
-  it('rejects guest lists that do not match the rooms, and invalid contact details', async () => {
+  it('accepts fewer named guests than the room holds (Feature 3: additional guests are optional)', async () => {
     const hold = await createHold(guestToken, { offset: 18, rooms: 1, occupancy: [{ adults: 2, childAges: [7] }] });
     const id = hold.body.hold.id;
-    const wrongCount = await request(app)
+    // Room capacity is 3 (2 adults + 1 child); naming only 2 of them is now allowed.
+    const fewerNamed = await request(app)
       .put(`/api/booking/holds/${id}/guests`)
       .set(bearer(guestToken))
       .send(guestDetailsFor([{ adults: 2, childAges: [] }]));
-    assert.equal(wrongCount.status, 422);
+    assert.equal(fewerNamed.status, 200, JSON.stringify(fewerNamed.body));
+  });
+
+  it('still rejects a guest list that exceeds the room\'s actual capacity, and invalid contact details', async () => {
+    const hold = await createHold(guestToken, { offset: 19, rooms: 1, occupancy: [{ adults: 2, childAges: [7] }] });
+    const id = hold.body.hold.id;
+    // Room capacity is 3; naming 4 guests overshoots it regardless of how optional additional guests are.
+    const tooMany = await request(app)
+      .put(`/api/booking/holds/${id}/guests`)
+      .set(bearer(guestToken))
+      .send(guestDetailsFor([{ adults: 2, childAges: [7, 9] }]));
+    assert.equal(tooMany.status, 422);
 
     const badEmail = guestDetailsFor([{ adults: 2, childAges: [7] }]);
     badEmail.primaryContact.email = 'not-an-email';

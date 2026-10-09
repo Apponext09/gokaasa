@@ -81,7 +81,7 @@ export function GuestDetailsPage() {
 
 function GuestForm({ hold, onSaved, onExpired }) {
   const occupancy = hold.quote.stay.occupancy;
-  const schema = useMemo(() => buildGuestFormSchema(occupancy), [occupancy]);
+  const schema = useMemo(() => buildGuestFormSchema(), []);
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: defaultGuestValues(occupancy, hold.guestDetails),
@@ -132,7 +132,6 @@ function GuestForm({ hold, onSaved, onExpired }) {
       </Card>
 
       {occupancy.map((room, roomIndex) => {
-        const roomError = errors.rooms?.[roomIndex]?.guests?.message;
         const children = room.childAges.length;
         return (
           <Card key={roomIndex} className="space-y-4 p-5 sm:p-6" aria-labelledby={`room-${roomIndex}-title`}>
@@ -143,9 +142,9 @@ function GuestForm({ hold, onSaved, onExpired }) {
               <p className="text-sm text-[var(--text-muted)]">
                 {room.adults} adult{room.adults === 1 ? '' : 's'}
                 {children ? ` and ${children} child${children === 1 ? '' : 'ren'}` : ''}. Guests under {ADULT_AGE} count as children.
+                {' '}Naming each guest is optional -- anyone you skip can be added at check-in.
               </p>
             </div>
-            {roomError && <p role="alert" className="text-sm text-danger-600">{roomError}</p>}
             {Array.from({ length: room.adults + children }).map((_, guestIndex) => {
               const isChild = guestIndex >= room.adults;
               const base = `rooms.${roomIndex}.guests.${guestIndex}`;
@@ -154,6 +153,7 @@ function GuestForm({ hold, onSaved, onExpired }) {
                 <fieldset key={guestIndex} className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-4 sm:grid-cols-[1fr_1fr_7rem]">
                   <legend className="px-1 text-sm font-medium text-[var(--text-strong)]">
                     Guest {guestIndex + 1} · {isChild ? 'Child' : 'Adult'}
+                    <span className="font-normal text-[var(--text-muted)]"> (optional)</span>
                   </legend>
                   <FormField id={`${base}-first`} label="First name" error={guestErrors?.firstName?.message}>
                     <Input id={`${base}-first`} invalid={!!guestErrors?.firstName} {...register(`${base}.firstName`)} />

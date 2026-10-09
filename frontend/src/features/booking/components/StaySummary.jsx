@@ -4,7 +4,7 @@ import { formatMoneyMinor, formatStayDate, occupancyLabel } from '../bookingForm
 
 /** The booking's facts and price breakdown. Shown from the server's quote, never from the browser's own numbers. */
 export function StaySummary({ quote, className = '' }) {
-  const { hotel, room, ratePlan, cancellationPolicy, stay, totals } = quote;
+  const { hotel, room, ratePlan, cancellationPolicy, stay, totals, coupon } = quote;
   const money = (minor) => formatMoneyMinor(minor, totals.currency);
   return (
     <article className={`overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm ${className}`} aria-label="Booking summary">
@@ -61,6 +61,7 @@ export function StaySummary({ quote, className = '' }) {
           {totals.discount > 0 && <Row label="Discount" value={`−${money(totals.discount)}`} tone="success" />}
           <Row label="Taxes" value={money(totals.taxes)} />
           <Row label="Fees" value={money(totals.fees)} />
+          {coupon && <Row label={`Coupon (${coupon.code})`} value={`−${money(totals.couponDiscount)}`} tone="success" />}
           <div className="flex items-baseline justify-between border-t border-[var(--border-subtle)] pt-3 text-base">
             <span className="font-semibold text-[var(--text-strong)]">Total</span>
             <span className="text-lg font-semibold text-[var(--text-strong)]" data-testid="total-amount">{money(totals.total)}</span>

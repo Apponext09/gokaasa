@@ -164,6 +164,31 @@ export function BookingDetailPage() {
         </Card>
 
         <Card>
+          <CardHeader><CardTitle>Guest details</CardTitle></CardHeader>
+          <CardContent className="space-y-3 pt-0">
+            <Row label="Lead guest" value={`${booking.primaryContact.firstName} ${booking.primaryContact.lastName}`} />
+            {(() => {
+              const booked = booking.stay.adults + booking.stay.children;
+              const named = booking.guests.length;
+              const missing = Math.max(0, booked - named);
+              return (
+                <>
+                  <Row label="Named occupants" value={`${named} of ${booked} provided`} />
+                  {booking.guests.map((guest, i) => (
+                    <Row key={i} label={guest.isPrimary ? 'Primary guest' : `Guest ${i + 1}`} value={`${guest.name}${guest.age != null ? ` (${guest.age})` : ''}`} />
+                  ))}
+                  {missing > 0 && (
+                    <Alert tone="neutral">
+                      {missing} guest{missing === 1 ? '' : 's'} not yet named online -- collect at check-in.
+                    </Alert>
+                  )}
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
           <CardContent className="space-y-1 pt-0">
             <Row label="Payment status" value={booking.paymentStatus} />

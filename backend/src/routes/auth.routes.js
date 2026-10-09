@@ -5,6 +5,7 @@ import { authLimiter } from '../middleware/rateLimiters.js';
 import { validate } from '../middleware/validate.js';
 import {
   forgotPasswordSchema,
+  guestCheckoutSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -13,6 +14,7 @@ import {
 export const authRouter = Router();
 
 authRouter.post('/register', authLimiter, validate({ body: registerSchema }), authController.register);
+authRouter.post('/guest-checkout', authLimiter, validate({ body: guestCheckoutSchema }), authController.guestCheckout);
 authRouter.post('/login', authLimiter, validate({ body: loginSchema }), authController.login);
 authRouter.post('/refresh', authController.refresh);
 authRouter.post('/logout', authController.logout);

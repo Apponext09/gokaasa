@@ -5,6 +5,7 @@ import { RequireAuth } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { HomePage } from '@/pages/customer/HomePage.jsx';
 import { DestinationsPage } from '@/pages/customer/DestinationsPage.jsx';
+import { OffersPage } from '@/pages/customer/OffersPage.jsx';
 import { WishlistPage } from '@/pages/customer/WishlistPage.jsx';
 import { NearbyHotelsPage } from '@/pages/customer/NearbyHotelsPage.jsx';
 import { AboutPage } from '@/pages/customer/AboutPage.jsx';
@@ -43,6 +44,9 @@ const ManagerDetailPage = lazy(() => import('@/pages/admin/ManagerDetailPage.jsx
 const ReportsPage = lazy(() => import('@/pages/admin/ReportsPage.jsx').then((m) => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage.jsx').then((m) => ({ default: m.SettingsPage })));
 const AdminProfilePage = lazy(() => import('@/pages/admin/ProfilePage.jsx').then((m) => ({ default: m.AdminProfilePage })));
+const InvoicesPage = lazy(() => import('@/pages/admin/InvoicesPage.jsx').then((m) => ({ default: m.InvoicesPage })));
+const AdminOffersPage = lazy(() => import('@/pages/admin/OffersPage.jsx').then((m) => ({ default: m.OffersPage })));
+const OfferFormPage = lazy(() => import('@/pages/admin/OfferFormPage.jsx').then((m) => ({ default: m.OfferFormPage })));
 
 function NotFoundPage() {
   return (
@@ -66,6 +70,7 @@ export function App() {
         <Route path="register" element={<RegisterPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
         <Route path="destinations" element={<DestinationsPage />} />
+        <Route path="offers" element={<OffersPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="contact" element={<ContactPage />} />
         {/* Static segments ("nearby") must be declared before the dynamic ":destination", otherwise it is read as one. */}
@@ -111,6 +116,12 @@ export function App() {
         <Route path="bookings/:id" element={<BookingDetailPage />} />
         <Route path="payments" element={<PaymentsPage />} />
         <Route path="refunds" element={<RefundsPage />} />
+        <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="offers" element={<AdminOffersPage />} />
+        <Route path="offers/new" element={<OfferFormPage />} />
+        <Route path="offers/:id" element={<OfferFormPage />} />
+        {/* Notifications are a per-user store, so the customer page's own component/API works unchanged here too. */}
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
