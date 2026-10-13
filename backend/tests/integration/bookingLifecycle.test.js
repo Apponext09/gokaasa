@@ -118,6 +118,38 @@ describe('booking detail DTO carries what Phase 10 needs', () => {
   });
 });
 
+describe('payment recovery (resuming a stuck PAYMENT_PENDING booking)', () => {
+  it('GET /api/bookings/:id exposes holdId once a booking exists, and that holdId can resume payment on the same booking', async () => {
+    const hold = await createHold(day(5));
+    await saveGuests(hold.id);
+
+    // First payment attempt: creates the PAYMENT_PENDING booking and an order, without completing it --
+    // simulates the guest closing the app before paying.
+    const firstOrder = await request(app).post('/api/payments/create-order').set(bearer(guestToken)).send({ holdId: hold.id });
+    assert.equal(firstOrder.status, 201, JSON.stringify(firstOrder.body));
+
+    const detail = await request(app).get(`/api/bookings/${firstOrder.body.bookingId}`).set(bearer(guestToken));
+    assert.equal(detail.status, 200, JSON.stringify(detail.body));
+    assert.equal(detail.body.booking.status, 'PAYMENT_PENDING');
+    assert.equal(detail.body.booking.holdId, hold.id, 'the booking detail must expose holdId so the client can resume payment');
+
+    // Resuming: calling create-order again with that same holdId -- exactly what the mobile "Resume
+    // payment" button does -- must succeed against the existing booking rather than erroring.
+    const resumed = await request(app).post('/api/payments/create-order').set(bearer(guestToken)).send({ holdId: hold.id });
+    assert.equal(resumed.status, 201, JSON.stringify(resumed.body));
+    assert.equal(resumed.body.bookingId, firstOrder.body.bookingId);
+
+    // And the resumed order can actually be paid and confirmed, proving this isn't a dead end.
+    const capture = await request(app).post('/api/payments/dev/checkout').set(bearer(guestToken)).send({ razorpayOrderId: resumed.body.orderId, outcome: 'success' });
+    assert.equal(capture.status, 200, JSON.stringify(capture.body));
+    const verified = await request(app).post('/api/payments/verify').set(bearer(guestToken)).send({
+      razorpay_order_id: capture.body.razorpay_order_id, razorpay_payment_id: capture.body.razorpay_payment_id, razorpay_signature: capture.body.razorpay_signature,
+    });
+    assert.equal(verified.status, 200, JSON.stringify(verified.body));
+    assert.equal(verified.body.booking.status, 'CONFIRMED');
+  });
+});
+
 describe('refund notifications', () => {
   it('cancelling with a refund creates both a refund.initiated and a refund.completed notification, deep-linking to the booking', async () => {
     const hold = await createHold(day(3));

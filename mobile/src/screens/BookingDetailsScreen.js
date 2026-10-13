@@ -15,7 +15,7 @@ import { BOOKING_STATUS_LABEL } from '../constants/booking.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 
-export default function BookingDetailsScreen({ route }) {
+export default function BookingDetailsScreen({ route, navigation }) {
   const { bookingId } = route.params;
   const [state, setState] = useState({ status: 'loading', booking: null, error: null });
   const [cancelling, setCancelling] = useState(false);
@@ -37,6 +37,11 @@ export default function BookingDetailsScreen({ route }) {
   const { booking } = state;
   const statusInfo = BOOKING_STATUS_LABEL[booking.status] ?? BOOKING_STATUS_LABEL.PAYMENT_PENDING;
   const canCancel = booking.status === 'CONFIRMED' && booking.cancellation?.preview?.canCancel;
+  // A payment that stalled (app closed mid-checkout, card declined, etc.) leaves the booking here with
+  // no way back into Payment -- holdId lets us resume the SAME booking (payment.service.js#createOrder's
+  // `hold.booking_id` branch reuses it) rather than starting over. If the underlying hold has since
+  // expired, PaymentScreen's own existing error handling already surfaces that clearly on retry.
+  const canResumePayment = booking.status === 'PAYMENT_PENDING' && Boolean(booking.holdId);
   // Matches the website's own gate exactly (BookingConfirmationPage.jsx): an invoice is only offered once
   // the booking is actually CONFIRMED, even though the backend's invoice service itself has no status
   // check -- a PAYMENT_PENDING/FAILED booking has nothing real to invoice yet.
@@ -92,6 +97,15 @@ export default function BookingDetailsScreen({ route }) {
         </View>
         <Text style={styles.caption}>{booking.hotel.address}</Text>
         <Text style={styles.bookingRef}>{booking.bookingRef}</Text>
+
+        {canResumePayment && (
+          <AppButton
+            title="Resume payment"
+            onPress={() => navigation.navigate('Payment', { holdId: booking.holdId, hotelName: booking.hotel.name })}
+            icon={<Ionicons name="card-outline" size={16} color={colors.white} />}
+            style={styles.resumeButton}
+          />
+        )}
 
         <Section title="Stay">
           <Row label="Dates" value={`${formatStayDate(booking.stay.checkIn)} → ${formatStayDate(booking.stay.checkOut)} (${booking.stay.nights} night${booking.stay.nights === 1 ? '' : 's'})`} />
@@ -177,5 +191,6 @@ const styles = StyleSheet.create({
   value: { ...typography.caption, color: colors.textStrong, flexShrink: 1, textAlign: 'right' },
   strongValue: { ...typography.bodyStrong, color: colors.textStrong },
   cancelButton: { marginTop: spacing.sm, marginBottom: spacing.xxxl },
+  resumeButton: { marginBottom: spacing.md },
   invoiceButton: { marginTop: spacing.sm, alignSelf: 'flex-start' },
 });

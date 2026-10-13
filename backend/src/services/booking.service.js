@@ -197,6 +197,10 @@ export async function buildBookingDto(client, booking, { includePreview = true }
   const dto = {
     id: booking.id,
     bookingRef: booking.booking_ref,
+    // Exposed so the client can resume payment on a PAYMENT_PENDING booking (POST /payments/create-order
+    // is re-callable with this same holdId -- see payment.service.js#createOrder's `hold.booking_id`
+    // branch) without a separate "resume" endpoint. Harmless once the booking is CONFIRMED/CANCELLED/etc.
+    holdId: booking.hold_id,
     status: booking.status,
     paymentStatus: paymentStatusOf(payments),
     hotel: {

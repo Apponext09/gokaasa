@@ -22,6 +22,7 @@ const CONFIRMED_BOOKING = {
   id: 1,
   bookingRef: 'GK-2026-000001',
   status: 'CONFIRMED',
+  holdId: 7,
   hotel: { name: 'Abbot Hotel', address: 'Ganesh Mandir Marg, Navi Mumbai' },
   stay: { checkIn: '2026-11-12', checkOut: '2026-11-14', nights: 2 },
   rooms: [{ quantity: 1, name: 'Deluxe Room', ratePlanName: 'Room only' }],
@@ -53,5 +54,28 @@ describe('BookingDetailsScreen invoice download', () => {
     await waitFor(() => expect(screen.queryByText('Abbot Hotel')).toBeTruthy());
     expect(screen.queryByText('Download invoice')).toBeNull();
     expect(bookingsApi.invoice).not.toHaveBeenCalled();
+  });
+});
+
+describe('BookingDetailsScreen payment recovery', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('a PAYMENT_PENDING booking with a real holdId shows "Resume payment", which navigates to Payment with that hold', async () => {
+    bookingsApi.booking.mockResolvedValue({ ...CONFIRMED_BOOKING, status: 'PAYMENT_PENDING', holdId: 7 });
+    const navigation = { navigate: jest.fn() };
+    await render(<BookingDetailsScreen route={{ params: { bookingId: 1 } }} navigation={navigation} />);
+
+    const button = await screen.findByText('Resume payment');
+    fireEvent.press(button);
+
+    expect(navigation.navigate).toHaveBeenCalledWith('Payment', { holdId: 7, hotelName: 'Abbot Hotel' });
+  });
+
+  test('a CONFIRMED booking never shows "Resume payment", even though it still has a holdId on record', async () => {
+    bookingsApi.booking.mockResolvedValue(CONFIRMED_BOOKING);
+    await render(<BookingDetailsScreen route={{ params: { bookingId: 1 } }} navigation={{ navigate: jest.fn() }} />);
+
+    await waitFor(() => expect(screen.queryByText('Abbot Hotel')).toBeTruthy());
+    expect(screen.queryByText('Resume payment')).toBeNull();
   });
 });
