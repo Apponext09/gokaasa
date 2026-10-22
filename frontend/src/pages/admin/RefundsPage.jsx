@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Download, ReceiptText } from 'lucide-react';
-import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Select, Input } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -77,39 +78,37 @@ export function RefundsPage() {
 
       <Card className="overflow-hidden">
         {data === null && !error ? (
-          <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
+          <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (
           <EmptyState icon={ReceiptText} title="No refunds found" description="Try a different filter." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <caption className="sr-only">Refunds</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Booking</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Customer</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Hotel</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Amount</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Reason</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {data?.items.map((r) => (
-                  <tr key={r.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3"><Link to={`/admin/bookings/${r.bookingId}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{r.bookingRef}</Link></td>
-                    <td className="px-4 py-3 text-[var(--text-body)]"><p>{r.customer.name}</p><p className="text-xs text-[var(--text-muted)]">{r.customer.email}</p></td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{r.hotelName}</td>
-                    <td className="px-4 py-3 text-[var(--text-strong)]">{formatMoney(r.amountMinor)}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{r.reason?.replaceAll('_', ' ').toLowerCase() ?? '—'}</td>
-                    <td className="px-4 py-3"><Badge tone={STATUS_TONE[r.status] ?? 'neutral'}>{r.status}</Badge></td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatDateTime(r.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="760px">
+            <caption className="sr-only">Refunds</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Booking</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Hotel</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Reason</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data?.items.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell><Link to={`/admin/bookings/${r.bookingId}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{r.bookingRef}</Link></TableCell>
+                  <TableCell className="text-[var(--text-body)]"><p>{r.customer.name}</p><p className="text-xs text-[var(--text-muted)]">{r.customer.email}</p></TableCell>
+                  <TableCell className="text-[var(--text-body)]">{r.hotelName}</TableCell>
+                  <TableCell className="text-[var(--text-strong)]">{formatMoney(r.amountMinor)}</TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{r.reason?.replaceAll('_', ' ').toLowerCase() ?? '—'}</TableCell>
+                  <TableCell><Badge tone={STATUS_TONE[r.status] ?? 'neutral'}>{r.status}</Badge></TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(r.createdAt)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 

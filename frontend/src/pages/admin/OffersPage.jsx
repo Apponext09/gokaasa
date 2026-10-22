@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Tag } from 'lucide-react';
-import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
-import { Button } from '@/components/ui/button.jsx';
+import { buttonVariants } from '@/components/ui/button.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, Pagination, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
 import { minorToRupees } from '@/features/rooms/roomForm.js';
 import { adminApi } from '@/services/endpoints.js';
@@ -55,7 +56,7 @@ export function OffersPage() {
       <PageHeader
         title="Offers & Coupons"
         description="Discount codes customers can apply at checkout."
-        actions={<Link to="/admin/offers/new"><Button size="sm"><Plus className="h-3.5 w-3.5" aria-hidden="true" /> New coupon</Button></Link>}
+        actions={<Link to="/admin/offers/new" className={buttonVariants({ size: 'sm' })}><Plus className="h-3.5 w-3.5" aria-hidden="true" /> New coupon</Link>}
       />
 
       <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
@@ -74,39 +75,37 @@ export function OffersPage() {
 
       <Card className="overflow-hidden">
         {data === null && !error ? (
-          <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
+          <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (
           <EmptyState icon={Tag} title={hasFilters ? 'No coupons match these filters' : 'No coupons yet'} description={hasFilters ? 'Try changing or clearing your filters.' : 'Create your first coupon to get started.'} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-left text-sm">
-              <caption className="sr-only">Coupons</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Code</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Discount</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Validity</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Usage</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {data?.items.map((c) => (
-                  <tr key={c.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/offers/${c.id}`} className="font-mono font-medium text-[var(--text-strong)] hover:text-brand-700">{c.code}</Link>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{discountLabel(c)}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatDateTime(c.validFrom)} → {formatDateTime(c.validTo)}</td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{c.usedCount}{c.usageLimit ? ` / ${c.usageLimit}` : ''}</td>
-                    <td className="px-4 py-3"><Badge tone={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Active' : 'Inactive'}</Badge></td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatDateTime(c.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="800px">
+            <caption className="sr-only">Coupons</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Code</TableHead>
+                <TableHead>Discount</TableHead>
+                <TableHead>Validity</TableHead>
+                <TableHead>Usage</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data?.items.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Link to={`/admin/offers/${c.id}`} className="font-mono font-medium text-[var(--text-strong)] hover:text-brand-700">{c.code}</Link>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">{discountLabel(c)}</TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(c.validFrom)} → {formatDateTime(c.validTo)}</TableCell>
+                  <TableCell className="text-[var(--text-body)]">{c.usedCount}{c.usageLimit ? ` / ${c.usageLimit}` : ''}</TableCell>
+                  <TableCell><Badge tone={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(c.createdAt)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 

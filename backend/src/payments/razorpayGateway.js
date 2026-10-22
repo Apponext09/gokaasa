@@ -16,7 +16,7 @@ export function safeEqualHex(a, b) {
  * Razorpay REST adapter. The key secret only ever leaves this process in the Authorization header over TLS.
  * Errors are reported with Razorpay's description, never with the request body or credentials.
  */
-export function createRazorpayGateway({ keyId, keySecret, webhookSecret, fetchImpl = fetch }) {
+export function createRazorpayGateway({ keyId, keySecret, fetchImpl = fetch }) {
   const mode = keyId.startsWith('rzp_live_') ? 'LIVE' : 'TEST';
   const auth = `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`;
 
@@ -70,13 +70,6 @@ export function createRazorpayGateway({ keyId, keySecret, webhookSecret, fetchIm
     /** Checkout signature: HMAC-SHA256 of "order_id|payment_id" with the key secret. */
     verifyPaymentSignature({ orderId, paymentId, signature }) {
       const expected = crypto.createHmac('sha256', keySecret).update(`${orderId}|${paymentId}`).digest('hex');
-      return safeEqualHex(expected, signature);
-    },
-
-    /** Webhook signature: HMAC-SHA256 of the raw request body with the webhook secret. */
-    verifyWebhookSignature(rawBody, signature) {
-      if (!webhookSecret) return false;
-      const expected = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
       return safeEqualHex(expected, signature);
     },
   };

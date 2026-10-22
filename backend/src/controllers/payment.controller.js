@@ -28,13 +28,4 @@ export const paymentController = {
   async devCheckout(req, res) {
     return res.json(await paymentService.devCheckout(req.user.id, req.validated.body));
   },
-
-  /**
-   * Provider webhook. Mounted in app.js with a raw body parser, because the signature covers the exact bytes
-   * sent. It is not behind authentication: the signature is the authentication.
-   */
-  async webhook(req, res) {
-    const result = await paymentService.webhook(req.body, req.get('x-razorpay-signature'), req.get('x-razorpay-event-id'));
-    return res.json({ received: true, ...result });
-  },
 };

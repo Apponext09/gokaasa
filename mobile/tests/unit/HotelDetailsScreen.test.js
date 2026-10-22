@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import HotelDetailsScreen from '../../src/screens/HotelDetailsScreen.js';
 
 jest.mock('../../src/api/hotelsApi.js', () => ({
@@ -76,10 +76,11 @@ describe('HotelDetailsScreen', () => {
     await waitFor(() => expect(screen.queryByText('Abbot Hotel')).toBeTruthy());
 
     // The actual bug: this used to render "undefined" (wrong field) with a missing key (wrong id field).
-    expect(screen.getByText('• Free cancellation if cancelled at least 1 day(s) before check-in.')).toBeTruthy();
-    expect(screen.getByText('• Non-refundable. No refund after booking.')).toBeTruthy();
-    expect(screen.getByText('• 50% refund if cancelled at least 2 day(s) before check-in.')).toBeTruthy();
-    expect(screen.queryByText('• undefined')).toBeNull();
+    // Each policy now renders as an icon + its summary text (no "• " prefix -- the icon is the bullet).
+    expect(screen.getByText('Free cancellation if cancelled at least 1 day(s) before check-in.')).toBeTruthy();
+    expect(screen.getByText('Non-refundable. No refund after booking.')).toBeTruthy();
+    expect(screen.getByText('50% refund if cancelled at least 2 day(s) before check-in.')).toBeTruthy();
+    expect(screen.queryByText('undefined')).toBeNull();
 
     const keyWarning = consoleErrorSpy.mock.calls.find((args) => String(args[0]).includes('unique') && String(args[0]).includes('key'));
     expect(keyWarning).toBeUndefined();
@@ -120,6 +121,28 @@ describe('HotelDetailsScreen', () => {
     const footer = button.parent.parent; // Pressable -> AppButton's Animated.View -> footer
     const footerStyle = Object.assign({}, ...[].concat(footer.props.style).filter(Boolean));
     expect(footerStyle.flexDirection).not.toBe('row');
+  });
+
+  test('renders real similar hotels from the hotel detail response, and tapping one pushes a new HotelDetails instance (not an in-place param swap, so Back returns to this hotel)', async () => {
+    hotelsApi.hotel.mockResolvedValue({
+      ...MOCK_HOTEL,
+      similarHotels: [
+        { id: 9, slug: 'nearby-stay-navi-mumbai', name: 'Nearby Stay', city: 'Navi Mumbai', area: 'Vashi', propertyType: 'HOTEL', amenities: [] },
+      ],
+    });
+    const route = { params: { idOrSlug: MOCK_HOTEL.slug, checkIn: '2026-11-12', checkOut: '2026-11-14', occupancy: [{ adults: 2, childAges: [] }] } };
+    const navigation = { navigate: jest.fn(), replace: jest.fn(), push: jest.fn() };
+    await render(<HotelDetailsScreen route={route} navigation={navigation} />);
+
+    const card = await screen.findByText('Nearby Stay');
+    fireEvent.press(card);
+
+    expect(navigation.push).toHaveBeenCalledWith('HotelDetails', {
+      idOrSlug: 'nearby-stay-navi-mumbai',
+      checkIn: '2026-11-12',
+      checkOut: '2026-11-14',
+      occupancy: [{ adults: 2, childAges: [] }],
+    });
   });
 
   test('shows a real error state, not a crash, when the hotel fails to load', async () => {

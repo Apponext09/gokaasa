@@ -8,7 +8,6 @@ import { apiRouter } from './routes/index.js';
 import { apiLimiter } from './middleware/rateLimiters.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { getStorage } from './storage/index.js';
-import { paymentController } from './controllers/payment.controller.js';
 
 export function createApp() {
   const app = express();
@@ -39,10 +38,6 @@ export function createApp() {
       maxAge: 600,
     }),
   );
-
-  // Provider webhook: the signature is computed over the exact bytes, so this route gets the raw body and must
-  // be registered before the JSON parser touches the request.
-  app.post('/api/payments/webhook', express.raw({ type: '*/*', limit: '256kb' }), paymentController.webhook);
 
   // Only JSON bodies are parsed. Cross-site HTML forms cannot send application/json without a CORS
   // preflight, which is refused for other origins. This is the CSRF defence for API writes.

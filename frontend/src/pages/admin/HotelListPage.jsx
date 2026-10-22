@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Building2, Plus, Search, Star } from 'lucide-react';
-import { Button } from '@/components/ui/button.jsx';
-import { Card, Skeleton, Alert } from '@/components/ui/surfaces.jsx';
+import { Button, buttonVariants } from '@/components/ui/button.jsx';
+import { Card, Alert } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, HOTEL_STATUS_OPTIONS, HotelStatusBadge, PROPERTY_TYPE_OPTIONS, Pagination, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -83,16 +84,10 @@ export function HotelListPage() {
         description="Every hotel in Gokaasa, including drafts awaiting verification."
         actions={
           <>
-            <Link
-              to="/admin/hotels/onboarding"
-              className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
-            >
+            <Link to="/admin/hotels/onboarding" className={buttonVariants({ variant: 'primary' })}>
               <Search className="h-4 w-4" aria-hidden="true" /> Import hotel
             </Link>
-            <Link
-              to="/admin/hotels/new"
-              className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 text-sm font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]"
-            >
+            <Link to="/admin/hotels/new" className={buttonVariants({ variant: 'secondary' })}>
               <Plus className="h-4 w-4" aria-hidden="true" /> New hotel
             </Link>
           </>
@@ -155,11 +150,7 @@ export function HotelListPage() {
 
       <Card className="overflow-hidden">
         {data === null && !error ? (
-          <div className="space-y-3 p-5">
-            {[0, 1, 2, 3].map((row) => (
-              <Skeleton key={row} className="h-14 w-full" />
-            ))}
-          </div>
+          <TableSkeleton rows={4} />
         ) : data?.items.length === 0 ? (
           <EmptyState
             icon={Building2}
@@ -178,53 +169,51 @@ export function HotelListPage() {
             }
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
-              <caption className="sr-only">Hotels</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Hotel</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Location</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Rating</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Rooms</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Last updated</th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold"><span className="sr-only">Actions</span></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {data?.items.map((hotel) => (
-                  <tr key={hotel.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
-                        {hotel.name}
-                      </Link>
-                      <p className="text-xs text-[var(--text-muted)]">{hotel.propertyType.replaceAll('_', ' ').toLowerCase()}</p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{[hotel.city, hotel.countryCode].filter(Boolean).join(', ')}</td>
-                    <td className="px-4 py-3">
-                      {hotel.starRating ? (
-                        <span className="inline-flex items-center gap-1 text-[var(--text-body)]">
-                          <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" aria-hidden="true" />
-                          {hotel.starRating}
-                        </span>
-                      ) : (
-                        <span className="text-[var(--text-muted)]">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{hotel.roomTypeCount}</td>
-                    <td className="px-4 py-3"><HotelStatusBadge status={hotel.status} /></td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatDateTime(hotel.updatedAt)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-brand-600 hover:underline">
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="760px">
+            <caption className="sr-only">Hotels</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Hotel</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Rating</TableHead>
+                <TableHead>Rooms</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last updated</TableHead>
+                <TableHead className="text-right"><span className="sr-only">Actions</span></TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data?.items.map((hotel) => (
+                <TableRow key={hotel.id}>
+                  <TableCell>
+                    <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
+                      {hotel.name}
+                    </Link>
+                    <p className="text-xs text-[var(--text-muted)]">{hotel.propertyType.replaceAll('_', ' ').toLowerCase()}</p>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">{[hotel.city, hotel.countryCode].filter(Boolean).join(', ')}</TableCell>
+                  <TableCell>
+                    {hotel.starRating ? (
+                      <span className="inline-flex items-center gap-1 text-[var(--text-body)]">
+                        <Star className="h-3.5 w-3.5 fill-accent-500 text-accent-500" aria-hidden="true" />
+                        {hotel.starRating}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--text-muted)]">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">{hotel.roomTypeCount}</TableCell>
+                  <TableCell><HotelStatusBadge status={hotel.status} /></TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(hotel.updatedAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-brand-600 hover:underline">
+                      Edit
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 

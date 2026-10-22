@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { PageHeader } from '@/components/shared/index.jsx';
+import { BackLink, PageHeader } from '@/components/shared/index.jsx';
 import { HotelWorkspace } from '@/features/hotels/HotelWorkspace.jsx';
 import { HotelFieldsForm } from '@/features/hotels/components/HotelFieldsForm.jsx';
 import { EMPTY_HOTEL_FORM, TAB_FIELDS, hotelFormSchema, toPayload } from '@/features/hotels/hotelForm.js';
@@ -35,9 +34,7 @@ function NewHotelPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/hotels" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All hotels
-      </Link>
+      <BackLink to="/admin/hotels">All hotels</BackLink>
       <PageHeader title="New hotel" description="Create a draft by hand. Drafts stay private until you publish them." />
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="space-y-6">
         <Card>
@@ -64,9 +61,7 @@ export function HotelEditorPage() {
   if (!id) return <NewHotelPage />;
   return (
     <div className="space-y-6">
-      <Link to="/admin/hotels" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> All hotels
-      </Link>
+      <BackLink to="/admin/hotels">All hotels</BackLink>
       <HotelWorkspace hotelId={Number(id)} />
     </div>
   );

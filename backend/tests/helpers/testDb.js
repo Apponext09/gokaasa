@@ -42,6 +42,7 @@ const TABLES_TO_CLEAR = [
   'hotel_amenities',
   'hotel_locations',
   'hotels',
+  'user_sessions',
   'refresh_tokens',
   'password_reset_tokens',
   'user_roles',

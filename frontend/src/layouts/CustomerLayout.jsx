@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Link,
-  NavLink,
   Outlet,
   useLocation,
 } from 'react-router-dom';
@@ -20,27 +19,13 @@ import {
 import { Logo } from '@/components/shared/index.jsx';
 import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
+import { ComingSoonModal } from '@/components/shared/ComingSoonModal.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
+import { SupportLauncher } from '@/features/support/SupportLauncher.jsx';
+import { TRAVEL_PRODUCTS } from '@/config/travelProducts.js';
 import { cn } from '@/lib/utils.js';
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
-
-const NAV_LINKS = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/destinations', label: 'Hotels' },
-  {
-    to: '/destinations',
-    label: 'Top Destinations',
-    key: 'top-destinations',
-  },
-  { to: '/offers', label: 'Offers' },
-  { to: '/about', label: 'About Us' },
-  { to: '/contact', label: 'Contact Us' },
-];
 
 /* =========================================================
    SOCIAL ICONS
@@ -144,36 +129,51 @@ function SocialButton({ label, children }) {
 }
 
 /* =========================================================
-   NAV LINKS
+   PRODUCT NAV LINKS
+   Hotels is the only fully functional product; every other
+   entry opens ComingSoonModal instead of navigating.
 ========================================================= */
 
-function NavLinks({ className, onNavigate }) {
+function ProductNavLinks({ className, onNavigate, onSelectComingSoon }) {
+  const location = useLocation();
+
+  const isHotelsActive =
+    location.pathname === '/' ||
+    location.pathname.startsWith('/hotels') ||
+    location.pathname.startsWith('/destinations');
+
   return (
     <>
-      {NAV_LINKS.map((link) => (
-        <NavLink
-          key={link.key ?? link.to}
-          to={link.to}
-          end={link.end}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              className,
-              `
-                relative
-                transition-all
-                duration-300
-                hover:text-brand-600
-              `,
-              isActive
-                ? 'text-brand-700'
-                : 'text-[var(--text-body)]',
-            )
-          }
-        >
-          {({ isActive }) => (
-            <>
-              {link.label}
+      {TRAVEL_PRODUCTS.map((product) => {
+        const Icon = product.icon;
+
+        if (product.status === 'active') {
+          return (
+            <Link
+              key={product.key}
+              to={product.to}
+              onClick={onNavigate}
+              className={cn(
+                className,
+                `
+                  relative
+                  flex
+                  items-center
+                  gap-1.5
+                  transition-all
+                  duration-300
+                  hover:text-brand-600
+                `,
+                isHotelsActive
+                  ? 'text-brand-700'
+                  : 'text-[var(--text-body)]',
+              )}
+            >
+              <Icon
+                className="h-4 w-4"
+                aria-hidden="true"
+              />
+              {product.label}
 
               <span
                 className={cn(
@@ -189,15 +189,45 @@ function NavLinks({ className, onNavigate }) {
                     transition-all
                     duration-300
                   `,
-                  isActive
+                  isHotelsActive
                     ? 'w-full opacity-100'
                     : 'w-0 opacity-0',
                 )}
               />
-            </>
-          )}
-        </NavLink>
-      ))}
+            </Link>
+          );
+        }
+
+        return (
+          <button
+            key={product.key}
+            type="button"
+            onClick={() => {
+              onNavigate?.();
+              onSelectComingSoon(product);
+            }}
+            className={cn(
+              className,
+              `
+                flex
+                items-center
+                gap-1.5
+                text-left
+                text-[var(--text-body)]
+                transition-all
+                duration-300
+                hover:text-brand-600
+              `,
+            )}
+          >
+            <Icon
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
+            {product.label}
+          </button>
+        );
+      })}
     </>
   );
 }
@@ -277,7 +307,7 @@ function useBodyScrollLock(locked) {
    MOBILE DRAWER
 ========================================================= */
 
-function MobileDrawer({ open, onClose }) {
+function MobileDrawer({ open, onClose, onSelectComingSoon }) {
   useBodyScrollLock(open);
 
   const {
@@ -462,7 +492,7 @@ function MobileDrawer({ open, onClose }) {
           </p>
 
           <nav className="flex flex-col gap-1">
-            <NavLinks
+            <ProductNavLinks
               className="
                 rounded-xl
                 px-3
@@ -471,6 +501,7 @@ function MobileDrawer({ open, onClose }) {
                 font-medium
               "
               onNavigate={onClose}
+              onSelectComingSoon={onSelectComingSoon}
             />
           </nav>
         </div>
@@ -1184,6 +1215,15 @@ function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
+                  to="/offers"
+                  className={linkClass}
+                >
+                  Offers
+                </Link>
+              </li>
+
+              <li>
+                <Link
                   to="/contact"
                   className={linkClass}
                 >
@@ -1294,6 +1334,7 @@ export function CustomerLayout() {
   const { isAuthenticated, status } = useAuth();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [comingSoonProduct, setComingSoonProduct] = useState(null);
 
   const location = useLocation();
 
@@ -1306,6 +1347,7 @@ export function CustomerLayout() {
   return (
     <div
       className="
+        assistant-dock-shift
         flex
         min-h-screen
         flex-col
@@ -1355,7 +1397,10 @@ export function CustomerLayout() {
                 md:flex
               "
             >
-              <NavLinks className="text-sm font-medium" />
+              <ProductNavLinks
+                className="text-sm font-medium"
+                onSelectComingSoon={setComingSoonProduct}
+              />
             </nav>
           </div>
 
@@ -1525,6 +1570,7 @@ export function CustomerLayout() {
       <MobileDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
+        onSelectComingSoon={setComingSoonProduct}
       />
 
       {/* Main */}
@@ -1539,6 +1585,16 @@ export function CustomerLayout() {
       {/* Footer */}
 
       <Footer />
+
+      {/* Coming Soon modal for unsupported travel products (Flights, Trains, Buses, Cabs, Holiday Packages, Homestays & Villas) */}
+      <ComingSoonModal
+        product={comingSoonProduct}
+        open={Boolean(comingSoonProduct)}
+        onClose={() => setComingSoonProduct(null)}
+      />
+
+      {/* Floating support launcher (WhatsApp / Booking Assistant) -- customer-facing pages only */}
+      <SupportLauncher />
     </div>
   );
 }

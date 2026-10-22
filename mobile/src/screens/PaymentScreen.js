@@ -184,7 +184,7 @@ export default function PaymentScreen({ route, navigation }) {
               <Text style={styles.webviewClose}>Cancel</Text>
             </Pressable>
           </View>
-          <WebView source={{ html: checkoutHtml(order) }} onMessage={onWebviewMessage} originWhitelist={['*']} />
+          <WebView testID="razorpay-webview" source={{ html: checkoutHtml(order) }} onMessage={onWebviewMessage} originWhitelist={['*']} />
         </ScreenContainer>
       </Modal>
     </ScreenContainer>

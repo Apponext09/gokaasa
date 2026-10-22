@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Building2, CalendarCheck, Star } from 'lucide-react';
+import { Building2, CalendarCheck, Star } from 'lucide-react';
 import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
-import { PageHeader, formatDateTime, formatMoney } from '@/components/shared/index.jsx';
-import { HotelStatusBadge } from '@/components/shared/index.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table.jsx';
+import { BackLink, HotelStatusBadge, PageHeader, formatDateTime, formatMoney } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 
@@ -38,7 +38,7 @@ export function ManagerDetailPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/managers" className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-strong)]"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Managers</Link>
+        <BackLink to="/admin/managers">Managers</BackLink>
         <Alert tone="error">{error}</Alert>
       </div>
     );
@@ -49,7 +49,7 @@ export function ManagerDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/managers" className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-strong)]"><ArrowLeft className="h-4 w-4" aria-hidden="true" /> Managers</Link>
+      <BackLink to="/admin/managers">Managers</BackLink>
       <PageHeader title={`${manager.firstName} ${manager.lastName}`} description={manager.email} />
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -69,17 +69,28 @@ export function ManagerDetailPage() {
         {manager.hotels.length === 0 ? (
           <p className="p-5 text-sm text-[var(--text-muted)]">Not assigned to any hotel yet.</p>
         ) : (
-          <ul className="divide-y divide-[var(--border-subtle)]">
-            {manager.hotels.map((hotel) => (
-              <li key={hotel.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                <div>
-                  <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{hotel.name}</Link>
-                  <p className="text-xs text-[var(--text-muted)]">{hotel.city} · Assigned {formatDateTime(hotel.assignedAt)}</p>
-                </div>
-                <HotelStatusBadge status={hotel.status} />
-              </li>
-            ))}
-          </ul>
+          <Table minWidth="480px">
+            <caption className="sr-only">Assigned hotels</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Hotel</TableHead>
+                <TableHead>Assigned</TableHead>
+                <TableHead className="text-right">Status</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {manager.hotels.map((hotel) => (
+                <TableRow key={hotel.id}>
+                  <TableCell>
+                    <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{hotel.name}</Link>
+                    <p className="text-xs text-[var(--text-muted)]">{hotel.city}</p>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(hotel.assignedAt)}</TableCell>
+                  <TableCell className="text-right"><HotelStatusBadge status={hotel.status} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 
@@ -88,20 +99,28 @@ export function ManagerDetailPage() {
         {manager.recentBookings.length === 0 ? (
           <p className="p-5 text-sm text-[var(--text-muted)]">No bookings yet.</p>
         ) : (
-          <ul className="divide-y divide-[var(--border-subtle)]">
-            {manager.recentBookings.map((booking) => (
-              <li key={booking.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-                <div>
-                  <Link to={`/admin/bookings/${booking.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{booking.bookingRef}</Link>
-                  <p className="text-xs text-[var(--text-muted)]">{booking.hotelName}</p>
-                </div>
-                <div className="text-right">
-                  <Badge tone="neutral">{booking.status}</Badge>
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">{formatMoney(booking.totalMinor)}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <Table minWidth="480px">
+            <caption className="sr-only">Recent bookings</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Booking</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {manager.recentBookings.map((booking) => (
+                <TableRow key={booking.id}>
+                  <TableCell>
+                    <Link to={`/admin/bookings/${booking.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{booking.bookingRef}</Link>
+                    <p className="text-xs text-[var(--text-muted)]">{booking.hotelName}</p>
+                  </TableCell>
+                  <TableCell><Badge tone="neutral">{booking.status}</Badge></TableCell>
+                  <TableCell className="text-right text-[var(--text-strong)]">{formatMoney(booking.totalMinor)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
     </div>

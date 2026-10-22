@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CalendarCheck, Download, Search } from 'lucide-react';
-import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney } from '@/components/shared/index.jsx';
 import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
@@ -100,47 +101,45 @@ export function BookingsPage() {
 
       <Card className="overflow-hidden">
         {data === null && !error ? (
-          <div className="space-y-3 p-5">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
+          <TableSkeleton rows={4} />
         ) : data?.items.length === 0 ? (
           <EmptyState icon={CalendarCheck} title={hasFilters ? 'No bookings match these filters' : 'No bookings yet'} description={hasFilters ? 'Try changing or clearing your filters.' : 'Bookings will appear here once guests start booking.'} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-left text-sm">
-              <caption className="sr-only">Bookings</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Booking</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Customer</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Hotel</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Dates</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Amount</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {data?.items.map((b) => (
-                  <tr key={b.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/bookings/${b.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{b.bookingRef}</Link>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">
-                      <p>{b.customer.name}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{b.customer.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">
-                      <p>{b.hotel.name}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{b.hotel.city}</p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{b.checkIn} → {b.checkOut}</td>
-                    <td className="px-4 py-3 text-[var(--text-strong)]">{formatMoney(b.amounts.total, b.amounts.currency)}</td>
-                    <td className="px-4 py-3"><Badge tone={BOOKING_STATUS_LABEL[b.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[b.status]?.label ?? b.status}</Badge></td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{new Date(b.createdAt).toLocaleDateString('en-IN')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="820px">
+            <caption className="sr-only">Bookings</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Booking</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Hotel</TableHead>
+                <TableHead>Dates</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data?.items.map((b) => (
+                <TableRow key={b.id}>
+                  <TableCell>
+                    <Link to={`/admin/bookings/${b.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{b.bookingRef}</Link>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">
+                    <p>{b.customer.name}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{b.customer.email}</p>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">
+                    <p>{b.hotel.name}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{b.hotel.city}</p>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{b.checkIn} → {b.checkOut}</TableCell>
+                  <TableCell className="text-[var(--text-strong)]">{formatMoney(b.amounts.total, b.amounts.currency)}</TableCell>
+                  <TableCell><Badge tone={BOOKING_STATUS_LABEL[b.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[b.status]?.label ?? b.status}</Badge></TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{new Date(b.createdAt).toLocaleDateString('en-IN')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 

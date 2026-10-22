@@ -8,6 +8,8 @@ import { reviewRouter } from './review.routes.js';
 import { newsletterRouter } from './newsletter.routes.js';
 import { notificationRouter } from './notification.routes.js';
 import { offerRouter } from './offer.routes.js';
+import { assistantRouter } from './assistant.routes.js';
+import { presenceRouter } from './presence.routes.js';
 
 export const apiRouter = Router();
 
@@ -25,4 +27,6 @@ apiRouter.use('/reviews', reviewRouter);
 apiRouter.use('/newsletter', newsletterRouter);
 apiRouter.use('/notifications', notificationRouter);
 apiRouter.use('/offers', offerRouter);
+apiRouter.use('/assistant', assistantRouter);
+apiRouter.use('/presence', presenceRouter);
 apiRouter.use('/admin', adminRouter);

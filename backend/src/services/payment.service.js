@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { withTransaction } from '../db/pool.js';
 import { bookingRepository } from '../repositories/booking.repository.js';
 import { paymentRepository } from '../repositories/payment.repository.js';
@@ -20,23 +19,6 @@ import { createLogger } from '../utils/logger.js';
 const log = createLogger('payment');
 const CHECKOUT_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
 
-/** Keys the webhook payload may contain that are never stored, even though Razorpay sends them. */
-const SENSITIVE_PAYLOAD_KEYS = ['card', 'card_id', 'token_id', 'vpa', 'email', 'contact', 'bank', 'wallet', 'upi'];
-
-function sanitizeEvent(event) {
-  const strip = (entity) => {
-    if (!entity || typeof entity !== 'object') return entity;
-    return Object.fromEntries(Object.entries(entity).filter(([key]) => !SENSITIVE_PAYLOAD_KEYS.includes(key)));
-  };
-  const payload = event.payload ?? {};
-  return {
-    event: event.event,
-    created_at: event.created_at,
-    payment: strip(payload.payment?.entity),
-    order: strip(payload.order?.entity),
-  };
-}
-
 /** Writes a payment's success. Only non-sensitive fields from the provider are kept. */
 function successFields(paymentId, providerPayment) {
   return {
@@ -47,8 +29,8 @@ function successFields(paymentId, providerPayment) {
 }
 
 /**
- * Settles one payment against its booking. Used by verify, by the webhook, and by the simulated checkout, so
- * every route to CONFIRMED runs the same checks. The caller has already verified the provider signature.
+ * Settles one payment against its booking. Used by verify and by the simulated checkout, so every route to
+ * CONFIRMED runs the same checks. The caller has already verified the provider signature.
  *
  * Lock order is hold, then booking, then payment, the same order every other path uses, so the paths cannot deadlock.
  */
@@ -422,68 +404,6 @@ export const paymentService = {
       return { status: 'FAILED' };
     }
     return gateway.capture(razorpayOrderId);
-  },
-
-  /**
-   * Razorpay webhook. Signature-checked on the raw body. Each event id is recorded once, so a redelivered
-   * event returns immediately; settlement is idempotent, so a repeat can never confirm or refund twice.
-   */
-  async webhook(rawBody, signature, headerEventId) {
-    const gateway = getGateway();
-    if (gateway.simulated) throw AppError.notFound('Webhooks are not used in simulated mode');
-    if (!gateway.verifyWebhookSignature(rawBody, signature ?? '')) {
-      log.warn('webhook signature rejected');
-      throw AppError.badRequest('Invalid webhook signature', { code: 'WEBHOOK_SIGNATURE_INVALID' });
-    }
-
-    let event;
-    try {
-      event = JSON.parse(rawBody.toString('utf8'));
-    } catch {
-      throw AppError.badRequest('Webhook body is not valid JSON');
-    }
-    const eventId = headerEventId || crypto.createHash('sha256').update(rawBody).digest('hex');
-    const entity = event.payload?.payment?.entity ?? null;
-    const orderId = entity?.order_id ?? event.payload?.order?.entity?.id ?? null;
-
-    const recorded = await withTransaction((client) =>
-      paymentRepository.recordWebhookEvent(client, {
-        eventId,
-        eventType: String(event.event ?? 'unknown').slice(0, 80),
-        paymentId: entity?.id ?? null,
-        orderId,
-        payload: sanitizeEvent(event),
-      }),
-    );
-    if (!recorded) {
-      const previous = await paymentRepository.findWebhookEvent(eventId);
-      if (previous && ['PROCESSED', 'IGNORED'].includes(previous.status)) return { duplicate: true };
-    }
-
-    try {
-      let status = 'IGNORED';
-      if ((event.event === 'payment.captured' || event.event === 'order.paid') && entity) {
-        const result = await settlePayment({
-          orderId: entity.order_id,
-          paymentId: entity.id,
-          amountMinor: entity.amount,
-          currency: entity.currency,
-          providerPayment: entity,
-          source: 'WEBHOOK',
-        });
-        await afterSettle(result);
-        status = 'PROCESSED';
-      } else if (event.event === 'payment.failed' && entity) {
-        await recordFailure({ orderId: entity.order_id, reason: entity.error_description ?? 'PAYMENT_FAILED' });
-        status = 'PROCESSED';
-      }
-      await withTransaction((client) => paymentRepository.setWebhookStatus(client, eventId, status));
-      return { duplicate: false, status };
-    } catch (error) {
-      // Stored as FAILED and answered with a 5xx, so the gateway redelivers it.
-      await withTransaction((client) => paymentRepository.setWebhookStatus(client, eventId, 'FAILED')).catch(() => {});
-      throw error;
-    }
   },
 };
 

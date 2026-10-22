@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Download, Search, Users } from 'lucide-react';
-import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -75,41 +76,39 @@ export function CustomersPage() {
 
       <Card className="overflow-hidden">
         {data === null && !error ? (
-          <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
+          <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (
           <EmptyState icon={Users} title={q ? 'No customers match this search' : 'No customers yet'} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <caption className="sr-only">Customers</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Customer</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Bookings</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Total spend</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Last booking</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Joined</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {data?.items.map((c) => (
-                  <tr key={c.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Link to={`/admin/customers/${c.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{c.name || c.email}</Link>
-                        {!c.isActive && <Badge tone="danger">Inactive</Badge>}
-                      </div>
-                      <p className="text-xs text-[var(--text-muted)]">{c.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{c.bookingsCount}</td>
-                    <td className="px-4 py-3 text-[var(--text-strong)]">{formatMoney(c.totalSpendMinor)}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{c.lastBookingAt ? new Date(c.lastBookingAt).toLocaleDateString('en-IN') : '—'}</td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{new Date(c.joinedAt).toLocaleDateString('en-IN')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="720px">
+            <caption className="sr-only">Customers</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Customer</TableHead>
+                <TableHead>Bookings</TableHead>
+                <TableHead>Total spend</TableHead>
+                <TableHead>Last booking</TableHead>
+                <TableHead>Joined</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data?.items.map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Link to={`/admin/customers/${c.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{c.name || c.email}</Link>
+                      {!c.isActive && <Badge tone="danger">Inactive</Badge>}
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)]">{c.email}</p>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">{c.bookingsCount}</TableCell>
+                  <TableCell className="text-[var(--text-strong)]">{formatMoney(c.totalSpendMinor)}</TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{c.lastBookingAt ? new Date(c.lastBookingAt).toLocaleDateString('en-IN') : '—'}</TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{new Date(c.joinedAt).toLocaleDateString('en-IN')}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 

@@ -29,15 +29,23 @@
   --color-accent-700: #7f5316;
 
   --color-success-50: #ecf8f0;
+  --color-success-100: #d7f0de;
   --color-success-600: #17803d;
+  --color-success-700: #12652f;
+
   --color-warning-50: #fdf5e6;
+  --color-warning-100: #faeac6;
   --color-warning-600: #a86a0d;
+  --color-warning-700: #8a560a;
+
   --color-danger-50: #fdeeee;
+  --color-danger-100: #fad9d8;
   --color-danger-600: #c2372f;
   --color-danger-700: #a02a23;
 
   --radius-control: 0.625rem;
   --radius-card: 0.875rem;
+  --radius-sheet: 1.25rem;
 }
 
 /* Semantic surface tokens. Dark mode is intentionally out of scope for V1. */
@@ -49,6 +57,9 @@
   --text-strong: #121a28;
   --text-body: #3b4452;
   --text-muted: #6f6a62;
+  --surface-hover: #f5f1e9;
+  --shadow-card: 0 1px 2px 0 rgb(18 26 40 / 0.04), 0 1px 3px 0 rgb(18 26 40 / 0.06);
+  --shadow-popover: 0 8px 24px -4px rgb(18 26 40 / 0.12), 0 2px 6px -2px rgb(18 26 40 / 0.08);
   color-scheme: light;
 }
 
@@ -159,5 +170,51 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Support launcher: a one-time "Plan your stay" label reveal, then it stays hover/focus-revealed. */
+@keyframes launcherLabelIntro {
+  0% {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+/* The launcher button's own one-time entrance pop. */
+@keyframes launcherPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Booking assistant side dock (wide screens only, set by SupportLauncher while the chat is open): the whole
+   customer layout makes room for the panel instead of sitting underneath it. */
+:root {
+  --assistant-dock-width: 27rem;
+}
+@media (min-width: 1280px) {
+  html[data-assistant-docked] {
+    --assistant-dock-offset: var(--assistant-dock-width);
+  }
+  html[data-assistant-docked] .assistant-dock-shift {
+    padding-right: var(--assistant-dock-width);
   }
 }

@@ -117,31 +117,4 @@ export const paymentRepository = {
     const { rows } = await client.query(`SELECT ${REFUND_COLUMNS} FROM refunds r WHERE r.booking_id = $1 ORDER BY r.id`, [bookingId]);
     return rows;
   },
-
-  /**
-   * Records a webhook delivery. The unique provider event id makes a repeat delivery a no-op: the returned
-   * row is null when the event was already recorded.
-   */
-  async recordWebhookEvent(client, values) {
-    const { rows } = await client.query(
-      `INSERT INTO payment_webhook_events (provider_event_id, event_type, provider_payment_id, provider_order_id, payload)
-       VALUES ($1, $2, $3, $4, $5)
-       ON CONFLICT (provider_event_id) DO NOTHING
-       RETURNING id`,
-      [values.eventId, values.eventType, values.paymentId, values.orderId, JSON.stringify(values.payload)],
-    );
-    return rows[0] ?? null;
-  },
-
-  async findWebhookEvent(eventId, client = pool) {
-    const { rows } = await client.query(`SELECT status FROM payment_webhook_events WHERE provider_event_id = $1`, [eventId]);
-    return rows[0] ?? null;
-  },
-
-  async setWebhookStatus(client, eventId, status) {
-    await client.query(
-      `UPDATE payment_webhook_events SET status = $2, processed_at = now() WHERE provider_event_id = $1`,
-      [eventId, status],
-    );
-  },
 };

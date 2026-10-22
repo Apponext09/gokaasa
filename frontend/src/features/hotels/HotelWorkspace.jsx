@@ -487,7 +487,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         </div>
       </form>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/95 backdrop-blur md:left-60">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/95 backdrop-blur md:left-[var(--admin-sidebar-width,15rem)] transition-[left] duration-200">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
           <p className="text-xs text-[var(--text-muted)]">
             {hasUnsaved ? (

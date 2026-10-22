@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select, Textarea, Checkbox } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
-import { EmptyState, FormField, PageHeader, formatDateTime, formatMoney } from '@/components/shared/index.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table.jsx';
+import { BackLink, EmptyState, FormField, PageHeader, formatDateTime, formatMoney } from '@/components/shared/index.jsx';
 import { minorToRupees, rupeesToMinor } from '@/features/rooms/roomForm.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -141,7 +142,7 @@ export function OfferFormPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/offers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to offers</Link>
+        <BackLink to="/admin/offers">Back to offers</BackLink>
         <EmptyState title="We couldn't load this coupon" description={error} />
       </div>
     );
@@ -150,7 +151,7 @@ export function OfferFormPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/offers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to offers</Link>
+      <BackLink to="/admin/offers">Back to offers</BackLink>
       <PageHeader
         title={isNew ? 'New coupon' : coupon.code}
         description={isNew ? 'Create a discount code customers can apply at checkout.' : 'Edit this coupon and review how it has been used.'}
@@ -270,20 +271,28 @@ export function OfferFormPage() {
             {coupon.recentUsages.length === 0 ? (
               <p className="text-sm text-[var(--text-muted)]">Not used yet.</p>
             ) : (
-              <div className="divide-y divide-[var(--border-subtle)]">
-                {coupon.recentUsages.map((u) => (
-                  <div key={u.id} className="flex items-center justify-between py-2.5 text-sm">
-                    <div>
-                      <p className="font-medium text-[var(--text-strong)]">{u.customerName || u.customerEmail}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{u.bookingRef ?? 'Checkout not completed'} · {formatDateTime(u.createdAt)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-[var(--text-strong)]">{formatMoney(u.discountMinor)}</p>
-                      <Badge tone={u.status === 'CONFIRMED' ? 'success' : u.status === 'PENDING' ? 'warning' : 'neutral'}>{u.status}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <Table minWidth="480px">
+                <caption className="sr-only">Recent coupon usage</caption>
+                <TableHeader>
+                  <tr>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Discount</TableHead>
+                  </tr>
+                </TableHeader>
+                <TableBody>
+                  {coupon.recentUsages.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell>
+                        <p className="font-medium text-[var(--text-strong)]">{u.customerName || u.customerEmail}</p>
+                        <p className="text-xs text-[var(--text-muted)]">{u.bookingRef ?? 'Checkout not completed'} · {formatDateTime(u.createdAt)}</p>
+                      </TableCell>
+                      <TableCell><Badge tone={u.status === 'CONFIRMED' ? 'success' : u.status === 'PENDING' ? 'warning' : 'neutral'}>{u.status}</Badge></TableCell>
+                      <TableCell className="text-right text-[var(--text-strong)]">{formatMoney(u.discountMinor)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>

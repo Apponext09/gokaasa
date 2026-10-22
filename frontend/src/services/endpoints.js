@@ -77,6 +77,15 @@ export const adminApi = {
   getCustomer: (id) => api.get(`/admin/customers/${id}`).then((r) => r.data.customer),
   setCustomerStatus: (id, isActive) => api.patch(`/admin/customers/${id}/status`, { isActive }).then((r) => r.data.customer),
 
+  // User Management: a unified, presence-aware directory across every role. ADMIN only (the backend enforces this).
+  listUsers: (params) => api.get('/admin/users', { params }).then((r) => r.data),
+  getUser: (id) => api.get(`/admin/users/${id}`).then((r) => r.data.user),
+  getUserKpis: () => api.get('/admin/users/kpis').then((r) => r.data),
+  setUserStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }).then((r) => r.data.user),
+  forceSignOutUser: (id) => api.post(`/admin/users/${id}/force-signout`).then((r) => r.data),
+  revokeUserSession: (id, sessionId) => api.delete(`/admin/users/${id}/sessions/${sessionId}`).then((r) => r.data),
+  issueUserStreamTicket: () => api.post('/admin/users/stream-ticket').then((r) => r.data),
+
   // Audit log (ADMIN only; the backend enforces this)
   listAuditLogs: (params) => api.get('/admin/audit-logs', { params }).then((r) => r.data),
 
@@ -170,6 +179,19 @@ export const discoveryApi = {
 /** Public offer/coupon discovery -- no auth required, nothing customer-specific. */
 export const offerApi = {
   list: () => api.get('/offers').then((r) => r.data.items),
+};
+
+/** Mode B: the AI natural-language assistant. Public -- no auth needed, same as search itself. */
+export const assistantApi = {
+  status: () => api.get('/assistant/status').then((r) => r.data),
+  extract: (message) => api.post('/assistant/extract', { message }).then((r) => r.data),
+};
+
+/** Authenticated presence: one call each to open, heartbeat and close this tab's session. Identity always comes from the access token, never from a client-supplied user id. */
+export const presenceApi = {
+  start: (body) => api.post('/presence/session', body).then((r) => r.data.session),
+  heartbeat: (body) => api.post('/presence/heartbeat', body).then((r) => r.data),
+  end: (body) => api.post('/presence/session/end', body).then((r) => r.data),
 };
 
 /** Customer booking flow: holds, guest details, the booking itself, My Trips and cancellation. */

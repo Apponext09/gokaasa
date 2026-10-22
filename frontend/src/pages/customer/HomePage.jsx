@@ -2,24 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   Award,
-  Building2,
+  ArrowRight,
   CalendarCheck,
+  CheckCircle2,
+  ChevronRight,
   Globe2,
   Headphones,
   Mail,
   MapPin,
   Phone,
   ShieldCheck,
-  Users,
-  ArrowRight,
+  Sparkles,
   Star,
-  ChevronRight,
+  Users,
 } from 'lucide-react';
 
-import { Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
-
 import {
   Carousel,
   CarouselItem,
@@ -29,7 +28,9 @@ import {
   FullPageSpinner,
   homePathFor,
 } from '@/components/shared/index.jsx';
+import { ComingSoonModal } from '@/components/shared/ComingSoonModal.jsx';
 
+import { TRAVEL_PRODUCTS } from '@/config/travelProducts.js';
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
 import { NearbyHotelsSection } from '@/features/home/NearbyHotelsSection.jsx';
 import { HandpickedHotelsSection } from '@/features/home/HandpickedHotelsSection.jsx';
@@ -46,131 +47,83 @@ import {
 import { normalizeError } from '@/services/api.js';
 import { slugifyPlace } from '@/features/search/searchParams.js';
 
-/* -------------------------------------------------------------------------- */
-/*                              HERO IMAGES                                   */
-/* -------------------------------------------------------------------------- */
-
 const HERO_IMAGES = [
   {
     src: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Luxury hotel room',
-    quote:
-      '“The journey is always better when you have a beautiful place to stay.”',
+    alt: 'Elegant luxury hotel suite',
+    quote: 'Find your kind of extraordinary.',
+    caption: 'Beautiful stays. Unforgettable journeys.',
   },
   {
     src: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=2400&q=90',
     alt: 'Luxury hotel interior',
-    quote:
-      '“Collect moments, not things — and make every stay memorable.”',
+    quote: 'Your next escape starts here.',
+    caption: 'Discover stays that feel made for you.',
   },
   {
     src: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=2400&q=90',
     alt: 'Luxury resort with swimming pool',
-    quote:
-      '“Escape the ordinary and discover a stay worth remembering.”',
+    quote: 'Make room for remarkable moments.',
+    caption: 'From peaceful retreats to vibrant getaways.',
   },
   {
     src: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Premium hotel pool',
-    quote:
-      '“Wherever you go, make your stay part of the story.”',
+    alt: 'Premium resort pool',
+    quote: 'Go further. Stay beautifully.',
+    caption: 'The right stay changes everything.',
   },
   {
     src: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Luxury resort',
-    quote:
-      '“Your next unforgettable escape begins with the perfect stay.”',
+    alt: 'Luxury resort surrounded by greenery',
+    quote: 'A better journey begins with a better stay.',
+    caption: 'Explore more of the places you love.',
   },
 ];
 
-/* -------------------------------------------------------------------------- */
-/*                          DESTINATION IMAGES                                */
-/* -------------------------------------------------------------------------- */
-
 const DESTINATION_IMAGES = {
-  Mumbai:
-    'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=1400&q=85',
-
-  Goa:
-    'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1400&q=85',
-
-  Delhi:
-    'https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1400&q=85',
-
-  Pune:
-    'https://images.unsplash.com/photo-1595658658481-d53d3f999875?auto=format&fit=crop&w=1400&q=85',
-
-  Jaipur:
-    'https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1400&q=85',
-
-  Bangalore:
-    'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=1400&q=85',
-
-  Hyderabad:
-    'https://images.unsplash.com/photo-1572449043416-55f4685c9bb7?auto=format&fit=crop&w=1400&q=85',
-
-  Kashmir:
-    'https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=1400&q=85',
+  Mumbai: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=1400&q=85',
+  Goa: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1400&q=85',
+  Delhi: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1400&q=85',
+  Pune: 'https://images.unsplash.com/photo-1595658658481-d53d3f999875?auto=format&fit=crop&w=1400&q=85',
+  Jaipur: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1400&q=85',
+  Bangalore: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=1400&q=85',
+  Hyderabad: 'https://images.unsplash.com/photo-1572449043416-55f4685c9bb7?auto=format&fit=crop&w=1400&q=85',
+  Kashmir: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=1400&q=85',
 };
 
-const WORLD_DESTINATION_IMAGES = {
-  Singapore:
-    'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=1400&q=85',
-
-  'New York':
-    'https://images.unsplash.com/photo-1485871981521-5b1fd3805eee?auto=format&fit=crop&w=1400&q=85',
-
-  Dubai:
-    'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1400&q=85',
-
-  Maldives:
-    'https://images.unsplash.com/photo-1514282401047-d79a71a590e8?auto=format&fit=crop&w=1400&q=85',
-
-  Paris:
-    'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1400&q=85',
-};
+/** Fallback imagery for real popular destinations we don't have curated city photography for. */
+function destinationImageFor(label, index) {
+  return DESTINATION_IMAGES[label] || HERO_IMAGES[index % HERO_IMAGES.length].src;
+}
 
 const STAY_CATEGORY_IMAGES = {
-  Resort:
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85',
-
-  'Airport Hotel':
-    'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1400&q=85',
-
-  'Mountain Hotel':
-    'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1400&q=85',
-
-  'Heritage Hotel':
-    'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1400&q=85',
-
-  'Beach Hotel':
-    'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1400&q=85',
+  Resort: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85',
+  'Airport Hotel': 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1400&q=85',
+  'Mountain Hotel': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1400&q=85',
+  'Heritage Hotel': 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1400&q=85',
+  'Beach Hotel': 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1400&q=85',
 };
-
-/* -------------------------------------------------------------------------- */
-/*                                  DATA                                      */
-/* -------------------------------------------------------------------------- */
 
 const WHY_GOKAASA = [
   {
     icon: Award,
-    title: 'Premium Quality',
-    text: 'Hand-selected hotels with verified reviews.',
+    title: 'Thoughtfully Selected',
+    text: 'Discover stays chosen for comfort, character, and quality.',
   },
   {
     icon: ShieldCheck,
     title: 'Secure Booking',
-    text: 'Safe and secure payment processing.',
+    text: 'A smoother booking experience with secure payment processing.',
   },
   {
     icon: Headphones,
-    title: '24/7 Support',
-    text: 'Round-the-clock customer service.',
+    title: 'Here When You Need Us',
+    text: 'Get support and guidance throughout your journey.',
   },
   {
     icon: Users,
-    title: 'Trusted by Millions',
-    text: 'Join millions of satisfied customers.',
+    title: 'Made for Travellers',
+    text: 'A simpler way to find a stay that fits your plans.',
   },
 ];
 
@@ -185,14 +138,6 @@ const INDIA_DESTINATIONS = [
   'Kashmir',
 ];
 
-const WORLD_DESTINATIONS = [
-  'Singapore',
-  'New York',
-  'Dubai',
-  'Maldives',
-  'Paris',
-];
-
 const INSPIRATION = [
   'Mumbai',
   'Goa',
@@ -205,87 +150,48 @@ const INSPIRATION = [
 ];
 
 const STAY_CATEGORIES = [
-  {
-    title: 'Resort',
-    propertyType: 'RESORT',
-  },
-  {
-    title: 'Airport Hotel',
-    propertyType: 'HOTEL',
-  },
-  {
-    title: 'Mountain Hotel',
-    propertyType: 'HOTEL',
-  },
-  {
-    title: 'Heritage Hotel',
-    propertyType: 'HOTEL',
-  },
-  {
-    title: 'Beach Hotel',
-    propertyType: 'RESORT',
-  },
+  { title: 'Resort', propertyType: 'RESORT' },
+  { title: 'Airport Hotel', propertyType: 'HOTEL' },
+  { title: 'Mountain Hotel', propertyType: 'HOTEL' },
+  { title: 'Heritage Hotel', propertyType: 'HOTEL' },
+  { title: 'Beach Hotel', propertyType: 'RESORT' },
 ];
 
 const TESTIMONIALS = [
   {
     name: 'Priya Verma',
-    quote:
-      'Loved the stay. Easy booking and great support from Gokaasa.',
+    quote: 'Loved the stay. Easy booking and great support from Gokaasa.',
     rating: 5,
   },
   {
     name: 'Rahul Sharma',
-    quote:
-      'Amazing experience! Rooms were clean and service was top-notch.',
+    quote: 'Amazing experience! Rooms were clean and service was top-notch.',
     rating: 5,
   },
   {
     name: 'Anshu Yadav',
-    quote:
-      'The booking process was smooth, simple and completely hassle-free.',
+    quote: 'The booking process was smooth, simple and completely hassle-free.',
     rating: 5,
   },
   {
     name: 'Amit Patel',
-    quote:
-      'Loved the stay. Easy booking and great support.',
+    quote: 'Loved the stay. Easy booking and great support.',
     rating: 5,
   },
   {
     name: 'Amit Singh',
-    quote:
-      'Best hotel deals I found. Highly recommended!',
+    quote: 'Best hotel deals I found. Highly recommended!',
     rating: 5,
   },
 ];
 
 const TRUST_STRIP = [
-  {
-    icon: Users,
-    label: 'Happy Travelers',
-  },
-  {
-    icon: Headphones,
-    label: 'On-Trip Assistance',
-  },
-  {
-    icon: CalendarCheck,
-    label: 'Flexible Bookings',
-  },
-  {
-    icon: Award,
-    label: 'Best Curation',
-  },
-  {
-    icon: ShieldCheck,
-    label: '24/7 Support',
-  },
+  { icon: Users, label: 'Happy Travelers' },
+  { icon: Headphones, label: 'On-Trip Assistance' },
+  { icon: CalendarCheck, label: 'Flexible Bookings' },
+  { icon: Award, label: 'Thoughtful Curation' },
+  { icon: ShieldCheck, label: 'Booking Support' },
 ];
-
-/* -------------------------------------------------------------------------- */
-/*                                HELPERS                                     */
-/* -------------------------------------------------------------------------- */
 
 function buildStats(stats) {
   if (!stats) return [];
@@ -294,9 +200,9 @@ function buildStats(stats) {
 
   if (stats.hotels?.published > 0) {
     items.push({
-      icon: Building2,
+      icon: Globe2,
       value: stats.hotels.published.toLocaleString('en-IN'),
-      label: 'Hotels',
+      label: 'Available hotels',
     });
   }
 
@@ -312,7 +218,7 @@ function buildStats(stats) {
     items.push({
       icon: MapPin,
       value: stats.destinations.cities.toLocaleString('en-IN'),
-      label: 'Cities',
+      label: 'Destinations',
     });
   }
 
@@ -327,29 +233,32 @@ function buildStats(stats) {
   return items;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                            SECTION HEADING                                 */
-/* -------------------------------------------------------------------------- */
-
-function SectionHeading({ title, subtitle }) {
+function SectionHeading({ eyebrow, title, subtitle, action }) {
   return (
-    <div className="space-y-2">
-      <h2 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
-        {title}
-      </h2>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="max-w-2xl">
+        {eyebrow && (
+          <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-brand-700">
+            <span className="h-px w-7 bg-brand-700" />
+            {eyebrow}
+          </p>
+        )}
 
-      {subtitle && (
-        <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
-          {subtitle}
-        </p>
-      )}
+        <h2 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl lg:text-4xl">
+          {title}
+        </h2>
+
+        {subtitle && (
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-muted)] sm:text-base">
+            {subtitle}
+          </p>
+        )}
+      </div>
+
+      {action}
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*                         SCROLL REVEAL COMPONENT                            */
-/* -------------------------------------------------------------------------- */
 
 function Reveal({
   children,
@@ -363,7 +272,16 @@ function Reveal({
   useEffect(() => {
     const element = ref.current;
 
-    if (!element) return;
+    if (!element) return undefined;
+
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+
+    if (reduceMotion || !('IntersectionObserver' in window)) {
+      setVisible(true);
+      return undefined;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -374,52 +292,37 @@ function Reveal({
       },
       {
         threshold: 0.12,
-        rootMargin: '0px 0px -50px 0px',
+        rootMargin: '0px 0px -35px 0px',
       },
     );
 
     observer.observe(element);
 
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
   const hiddenTransform = {
-    up: 'translate-y-10',
-    down: '-translate-y-10',
-    left: 'translate-x-10',
-    right: '-translate-x-10',
-    zoom: 'scale-95',
+    up: 'translate-y-8',
+    down: '-translate-y-8',
+    left: 'translate-x-8',
+    right: '-translate-x-8',
+    zoom: 'scale-[0.96]',
   };
 
   return (
     <div
       ref={ref}
-      style={{
-        transitionDelay: `${delay}ms`,
-      }}
-      className={`
-        transform-gpu
-        transition-all
-        duration-700
-        ease-out
-        ${
-          visible
-            ? 'translate-x-0 translate-y-0 scale-100 opacity-100'
-            : `${hiddenTransform[direction]} opacity-0`
-        }
-        ${className}
-      `}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transform-gpu transition-[opacity,transform] duration-700 ease-out ${
+        visible
+          ? 'translate-x-0 translate-y-0 scale-100 opacity-100'
+          : `${hiddenTransform[direction] || hiddenTransform.up} opacity-0`
+      } ${className}`}
     >
       {children}
     </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*                         PREMIUM IMAGE CARD                                 */
-/* -------------------------------------------------------------------------- */
 
 function PremiumImageCard({
   title,
@@ -427,12 +330,12 @@ function PremiumImageCard({
   href,
   className = '',
   aspect = 'aspect-[4/3]',
-  subtitle = 'Explore hotels',
+  subtitle = 'Explore stays',
 }) {
   return (
     <Link
       to={href}
-      className={`group relative block overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-slate-900 shadow-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl ${className}`}
+      className={`group relative block overflow-hidden rounded-3xl border border-white/70 bg-slate-900 shadow-[0_8px_30px_rgba(15,23,42,0.08)] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2 ${className}`}
     >
       <div className={`relative overflow-hidden ${aspect}`}>
         <img
@@ -443,7 +346,7 @@ function PremiumImageCard({
           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent transition-opacity duration-500 group-hover:from-slate-950/90" />
 
         <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
           <div className="flex items-end justify-between gap-3">
@@ -452,9 +355,8 @@ function PremiumImageCard({
                 {title}
               </h3>
 
-              <p className="mt-1 flex items-center gap-1 text-xs font-medium text-white/80">
+              <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-white/80 sm:text-sm">
                 {subtitle}
-
                 <ArrowRight
                   className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1"
                   aria-hidden="true"
@@ -462,11 +364,8 @@ function PremiumImageCard({
               </p>
             </div>
 
-            <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md sm:flex">
-              <ArrowRight
-                className="h-4 w-4"
-                aria-hidden="true"
-              />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/15 text-white backdrop-blur-md transition-all duration-300 group-hover:bg-white group-hover:text-slate-900">
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </span>
           </div>
         </div>
@@ -475,10 +374,6 @@ function PremiumImageCard({
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                              NEWSLETTER                                    */
-/* -------------------------------------------------------------------------- */
-
 function NewsletterSection() {
   const [email, setEmail] = useState('');
   const [state, setState] = useState('idle');
@@ -486,13 +381,11 @@ function NewsletterSection() {
 
   const submit = async (event) => {
     event.preventDefault();
-
     setState('loading');
     setError(null);
 
     try {
       await discoveryApi.subscribeNewsletter(email);
-
       setState('success');
       setEmail('');
     } catch (err) {
@@ -502,134 +395,120 @@ function NewsletterSection() {
   };
 
   return (
-    <Reveal direction="up">
+    <Reveal>
       <section
         aria-labelledby="newsletter-heading"
-        className="relative overflow-hidden bg-sky-100"
+        className="relative isolate overflow-hidden border-t border-sky-100 bg-gradient-to-br from-white via-sky-50 to-sky-100"
       >
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-64 w-64 -translate-x-1/2 rounded-full bg-brand-700/5 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -right-20 -top-28 h-80 w-80 rounded-full bg-brand-700/10 blur-3xl" />
+          <div className="absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-sky-300/25 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl space-y-4 px-4 py-16 text-center sm:px-6">
-
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-700/10">
-            <Mail
-              className="h-6 w-6 text-brand-700"
-              aria-hidden="true"
-            />
+        <div className="relative mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-20">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white bg-white/80 text-brand-700 shadow-lg shadow-sky-900/5">
+            <Mail className="h-6 w-6" aria-hidden="true" />
           </div>
+
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-brand-700">
+            The Gokaasa edit
+          </p>
 
           <h2
             id="newsletter-heading"
-            className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl"
+            className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-4xl"
           >
-            Stay Tuned
+            Good trips start in your inbox.
           </h2>
 
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
-            Get exclusive hotel deals, destination inspiration,
-            and travel updates.
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[var(--text-muted)] sm:text-base">
+            Get thoughtful travel inspiration, handpicked stays, and special offers delivered to you.
           </p>
 
           {state === 'success' ? (
             <p
-              className="text-sm font-medium text-success-600"
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700"
               role="status"
             >
-              You're subscribed! Watch your inbox for upcoming deals.
+              <CheckCircle2 className="h-4 w-4" />
+              You're subscribed! Keep an eye on your inbox.
             </p>
           ) : (
             <form
               onSubmit={submit}
-              className="mx-auto flex max-w-md flex-col gap-2 sm:flex-row"
+              className="mx-auto mt-7 flex max-w-xl flex-col gap-3 rounded-2xl border border-white bg-white/85 p-2 shadow-[0_15px_45px_rgba(15,23,42,0.09)] backdrop-blur sm:flex-row"
             >
               <Input
                 type="email"
                 required
                 aria-label="Email address"
-                placeholder="Enter email address..."
+                placeholder="Enter your email address"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 disabled={state === 'loading'}
-                className="flex-1"
+                className="min-h-12 flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
               />
 
               <Button
                 type="submit"
                 loading={state === 'loading'}
+                className="min-h-12 rounded-xl px-6"
               >
                 Subscribe
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>
           )}
 
           {state === 'error' && (
-            <p
-              role="alert"
-              className="text-sm text-danger-600"
-            >
+            <p role="alert" className="mt-3 text-sm text-danger-600">
               {error}
             </p>
           )}
+
+          <p className="mt-4 text-xs text-[var(--text-muted)]">
+            No noise, just good places to stay.
+          </p>
         </div>
       </section>
     </Reveal>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                               HOME PAGE                                    */
-/* -------------------------------------------------------------------------- */
-
 export function HomePage() {
-  const {
-    status,
-    user,
-    isStaff,
-  } = useAuth();
+  const { status, user, isStaff } = useAuth();
 
   const [popular, setPopular] = useState(null);
   const [stats, setStats] = useState(null);
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
-
   const [heroIndex, setHeroIndex] = useState(0);
+  const [comingSoonProduct, setComingSoonProduct] = useState(null);
 
   useDocumentMeta({
-    title: 'Gokaasa - Premium Hotels Management Platform',
+    title: 'Gokaasa | Discover Your Next Beautiful Stay',
     description:
-      'Book hotels worldwide with Gokaasa. Discover premium stays, exclusive hotel deals, flexible bookings, and trusted travel support.',
+      'Discover exceptional stays with Gokaasa. Explore destinations, find handpicked hotels, and plan your next getaway.',
     canonicalPath: '/',
   });
 
-  /* ---------------------------------------------------------------------- */
-  /* HERO IMAGE + QUOTE SLIDESHOW                                          */
-  /* ---------------------------------------------------------------------- */
-
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setHeroIndex((current) => {
-        return (current + 1) % HERO_IMAGES.length;
-      });
-    }, 5000);
+      setHeroIndex(
+        (current) => (current + 1) % HERO_IMAGES.length,
+      );
+    }, 6000);
 
-    return () => {
-      window.clearInterval(interval);
-    };
+    return () => window.clearInterval(interval);
   }, []);
 
-  /* ---------------------------------------------------------------------- */
-  /* LOAD DISCOVERY DATA                                                    */
-  /* ---------------------------------------------------------------------- */
-
   useEffect(() => {
-    if (isStaff) return;
+    if (isStaff) return undefined;
 
     let cancelled = false;
 
     discoveryApi
-      .popularDestinations()
+      .popularDestinations({ limit: 10 })
       .then((places) => {
         if (!cancelled) {
           setPopular(places);
@@ -665,327 +544,324 @@ export function HomePage() {
   }, [isStaff]);
 
   if (status === 'loading') {
-    return (
-      <FullPageSpinner label="Loading Gokaasa" />
-    );
+    return <FullPageSpinner label="Loading Gokaasa" />;
   }
 
   if (isStaff) {
-    return (
-      <Navigate
-        to={homePathFor(user)}
-        replace
-      />
-    );
+    return <Navigate to={homePathFor(user)} replace />;
   }
 
-  const categoryDestination =
-    popular?.[0]?.destination;
+  const categoryDestination = popular?.[0]?.destination;
 
   const realConfirmedBookings =
     stats?.bookings?.confirmed || 0;
 
+  const extraStats = buildStats(stats);
+
   return (
-    <div className="min-h-screen overflow-hidden bg-sky-100">
-
-      {/* ================================================================== */}
-      {/* HERO                                                               */}
-      {/* ================================================================== */}
-
-      <section className="relative isolate min-h-[620px] overflow-hidden bg-slate-950 sm:min-h-[660px] lg:min-h-[700px]">
-
-        {/* -------------------------------------------------------------- */}
-        {/* Background slideshow                                           */}
-        {/* -------------------------------------------------------------- */}
-
-        <div className="absolute inset-0 -z-30">
-
-          {HERO_IMAGES.map((image, index) => (
-            <img
-              key={image.src}
-              src={image.src}
-              alt=""
-              aria-hidden="true"
-              fetchPriority={
-                index === 0 ? 'high' : 'low'
-              }
-              decoding="async"
-              className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1600ms] ease-in-out ${
-                index === heroIndex
-                  ? 'scale-105 opacity-100'
-                  : 'scale-100 opacity-0'
-              }`}
-            />
-          ))}
-
-        </div>
-
-        {/* -------------------------------------------------------------- */}
-        {/* Premium overlays                                                */}
-        {/* -------------------------------------------------------------- */}
-
-        <div className="absolute inset-0 -z-20 bg-slate-950/10" />
-
-        <div className="absolute inset-0 -z-20 bg-gradient-to-b from-slate-950/20 via-transparent to-slate-950/45" />
-
-        <div className="absolute inset-0 -z-20 bg-gradient-to-r from-slate-950/20 via-transparent to-slate-950/10" />
-
-        {/* -------------------------------------------------------------- */}
-        {/* Search area                                                     */}
-        {/* -------------------------------------------------------------- */}
-
-        <div className="relative mx-auto flex min-h-[620px] max-w-7xl items-center justify-center px-4 py-24 sm:min-h-[660px] sm:px-6 lg:min-h-[700px] lg:px-8">
-
-          <div className="w-full max-w-5xl">
-
-            {/* -------------------------------------------------------- */}
-            {/* HERO QUOTE                                                */}
-            {/* -------------------------------------------------------- */}
-
-            <div
-              key={heroIndex}
-              className="mb-6 text-center animate-[heroQuote_800ms_ease-out]"
-            >
-              <p className="mx-auto max-w-3xl font-[var(--font-display)] text-xl font-medium italic leading-relaxed text-white drop-shadow-[0_3px_10px_rgba(0,0,0,0.65)] sm:text-2xl lg:text-3xl">
-                {HERO_IMAGES[heroIndex].quote}
-              </p>
-            </div>
-
-            {/* -------------------------------------------------------- */}
-            {/* SEARCH CARD                                               */}
-            {/* -------------------------------------------------------- */}
-
-            <div className="animate-[heroSearch_900ms_ease-out_200ms_both] rounded-[24px] border border-white/70 bg-white/95 p-2 shadow-[0_30px_100px_rgba(15,23,42,0.38)] backdrop-blur-xl sm:rounded-[28px] sm:p-3">
-
-              <div className="overflow-hidden rounded-[18px] bg-white shadow-sm sm:rounded-[22px]">
-
-                <SearchWidget variant="hero" />
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* ---------------------------------------------------------- */}
-          {/* HERO DOTS                                                  */}
-          {/* ---------------------------------------------------------- */}
-
-          <div className="absolute bottom-8 left-1/2 z-30 -translate-x-1/2 sm:bottom-10">
-
-            <div className="flex items-center gap-2 rounded-full border border-white/30 bg-slate-950/30 px-3 py-2 shadow-lg backdrop-blur-md">
-
+    <div className="min-h-screen overflow-hidden bg-sky-50 text-[var(--text-body)]">
+      {/* PREMIUM HERO SECTION */}
+      <section className="bg-sky-50 px-3 pb-10 pt-5 sm:px-6 sm:pb-14 sm:pt-8 lg:px-8 lg:pt-10">
+        <div className="relative mx-auto max-w-7xl">
+          <div className="group relative isolate min-h-[520px] overflow-hidden rounded-[28px] bg-slate-950 shadow-[0_25px_80px_rgba(15,23,42,0.18)] sm:min-h-[580px] sm:rounded-[36px] lg:min-h-[620px]">
+            <div className="absolute inset-0 -z-20">
               {HERO_IMAGES.map((image, index) => (
-                <button
+                <img
                   key={image.src}
-                  type="button"
-                  aria-label={`Show hero image ${index + 1}`}
-                  aria-current={
+                  src={image.src}
+                  alt={index === heroIndex ? image.alt : ''}
+                  aria-hidden={index !== heroIndex}
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
+                  decoding="async"
+                  className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1800ms] ease-in-out ${
                     index === heroIndex
-                      ? 'true'
-                      : undefined
-                  }
-                  onClick={() => setHeroIndex(index)}
-                  className={`h-1.5 rounded-full transition-all duration-500 ${
-                    index === heroIndex
-                      ? 'w-8 bg-white shadow-sm'
-                      : 'w-2 bg-white/50 hover:bg-white/80'
+                      ? 'scale-105 opacity-100'
+                      : 'scale-100 opacity-0'
                   }`}
                 />
               ))}
-
             </div>
 
+            <div className="absolute inset-0 -z-10 bg-slate-950/20" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-950/35 via-slate-950/15 to-slate-950/65" />
+            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/30 via-transparent to-slate-950/10" />
+
+            <div className="relative mx-auto flex min-h-[520px] max-w-6xl items-center justify-center px-4 py-16 sm:min-h-[580px] sm:px-8 sm:py-20 lg:min-h-[620px] lg:px-12">
+              <div className="w-full max-w-5xl">
+                <div
+                  key={heroIndex}
+                  className="mb-8 text-center animate-[heroQuote_800ms_ease-out]"
+                >
+                  <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-md">
+                    <Sparkles className="h-4 w-4 text-amber-200" />
+                    Your journey, beautifully planned
+                  </div>
+
+                  <h1 className="mx-auto max-w-4xl font-[var(--font-display)] text-3xl font-semibold leading-tight tracking-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
+                    {HERO_IMAGES[heroIndex].quote}
+                  </h1>
+
+                  <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/90 sm:text-base lg:text-lg">
+                    {HERO_IMAGES[heroIndex].caption}
+                  </p>
+                </div>
+
+                <div
+                  role="tablist"
+                  aria-label="Travel products"
+                  className="mb-4 flex flex-wrap items-center justify-center gap-2"
+                >
+                  {TRAVEL_PRODUCTS.map((product) => {
+                    const Icon = product.icon;
+                    const isActive = product.status === 'active';
+
+                    return (
+                      <button
+                        key={product.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        onClick={() => {
+                          if (!isActive) setComingSoonProduct(product);
+                        }}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-300 sm:text-sm ${
+                          isActive
+                            ? 'bg-white text-brand-700 shadow-lg'
+                            : 'bg-white/10 text-white/85 hover:bg-white/20'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                        {product.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="animate-[heroSearch_900ms_ease-out_150ms_both] rounded-[22px] border border-white/70 bg-white/95 p-2 shadow-[0_25px_80px_rgba(2,6,23,0.35)] backdrop-blur-2xl sm:rounded-[28px] sm:p-3">
+                  <div className="overflow-hidden rounded-[16px] bg-white sm:rounded-[22px]">
+                    <SearchWidget variant="hero" />
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-xs font-medium text-white/90 sm:text-sm">
+                  <span className="inline-flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                    Secure booking experience
+                  </span>
+
+                  <span className="hidden h-1 w-1 rounded-full bg-white/60 sm:block" />
+
+                  <span className="inline-flex items-center gap-2">
+                    <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+                    Stays for every journey
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 sm:bottom-7">
+              <div className="flex items-center gap-2 rounded-full border border-white/25 bg-slate-950/30 px-3 py-2 shadow-lg backdrop-blur-lg">
+                {HERO_IMAGES.map((image, index) => (
+                  <button
+                    key={image.src}
+                    type="button"
+                    aria-label={`Show hero image ${index + 1}`}
+                    aria-current={index === heroIndex ? 'true' : undefined}
+                    onClick={() => setHeroIndex(index)}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      index === heroIndex
+                        ? 'w-8 bg-white'
+                        : 'w-2 bg-white/50 hover:bg-white/85'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
+          <div className="mx-auto mt-5 grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:justify-start">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-brand-700">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Book with confidence
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  A smoother booking experience
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:justify-start">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <Sparkles className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Discover special stays
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Find your next favourite place
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:justify-start">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <Headphones className="h-5 w-5" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  Support when needed
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Help for your travel plans
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-  
-
-      {/* ================================================================== */}
-      {/* EXCLUSIVE OFFERS                                                   */}
-      {/* ================================================================== */}
-
+      {/* EXCLUSIVE OFFERS */}
       {offers && offers.length > 0 && (
         <section
           aria-labelledby="offers-heading"
-          className="mx-auto max-w-7xl space-y-6 px-4 py-12 sm:px-6"
+          className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6 lg:py-16"
         >
-
           <Reveal>
-            <div className="flex flex-wrap items-end justify-between gap-3">
-
-              <SectionHeading
-                title="Exclusive Offers"
-                subtitle="Save more on stays you'll love."
-              />
-
-              <Link
-                to="/offers"
-                className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 hover:underline"
-              >
-                View all offers
-
-                <ChevronRight
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                />
-              </Link>
-
-            </div>
+            <SectionHeading
+              eyebrow="Limited-time savings"
+              title="Exclusive Offers"
+              subtitle="Make your next getaway even more rewarding with special offers on stays you'll love."
+              action={
+                <Link
+                  to="/offers"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-700/30 hover:bg-brand-700/5"
+                >
+                  View all offers
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              }
+            />
           </Reveal>
 
           <Reveal direction="left">
-
-            <div className="flex gap-4 overflow-x-auto pb-2">
-
+            <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:thin]">
               {offers.map((offer, index) => (
                 <div
                   key={offer.id}
-                  className="animate-[cardReveal_700ms_ease-out_both]"
-                  style={{
-                    animationDelay: `${index * 100}ms`,
-                  }}
+                  className="shrink-0 animate-[cardReveal_700ms_ease-out_both]"
+                  style={{ animationDelay: `${index * 90}ms` }}
                 >
-                  <OfferCard
-                    offer={offer}
-                    compact
-                  />
+                  <OfferCard offer={offer} compact />
                 </div>
               ))}
-
             </div>
-
           </Reveal>
-
         </section>
       )}
 
-      {/* ================================================================== */}
-      {/* NEARBY HOTELS                                                      */}
-      {/* ================================================================== */}
-
-      <Reveal direction="up">
-        <div className="py-4">
+      {/* NEARBY HOTELS */}
+      <Reveal>
+        <div className="py-5">
           <NearbyHotelsSection />
         </div>
       </Reveal>
 
-      {/* ================================================================== */}
-      {/* HANDPICKED HOTELS                                                  */}
-      {/* ================================================================== */}
-
-      <Reveal direction="up">
-        <div className="py-4">
+      {/* HANDPICKED HOTELS */}
+      <Reveal>
+        <div className="py-5">
           <HandpickedHotelsSection />
         </div>
       </Reveal>
 
-      {/* ================================================================== */}
-      {/* INDIA DESTINATIONS                                                 */}
-      {/* ================================================================== */}
-
+      {/* INDIA DESTINATIONS */}
       <section
         aria-labelledby="india-heading"
-        className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6"
+        className="mx-auto max-w-7xl space-y-8 px-4 py-16 sm:px-6 lg:py-20"
       >
-
         <Reveal>
           <SectionHeading
-            title="Unlock Famous Destinations of India"
-            subtitle="Explore exceptional stays across India's most loved destinations."
+            eyebrow="Explore closer to home"
+            title="Discover India, one stay at a time."
+            subtitle="From energetic cities to serene escapes, find a destination for your next memorable trip."
           />
         </Reveal>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
           {INDIA_DESTINATIONS.map((name, index) => (
-            <Reveal
-              key={name}
-              delay={index * 80}
-              direction="zoom"
-            >
+            <Reveal key={name} delay={index * 65} direction="zoom">
               <PremiumImageCard
                 title={name}
                 image={DESTINATION_IMAGES[name]}
                 href={`/hotels/${slugifyPlace(name)}`}
+                subtitle="Discover destination"
                 aspect="aspect-[4/3]"
                 className="h-full"
               />
             </Reveal>
           ))}
-
         </div>
-
       </section>
 
-      {/* ================================================================== */}
-      {/* PERFECT STAY                                                       */}
-      {/* ================================================================== */}
-
+      {/* FIND YOUR PERFECT STAY */}
       <section
         aria-labelledby="stay-type-heading"
-        className="bg-sky-100"
+        className="relative bg-white py-16 lg:py-20"
       >
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-sky-50/80 via-white to-white" />
 
-        <div className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6">
-
+        <div className="relative mx-auto max-w-7xl space-y-8 px-4 sm:px-6">
           <Reveal>
             <SectionHeading
-              title="Find Your Perfect Stay"
-              subtitle="Choose a stay that matches the way you travel."
+              eyebrow="Stay your way"
+              title="Find your perfect kind of stay."
+              subtitle="Whether you're planning a relaxing escape or a city break, discover a stay that fits your travel style."
             />
           </Reveal>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
             {STAY_CATEGORIES.map((category, index) => (
-              <Reveal
-                key={category.title}
-                delay={index * 100}
-                direction="zoom"
-              >
+              <Reveal key={category.title} delay={index * 75} direction="zoom">
                 <PremiumImageCard
                   title={category.title}
                   image={STAY_CATEGORY_IMAGES[category.title]}
                   href={
                     categoryDestination
-                      ? `/hotels/${categoryDestination}?propertyTypes=${category.propertyType}`
+                      ? `/hotels/${slugifyPlace(categoryDestination)}?propertyTypes=${category.propertyType}`
                       : '/destinations'
                   }
+                  subtitle="Find your stay"
                   aspect="aspect-[4/5]"
                   className="h-full"
                 />
               </Reveal>
             ))}
-
           </div>
-
         </div>
-
       </section>
 
-      {/* ================================================================== */}
-      {/* TRAVEL INSPIRATION                                                 */}
-      {/* ================================================================== */}
-
+      {/* TRAVEL INSPIRATION */}
       <section
         aria-labelledby="inspiration-heading"
-        className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6"
+        className="mx-auto max-w-7xl space-y-8 px-4 py-16 sm:px-6 lg:py-20"
       >
-
         <Reveal>
           <SectionHeading
-            title="Travel Inspiration"
-            subtitle="A few places our guests keep coming back to."
+            eyebrow="Ideas for your next trip"
+            title="A little travel inspiration."
+            subtitle="Explore guest-favourite destinations and find a new place to fall in love with."
           />
         </Reveal>
 
         <Reveal direction="left">
-
           <Carousel aria-label="Travel inspiration">
-
             {INSPIRATION.map((name) => (
               <CarouselItem
                 key={name}
@@ -995,360 +871,261 @@ export function HomePage() {
                   title={name}
                   image={DESTINATION_IMAGES[name]}
                   href={`/hotels/${slugifyPlace(name)}`}
+                  subtitle="Explore hotels"
                   aspect="aspect-[3/4]"
                   className="h-full"
                 />
               </CarouselItem>
             ))}
-
           </Carousel>
-
         </Reveal>
-
       </section>
 
-      {/* ================================================================== */}
-      {/* WHY GOKAASA                                                        */}
-      {/* ================================================================== */}
-
+      {/* WHY CHOOSE GOKAASA */}
       <section
         aria-labelledby="why-heading"
-        className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6"
+        className="border-y border-sky-100 bg-white py-16 lg:py-20"
       >
+        <div className="mx-auto max-w-7xl space-y-9 px-4 sm:px-6">
+          <Reveal>
+            <SectionHeading
+              eyebrow="The Gokaasa difference"
+              title="Travel with a little more confidence."
+              subtitle="A considered hotel discovery experience, designed to make planning your next stay feel easier."
+            />
+          </Reveal>
 
-        <Reveal>
-          <SectionHeading
-            title="Why Choose Gokaasa?"
-            subtitle="A premium hotel booking experience built around trust, convenience and exceptional stays."
-          />
-        </Reveal>
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-
-          {WHY_GOKAASA.map(
-            ({ icon: Icon, title, text }, index) => (
-              <Reveal
-                key={title}
-                delay={index * 100}
-              >
-                <div className="group h-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-brand-700/10 transition-colors duration-300 group-hover:bg-brand-700">
-
-                    <Icon
-                      className="h-5 w-5 text-brand-700 group-hover:text-white"
-                      aria-hidden="true"
-                    />
-
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {WHY_GOKAASA.map(({ icon: Icon, title, text }, index) => (
+              <Reveal key={title} delay={index * 80}>
+                <div className="group h-full rounded-3xl border border-slate-100 bg-gradient-to-br from-white to-sky-50/70 p-6 shadow-[0_5px_25px_rgba(15,23,42,0.035)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-700/15 hover:shadow-[0_18px_40px_rgba(15,23,42,0.09)] sm:p-7">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-700/10 text-brand-700 transition-all duration-300 group-hover:bg-brand-700 group-hover:text-white group-hover:shadow-lg group-hover:shadow-brand-700/20">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
                   </div>
 
-                  <h3 className="mb-1 text-base font-semibold text-[var(--text-strong)]">
+                  <h3 className="mb-2 text-base font-semibold text-[var(--text-strong)]">
                     {title}
                   </h3>
 
                   <p className="text-sm leading-6 text-[var(--text-muted)]">
                     {text}
                   </p>
-
                 </div>
               </Reveal>
-            ),
-          )}
-
-        </div>
-
-      </section>
-
-      {/* ================================================================== */}
-      {/* WORLD DESTINATIONS                                                 */}
-      {/* ================================================================== */}
-
-      <section
-        aria-labelledby="world-heading"
-        className="bg-sky-100"
-      >
-
-        <div className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6">
-
-          <Reveal>
-            <SectionHeading
-              title="Explore the World"
-              subtitle="From tropical escapes to iconic cities, discover your next adventure."
-            />
-          </Reveal>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-
-            {WORLD_DESTINATIONS.map((name, index) => (
-              <Reveal
-                key={name}
-                delay={index * 100}
-                direction="zoom"
-              >
-                <PremiumImageCard
-                  title={name}
-                  image={WORLD_DESTINATION_IMAGES[name]}
-                  href={`/hotels/${slugifyPlace(name)}`}
-                  aspect="aspect-[4/3]"
-                  className="h-full"
-                />
-              </Reveal>
             ))}
-
           </div>
-
         </div>
-
       </section>
 
-      {/* ================================================================== */}
-      {/* TESTIMONIALS                                                       */}
-      {/* ================================================================== */}
+      {/* MORE DESTINATIONS -- real, searchable places only, sourced from /destinations/popular */}
+      {popular && popular.length > 0 && (
+        <section
+          aria-labelledby="world-heading"
+          className="bg-sky-50 py-16 lg:py-20"
+        >
+          <div className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6">
+            <Reveal>
+              <SectionHeading
+                eyebrow="Keep exploring"
+                title="More destinations to explore."
+                subtitle="Real stays, real places -- discover more cities with hotels ready to book on Gokaasa."
+              />
+            </Reveal>
+
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
+              {popular.map((place, index) => (
+                <Reveal key={place.destination} delay={index * 75} direction="zoom">
+                  <PremiumImageCard
+                    title={place.label}
+                    image={destinationImageFor(place.label, index)}
+                    href={`/hotels/${place.destination}`}
+                    subtitle={place.hotelCount > 0 ? `${place.hotelCount} hotels` : 'Explore stays'}
+                    aspect="aspect-[4/3]"
+                    className="h-full"
+                  />
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section
         aria-labelledby="testimonials-heading"
-        className="bg-sky-100"
+        className="mx-auto max-w-7xl space-y-8 px-4 py-16 sm:px-6 lg:py-20"
       >
+        <Reveal>
+          <SectionHeading
+            eyebrow="Notes from our travellers"
+            title="Good stays. Better memories."
+            subtitle="Every journey has a story. Here's what travellers have shared about their experiences."
+          />
+        </Reveal>
 
-        <div className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6">
-
-          <Reveal>
-            <SectionHeading
-              title="What Our Customers Say"
-              subtitle="Great stays create great memories."
-            />
-          </Reveal>
-
-          <Reveal direction="left">
-
-            <Carousel aria-label="Customer testimonials">
-
-              {TESTIMONIALS.map((testimonial) => (
-                <CarouselItem
-                  key={testimonial.name}
-                  className="w-80 sm:w-96"
-                >
-
-                  <figure className="flex h-full min-h-[190px] flex-col justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 shadow-sm transition-all duration-300 hover:shadow-lg">
-
-                    <div>
-
-                      <div className="mb-4 flex gap-1">
-
-                        {Array.from({
-                          length: testimonial.rating,
-                        }).map((_, index) => (
+        <Reveal direction="left">
+          <Carousel aria-label="Customer testimonials">
+            {TESTIMONIALS.map((testimonial) => (
+              <CarouselItem
+                key={testimonial.name}
+                className="w-80 sm:w-96"
+              >
+                <figure className="flex h-full min-h-[225px] flex-col justify-between rounded-3xl border border-white bg-white p-6 shadow-[0_8px_35px_rgba(15,23,42,0.055)] transition-all duration-300 hover:shadow-[0_18px_45px_rgba(15,23,42,0.1)] sm:p-7">
+                  <div>
+                    <div
+                      className="mb-5 flex items-center gap-1"
+                      aria-label={`${testimonial.rating} out of 5 stars`}
+                    >
+                      {Array.from({ length: testimonial.rating }).map(
+                        (_, index) => (
                           <Star
                             key={index}
-                            className="h-4 w-4 fill-current text-accent-500"
+                            className="h-4 w-4 fill-amber-400 text-amber-400"
                             aria-hidden="true"
                           />
-                        ))}
-
-                      </div>
-
-                      <blockquote className="text-sm leading-6 text-[var(--text-body)]">
-                        “{testimonial.quote}”
-                      </blockquote>
-
+                        )
+                      )}
                     </div>
 
-                    <figcaption className="mt-5 text-sm font-semibold text-[var(--text-strong)]">
+                    <blockquote className="text-sm leading-7 text-[var(--text-body)]">
+                      “{testimonial.quote}”
+                    </blockquote>
+                  </div>
+
+                  <figcaption className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-4">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-brand-700">
+                      {testimonial.name
+                        .split(' ')
+                        .map((part) => part[0])
+                        .join('')
+                        .slice(0, 2)}
+                    </span>
+
+                    <span className="text-sm font-semibold text-[var(--text-strong)]">
                       {testimonial.name}
-                    </figcaption>
+                    </span>
 
-                  </figure>
-
-                </CarouselItem>
-              ))}
-
-            </Carousel>
-
-          </Reveal>
-
-        </div>
-
+                    <span className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Traveller
+                    </span>
+                  </figcaption>
+                </figure>
+              </CarouselItem>
+            ))}
+          </Carousel>
+        </Reveal>
       </section>
 
-      {/* ================================================================== */}
-      {/* TRUST STRIP                                                        */}
-      {/* ================================================================== */}
-
       <Reveal>
-
         <section
           aria-labelledby="trust-heading"
-          className="mx-auto max-w-7xl px-4 py-14 sm:px-6"
+          className="border-y border-sky-100 bg-white"
         >
+          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-14">
+            <h2 id="trust-heading" className="sr-only">
+              Why travellers trust Gokaasa
+            </h2>
 
-          <h2
-            id="trust-heading"
-            className="sr-only"
-          >
-            Why travellers trust Gokaasa
-          </h2>
-
-          <dl className="grid grid-cols-2 gap-7 sm:grid-cols-3 lg:grid-cols-5">
-
-            {TRUST_STRIP.map(
-              ({ icon: Icon, label }, index) => {
-
+            <dl className="grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+              {TRUST_STRIP.map(({ icon: Icon, label }, index) => {
                 const showReal =
-                  index === 0 &&
-                  realConfirmedBookings > 0;
+                  index === 0 && realConfirmedBookings > 0;
 
                 return (
                   <div
                     key={label}
-                    className="flex flex-col items-center gap-2 text-center"
+                    className="flex flex-col items-center text-center"
                   >
-
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-700/10">
-
-                      <Icon
-                        className="h-5 w-5 text-brand-700"
-                        aria-hidden="true"
-                      />
-
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 text-brand-700">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
                     </div>
 
-                    {showReal && (
-                      <dd className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">
-                        {realConfirmedBookings.toLocaleString(
-                          'en-IN',
-                        )}
-                        +
-                      </dd>
-                    )}
+                    <div className="flex min-h-7 items-center justify-center">
+                      {showReal && (
+                        <dd className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">
+                          {realConfirmedBookings.toLocaleString('en-IN')}+
+                        </dd>
+                      )}
+                    </div>
 
-                    <dt className="text-sm font-medium text-[var(--text-body)]">
+                    <dt className="text-sm font-medium leading-snug text-[var(--text-body)]">
                       {label}
                     </dt>
-
                   </div>
                 );
-              },
-            )}
-
-          </dl>
-
-          {buildStats(stats).length > 0 && (
-            <dl className="mt-10 grid grid-cols-2 gap-6 border-t border-[var(--border-subtle)] pt-8 md:grid-cols-4">
-
-              {buildStats(stats).map(
-                ({ icon: Icon, value, label }) => (
-                  <div
-                    key={label}
-                    className="flex items-start gap-3"
-                  >
-
-                    <Icon
-                      className="mt-1 h-4 w-4 text-brand-700"
-                      aria-hidden="true"
-                    />
-
-                    <div>
-
-                      <dt className="text-xs text-[var(--text-muted)]">
-                        {label}
-                      </dt>
-
-                      <dd className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">
-                        {value}
-                      </dd>
-
-                    </div>
-
-                  </div>
-                ),
-              )}
-
+              })}
             </dl>
-          )}
 
+          
+          </div>
         </section>
-
       </Reveal>
 
-      {/* ================================================================== */}
-      {/* SUPPORT CTA                                                        */}
-      {/* ================================================================== */}
-
-      <Reveal direction="up">
-
+      <Reveal>
         <section
           aria-labelledby="support-heading"
-          className="relative overflow-hidden bg-brand-950"
+          className="relative isolate overflow-hidden bg-slate-950"
         >
+          <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-900 via-slate-950 to-slate-900" />
 
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-900 via-brand-950 to-brand-900" />
+          <div className="pointer-events-none absolute -right-24 -top-28 -z-10 h-96 w-96 rounded-full bg-brand-500/20 blur-3xl" />
 
-          <div className="relative mx-auto max-w-4xl space-y-4 px-4 py-16 text-center sm:px-6">
+          <div className="pointer-events-none absolute -bottom-36 -left-24 -z-10 h-96 w-96 rounded-full bg-sky-400/10 blur-3xl" />
 
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-
-              <Headphones
-                className="h-6 w-6 text-accent-200"
-                aria-hidden="true"
-              />
-
+          <div className="relative mx-auto max-w-4xl px-4 py-16 text-center sm:px-6 sm:py-20">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 bg-white/10 text-amber-200 backdrop-blur">
+              <Headphones className="h-6 w-6" aria-hidden="true" />
             </div>
+
+            <p className="mb-2 text-xs font-bold uppercase tracking-[0.22em] text-sky-200">
+              We're here to help
+            </p>
 
             <h2
               id="support-heading"
-              className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-white sm:text-3xl"
+              className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-white sm:text-4xl"
             >
-              Need help?
+              Need a hand planning your stay?
             </h2>
 
-            <p className="text-sm leading-6 text-white/70">
-
-              Call our award-winning support team at{' '}
-
-              <a
-                href="tel:+919876543210"
-                className="inline-flex items-center gap-1 font-medium text-accent-200 hover:underline"
-              >
-
-                <Phone
-                  className="h-3.5 w-3.5"
-                  aria-hidden="true"
-                />
-
-                +91-9876543210
-
-              </a>
-
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-white/70 sm:text-base">
+              Have a question? Reach out to our team and we'll help you find
+              your way.
             </p>
 
-            <div className="pt-2">
+            <p className="mt-5 text-sm text-white/80">
+              Contact our support team at{' '}
+              <a
+                href="tel:+919876543210"
+                className="inline-flex items-center gap-1.5 font-semibold text-sky-200 transition hover:text-white hover:underline"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                +91-9876543210
+              </a>
+            </p>
 
+            <div className="mt-7">
               <Link to="/contact">
-
-                <Button variant="secondary">
+                <Button
+                  variant="secondary"
+                  className="min-h-12 rounded-xl px-6"
+                >
                   Contact Support
-
-                  <ArrowRight
-                    className="ml-2 h-4 w-4"
-                  />
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-
               </Link>
-
             </div>
-
           </div>
-
         </section>
-
       </Reveal>
-
-      {/* ================================================================== */}
-      {/* NEWSLETTER                                                         */}
-      {/* ================================================================== */}
 
       <NewsletterSection />
 
+      <ComingSoonModal
+        product={comingSoonProduct}
+        open={Boolean(comingSoonProduct)}
+        onClose={() => setComingSoonProduct(null)}
+      />
     </div>
   );
 }

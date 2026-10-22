@@ -7,6 +7,7 @@ import { getActiveProviders } from './src/providers/index.js';
 import { hotelImportRepository } from './src/repositories/hotelImport.repository.js';
 import { createLogger } from './src/utils/logger.js';
 import { startHoldExpiryWorker } from './src/jobs/holdExpiry.js';
+import { startPresenceCleanupWorker } from './src/jobs/presenceCleanup.js';
 
 const log = createLogger('server');
 
@@ -34,10 +35,15 @@ async function start() {
   });
 
   const expiryWorker = startHoldExpiryWorker({ intervalMs: 30_000 });
+  const presenceCleanupWorker = startPresenceCleanupWorker({
+    intervalMs: config.presence.cleanupIntervalMs,
+    expireMinutes: config.presence.sessionExpireMinutes,
+  });
 
   const shutdown = (signal) => {
     log.info('shutting down', { signal });
     expiryWorker.stop();
+    presenceCleanupWorker.stop();
     server.close(async () => {
       await pool.end();
       process.exit(0);

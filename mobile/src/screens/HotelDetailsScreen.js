@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/ScreenContainer.js';
@@ -7,6 +7,8 @@ import { LoadingView } from '../components/LoadingView.js';
 import { ErrorView } from '../components/ErrorView.js';
 import { AppButton } from '../components/AppButton.js';
 import { StarRating } from '../components/StarRating.js';
+import { SectionHeader } from '../components/SectionHeader.js';
+import { HotelCard } from '../components/HotelCard.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
 import { hotelsApi } from '../api/hotelsApi.js';
 import { useAuth } from '../context/AuthContext.js';
@@ -75,6 +77,9 @@ export default function HotelDetailsScreen({ route, navigation }) {
             )}
           />
           {images.length > 1 && (
+            <View style={styles.galleryScrim} pointerEvents="none" />
+          )}
+          {images.length > 1 && (
             <View style={styles.dotsRow} pointerEvents="none">
               {images.map((_, i) => (
                 <View key={i} style={[styles.dot, i === activeImage && styles.dotActive]} />
@@ -87,40 +92,38 @@ export default function HotelDetailsScreen({ route, navigation }) {
               <Text style={styles.countChipText}>{activeImage + 1}/{images.length}</Text>
             </View>
           )}
+          {isAuthenticated && (
+            <Pressable
+              onPress={() => toggle(hotel.id)}
+              style={styles.galleryWishlistButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            >
+              <Ionicons name={wishlisted ? 'heart' : 'heart-outline'} size={20} color={wishlisted ? colors.danger600 : colors.textStrong} />
+            </Pressable>
+          )}
         </View>
 
         <FadeSlideIn style={styles.body}>
           <View style={styles.titleRow}>
-            <View style={styles.flex1}>
-              {hotel.starRating ? <StarRating count={hotel.starRating} /> : (
-                <Text style={styles.propertyType}>{PROPERTY_TYPE_LABEL[hotel.propertyType] ?? 'Stay'}</Text>
-              )}
-              <Text style={styles.name}>{hotel.name}</Text>
-              <View style={styles.addressRow}>
-                <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.address}>{address}</Text>
+            {hotel.starRating ? <StarRating count={hotel.starRating} /> : (
+              <Text style={styles.propertyType}>{PROPERTY_TYPE_LABEL[hotel.propertyType] ?? 'Stay'}</Text>
+            )}
+            {ratingValue != null && (
+              <View style={styles.ratingRow}>
+                <View style={styles.ratingChip}>
+                  <Text style={styles.ratingChipText}>{ratingValue.toFixed(1)}</Text>
+                </View>
+                {ratingCount > 0 && <Text style={styles.caption}>{ratingCount.toLocaleString('en-IN')} reviews</Text>}
               </View>
-            </View>
-            {isAuthenticated && (
-              <AppButton
-                title=""
-                icon={<Ionicons name={wishlisted ? 'heart' : 'heart-outline'} size={18} color={wishlisted ? colors.white : colors.brand600} />}
-                variant={wishlisted ? 'primary' : 'secondary'}
-                size="sm"
-                onPress={() => toggle(hotel.id)}
-                style={styles.wishlistButton}
-              />
             )}
           </View>
-
-          {ratingValue != null && (
-            <View style={styles.ratingRow}>
-              <View style={styles.ratingChip}>
-                <Text style={styles.ratingChipText}>{ratingValue.toFixed(1)}</Text>
-              </View>
-              {ratingCount > 0 && <Text style={styles.caption}>{ratingCount.toLocaleString('en-IN')} reviews</Text>}
-            </View>
-          )}
+          <Text style={styles.name}>{hotel.name}</Text>
+          <View style={styles.addressRow}>
+            <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+            <Text style={styles.address}>{address}</Text>
+          </View>
 
           {hotel.description ? (
             <Text style={styles.description}>{hotel.description}</Text>
@@ -140,8 +143,8 @@ export default function HotelDetailsScreen({ route, navigation }) {
               <Text style={styles.sectionTitle}>Amenities</Text>
               <View style={styles.amenityGrid}>
                 {hotel.amenities.map((a) => (
-                  <View key={a.code} style={styles.amenityItem}>
-                    <Ionicons name="checkmark-circle" size={15} color={colors.success600} />
+                  <View key={a.code} style={styles.amenityChip}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.success600} />
                     <Text style={styles.amenityText}>{a.name}</Text>
                   </View>
                 ))}
@@ -159,22 +162,53 @@ export default function HotelDetailsScreen({ route, navigation }) {
                 // unique-per-type identifier; `p.id` was always undefined, which is exactly why React
                 // reported a missing key here. `p.description` was also wrong -- the real field is
                 // `summary` (it was silently rendering "undefined" before).
-                <Text key={p.code} style={styles.caption}>• {p.summary}</Text>
+                <View key={p.code} style={styles.policyRow}>
+                  <Ionicons name="shield-checkmark-outline" size={14} color={colors.brand600} />
+                  <Text style={[styles.caption, styles.policyText]}>{p.summary}</Text>
+                </View>
               ))}
+            </View>
+          )}
+
+          {hotel.similarHotels?.length > 0 && (
+            <View style={styles.similarSection}>
+              <SectionHeader title="You might also like" />
+              <FlatList
+                data={hotel.similarHotels}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => String(item.id)}
+                contentContainerStyle={{ gap: spacing.md }}
+                renderItem={({ item }) => (
+                  <View style={styles.similarCard}>
+                    <HotelCard
+                      hotel={item}
+                      onPress={() => navigation.push('HotelDetails', { idOrSlug: item.slug, checkIn, checkOut, occupancy })}
+                    />
+                  </View>
+                )}
+              />
             </View>
           )}
         </FadeSlideIn>
       </ScrollView>
 
       <View style={styles.footer}>
-        <AppButton title="See available rooms" onPress={goToRooms} />
+        <AppButton
+          title="See available rooms"
+          icon={<Ionicons name="bed-outline" size={18} color={colors.white} />}
+          onPress={goToRooms}
+        />
       </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  galleryImage: { height: 260, backgroundColor: colors.surfaceMuted },
+  galleryImage: { height: 280, backgroundColor: colors.surfaceMuted },
+  // A flat scrim band (same visual language as HotelCard's illustrative-image strip) behind the dots and
+  // count chip, so both stay legible over a bright photo without needing a gradient library.
+  galleryScrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 56, backgroundColor: colors.scrimLight },
   dotsRow: { position: 'absolute', bottom: spacing.md, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.55)' },
   dotActive: { backgroundColor: colors.white, width: 8, height: 8, borderRadius: 4 },
@@ -183,16 +217,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.scrim, borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 4,
   },
   countChipText: { color: colors.white, fontSize: 11, fontWeight: '700' },
+  // Floats over the gallery (top-left, mirroring HotelCard's own wishlist placement) instead of competing
+  // with the hotel name for space in the title row below. 40dp visual size plus an 8dp hitSlop on the
+  // Pressable gives a full 44dp+ effective touch target, the minimum comfortable size for a frequently-
+  // tapped control.
+  galleryWishlistButton: {
+    position: 'absolute', top: spacing.md, left: spacing.md, width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center',
+  },
   body: { padding: spacing.lg, gap: spacing.sm },
-  flex1: { flex: 1 },
-  titleRow: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   propertyType: { ...typography.tiny, color: colors.textMuted },
   name: { ...typography.display, color: colors.textStrong },
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   address: { ...typography.caption, color: colors.textMuted, flexShrink: 1 },
-  // 44dp is the minimum comfortable touch target; the "sm" AppButton size this otherwise uses is only
-  // 36dp tall, below that floor for what is a real, frequently-tapped control on this screen.
-  wishlistButton: { width: 44, height: 44, paddingHorizontal: 0 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   ratingChip: { backgroundColor: colors.brand600, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   ratingChipText: { color: colors.white, fontSize: 12, fontWeight: '700' },
@@ -202,9 +240,16 @@ const styles = StyleSheet.create({
   timesRow: { flexDirection: 'row', gap: spacing.lg },
   section: { marginTop: spacing.md, gap: spacing.xs, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   sectionTitle: { ...typography.h2, color: colors.textStrong, marginBottom: spacing.xs },
-  amenityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  amenityItem: { flexDirection: 'row', alignItems: 'center', gap: 4, width: '45%' },
+  amenityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  amenityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 6,
+  },
   amenityText: { ...typography.caption, color: colors.textBody },
+  policyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  policyText: { flex: 1 },
+  similarSection: { marginTop: spacing.lg },
+  similarCard: { width: 260 },
   // Deliberately NOT flexDirection: 'row' (it has exactly one child, the button, so a row never bought
   // anything). AppButton.js wraps its Pressable in an unstyled <Animated.View> for its press-scale
   // animation, which defaults to flexDirection: 'column' and has no size of its own. A `flex: 1` passed

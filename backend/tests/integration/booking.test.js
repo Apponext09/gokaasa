@@ -19,7 +19,6 @@ process.env.MEDIA_DIR = MEDIA_DIR;
 
 const PASSWORD = 'Strong-pass-123';
 const KEY_SECRET = 'test_key_secret_never_leaves_server';
-const WEBHOOK_SECRET = 'test_webhook_secret_never_leaves_server';
 const TODAY = localToday('Asia/Kolkata');
 // Every stay is in the future, and each test uses its own nights, so tests never share inventory.
 const D0 = addDays(TODAY, 30);
@@ -81,7 +80,6 @@ function fakeRazorpay() {
   const gateway = createRazorpayGateway({
     keyId: 'rzp_test_fakekeyid',
     keySecret: KEY_SECRET,
-    webhookSecret: WEBHOOK_SECRET,
     fetchImpl,
   });
 
@@ -102,35 +100,6 @@ function fakeRazorpay() {
   };
 
   return { gateway, orders, payments, refundCalls, pay };
-}
-
-/** Posts a webhook exactly as Razorpay would: the signature covers the raw body bytes. */
-function deliverWebhook(event, { eventId = `evt_${crypto.randomBytes(6).toString('hex')}`, secret = WEBHOOK_SECRET } = {}) {
-  const raw = JSON.stringify(event);
-  const signature = crypto.createHmac('sha256', secret).update(raw).digest('hex');
-  return request(app)
-    .post('/api/payments/webhook')
-    .set('Content-Type', 'application/json')
-    .set('x-razorpay-signature', signature)
-    .set('x-razorpay-event-id', eventId)
-    .send(raw);
-}
-
-const capturedEvent = (payment) => ({ event: 'payment.captured', created_at: 1, payload: { payment: { entity: strip(payment) } } });
-const failedEvent = (payment) => ({
-  event: 'payment.failed',
-  created_at: 1,
-  payload: { payment: { entity: { ...strip(payment), status: 'failed', error_description: 'Bank declined' } } },
-});
-function strip(payment) {
-  return {
-    id: payment.paymentId,
-    order_id: payment.razorpay_order_id,
-    amount: payment.amount,
-    currency: 'INR',
-    status: 'captured',
-    method: 'upi',
-  };
 }
 
 /** Guest details that match the occupancy: adults are 30, children get the ages requested. */
@@ -552,7 +521,7 @@ describe('guest details and quotes', () => {
   });
 });
 
-describe('payments: amounts, signatures, webhooks', () => {
+describe('payments: amounts and signatures', () => {
   it('the Razorpay order amount is the server amount, whatever the browser sends', async () => {
     const hold = await holdWithGuests(guestToken, { offset: 24 });
     const res = await request(app).post('/api/payments/create-order').set(bearer(guestToken)).send({ holdId: hold.id, amount: 1 });
@@ -606,9 +575,10 @@ describe('payments: amounts, signatures, webhooks', () => {
   it('a failed payment never confirms; the hold stays valid and the guest can retry with a new order', async () => {
     const hold = await holdWithGuests(guestToken, { offset: 32 });
     const first = await startPayment(guestToken, hold.id);
-    const failed = fake.pay({ orderId: first.orderId, amount: first.amount, status: 'failed' });
-    const event = await deliverWebhook(failedEvent(failed));
-    assert.equal(event.status, 200);
+    // No gateway event arrives without a webhook: the client itself reports the decline, exactly as a real
+    // failed/dismissed Razorpay Checkout would from the browser.
+    const reported = await request(app).post('/api/payments/failed').set(bearer(guestToken)).send({ razorpayOrderId: first.orderId, reason: 'Bank declined' });
+    assert.equal(reported.status, 200);
 
     const { rows } = await pool.query(
       `SELECT p.status, b.status AS booking_status FROM payments p JOIN bookings b ON b.id = p.booking_id WHERE p.provider_order_id = $1`,
@@ -656,43 +626,27 @@ describe('payments: amounts, signatures, webhooks', () => {
     assert.equal(res.body.error.details.code, 'ALREADY_PAID');
   });
 
-  it('a duplicate webhook delivery is recognised by its event id and does nothing a second time', async () => {
+  it('without a webhook, a repeat /verify call for the same already-settled payment is idempotent: confirmed once, not reprocessed', async () => {
     const hold = await holdWithGuests(guestToken, { offset: 40 });
     const order = await startPayment(guestToken, hold.id);
     const payment = fake.pay({ orderId: order.orderId, amount: order.amount });
-    const eventId = `evt_dup_${crypto.randomBytes(4).toString('hex')}`;
 
-    const first = await deliverWebhook(capturedEvent(payment), { eventId });
-    assert.equal(first.status, 200);
-    assert.equal(first.body.status, 'PROCESSED');
-    const second = await deliverWebhook(capturedEvent(payment), { eventId });
-    assert.equal(second.status, 200);
-    assert.equal(second.body.duplicate, true);
+    // First verify call settles the payment -- this is the only path to CONFIRMED now that there is no webhook.
+    const first = await request(app).post('/api/payments/verify').set(bearer(guestToken)).send(payment);
+    assert.equal(first.status, 200, JSON.stringify(first.body));
+    assert.equal(first.body.status, 'CONFIRMED');
+
+    // Simulates the guest's app retrying verify after the first response was lost (closed tab, dropped
+    // connection) -- the existing recovery path, with no gateway event involved.
+    const second = await request(app).post('/api/payments/verify').set(bearer(guestToken)).send(payment);
+    assert.equal(second.status, 200, JSON.stringify(second.body));
+    assert.equal(second.body.status, 'CONFIRMED', 'a repeat verify for an already-confirmed payment is a no-op, not an error');
 
     const booking = await pool.query(`SELECT status FROM bookings WHERE hold_id = $1`, [hold.id]);
     assert.equal(booking.rows[0].status, 'CONFIRMED');
     const payments = await pool.query(`SELECT COUNT(*)::int AS n FROM payments p JOIN bookings b ON b.id = p.booking_id WHERE b.hold_id = $1 AND p.status = 'SUCCESS'`, [hold.id]);
-    assert.equal(payments.rows[0].n, 1);
-  });
-
-  it('a redelivered capture with a new event id is still idempotent: the booking is confirmed once', async () => {
-    const hold = await holdWithGuests(guestToken, { offset: 42 });
-    const order = await startPayment(guestToken, hold.id);
-    const payment = fake.pay({ orderId: order.orderId, amount: order.amount });
-    assert.equal((await deliverWebhook(capturedEvent(payment))).status, 200);
-    assert.equal((await deliverWebhook(capturedEvent(payment))).status, 200);
-    const rows = await pool.query(`SELECT COUNT(*)::int AS n FROM payments WHERE provider_order_id = $1 AND status = 'SUCCESS'`, [order.orderId]);
-    assert.equal(rows.rows[0].n, 1);
+    assert.equal(payments.rows[0].n, 1, 'exactly one successful payment row, never duplicated by the repeat verify');
     assert.equal((await holdRow(hold.id)).status, 'CONVERTED');
-  });
-
-  it('a webhook with a bad signature is rejected before anything is parsed or stored', async () => {
-    const hold = await holdWithGuests(guestToken, { offset: 44 });
-    const order = await startPayment(guestToken, hold.id);
-    const payment = fake.pay({ orderId: order.orderId, amount: order.amount });
-    const res = await deliverWebhook(capturedEvent(payment), { secret: 'attacker-secret' });
-    assert.equal(res.status, 400);
-    assert.equal((await bookingRow(await bookingIdOf(hold.id))).status, 'PAYMENT_PENDING');
   });
 
   it('the public payment config carries the key id only, never a secret', async () => {
@@ -701,7 +655,6 @@ describe('payments: amounts, signatures, webhooks', () => {
     assert.equal(res.body.keyId, 'rzp_test_fakekeyid');
     const text = JSON.stringify(res.body);
     assert.equal(text.includes(KEY_SECRET), false);
-    assert.equal(text.includes(WEBHOOK_SECRET), false);
   });
 
   it('a payment captured after the hold has expired is refunded, and the booking is not confirmed', async () => {

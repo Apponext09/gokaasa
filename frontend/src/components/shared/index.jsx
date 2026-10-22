@@ -1,5 +1,5 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Inbox, Loader2 } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Inbox, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Label } from '@/components/ui/form-controls.jsx';
@@ -52,6 +52,15 @@ export function RequireAuth({ children, staff = false }) {
 
 export function homePathFor(user) {
   return user?.roles?.some((role) => ADMIN_ROLES.includes(role)) ? '/admin/dashboard' : '/';
+}
+
+/** A "back to parent" link used above sub-pages (room editor, import review, etc). */
+export function BackLink({ to, children }) {
+  return (
+    <Link to={to} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {children}
+    </Link>
+  );
 }
 
 export function PageHeader({ title, description, actions, className }) {

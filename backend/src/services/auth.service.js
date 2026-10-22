@@ -73,7 +73,7 @@ export const authService = {
    * row is still required (bookings.user_id is NOT NULL, FK'd to users), so one is created -- or, for a
    * repeat guest checkout with the same email and no booking history yet, reused -- with an unusable
    * random password hash (never shared, never derivable). From here the guest is a completely ordinary
-   * authenticated CUSTOMER: every existing ownership check, hold/payment/webhook/invoice/cancellation
+   * authenticated CUSTOMER: every existing ownership check, hold/payment/invoice/cancellation
    * path applies unchanged.
    *
    * SECURITY: an email is refused outright (never reused, never attached to) whenever it already has

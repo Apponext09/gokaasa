@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Download } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
-import { EmptyState, PageHeader, formatMoney, formatDateTime } from '@/components/shared/index.jsx';
+import { BackLink, EmptyState, PageHeader, formatMoney, formatDateTime } from '@/components/shared/index.jsx';
 import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -87,7 +87,7 @@ export function BookingDetailPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/bookings" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to bookings</Link>
+        <BackLink to="/admin/bookings">Back to bookings</BackLink>
         <EmptyState title="We couldn't load this booking" description={error} action={<Button onClick={load}>Try again</Button>} />
       </div>
     );
@@ -117,7 +117,7 @@ export function BookingDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/bookings" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to bookings</Link>
+      <BackLink to="/admin/bookings">Back to bookings</BackLink>
       <PageHeader
         title={booking.bookingRef}
         description={`${booking.hotel.name} · ${booking.hotel.city}`}

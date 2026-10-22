@@ -62,6 +62,7 @@ import { settingsUpdateSchema } from '../validators/settings.validator.js';
 import { managerController } from '../controllers/manager.controller.js';
 import { adminBookingController } from '../controllers/adminBooking.controller.js';
 import { adminCustomerController } from '../controllers/adminCustomer.controller.js';
+import { adminUserController } from '../controllers/adminUser.controller.js';
 import { auditLogController } from '../controllers/auditLog.controller.js';
 import { reviewController } from '../controllers/review.controller.js';
 import { adminReviewListQuery, moderateSchema, reviewIdParam } from '../validators/review.validator.js';
@@ -77,6 +78,7 @@ import {
   dashboardTrendsQuery,
   hotelPerformanceQuery,
 } from '../validators/adminBooking.validator.js';
+import { adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
 
 /**
  * Everything under /api/admin requires an authenticated staff member. Individual actions narrow this
@@ -86,6 +88,12 @@ import {
  * not exist — the same pattern already used for booking/payment ownership.
  */
 export const adminRouter = Router();
+
+// Live presence stream for the User Management dashboard. EventSource cannot send an Authorization
+// header, so this one route sits BEFORE the staff bearer-auth gate below and authorizes itself via a
+// short-lived, single-use ticket (see streamTicket.service.js) minted by the authenticated endpoint
+// further down ('/users/stream-ticket'). It must stay above `adminRouter.use(staff)`.
+adminRouter.get('/users/stream', adminUserController.stream);
 
 const staff = [authenticate, authorize('ADMIN', 'HOTEL_MANAGER')];
 adminRouter.use(staff);
@@ -388,6 +396,27 @@ adminRouter.patch(
   validate({ params: adminCustomerIdParam, body: customerStatusSchema }),
   authorize('ADMIN'),
   adminCustomerController.setStatus,
+);
+
+// User Management: a unified, presence-aware directory across every role (customers, hotel managers,
+// admins). ADMIN only -- unlike /customers, this can reveal other staff accounts, so it is not opened
+// up to HOTEL_MANAGER even for read access.
+adminRouter.post('/users/stream-ticket', authorize('ADMIN'), adminUserController.issueStreamTicket);
+adminRouter.get('/users/kpis', authorize('ADMIN'), adminUserController.kpis);
+adminRouter.get('/users', validate({ query: adminUserListQuery }), authorize('ADMIN'), adminUserController.list);
+adminRouter.get('/users/:id', validate({ params: adminUserIdParam }), authorize('ADMIN'), adminUserController.detail);
+adminRouter.patch(
+  '/users/:id/status',
+  validate({ params: adminUserIdParam, body: adminUserStatusSchema }),
+  authorize('ADMIN'),
+  adminUserController.setStatus,
+);
+adminRouter.post('/users/:id/force-signout', validate({ params: adminUserIdParam }), authorize('ADMIN'), adminUserController.forceSignOut);
+adminRouter.delete(
+  '/users/:id/sessions/:sessionId',
+  validate({ params: adminUserSessionParam }),
+  authorize('ADMIN'),
+  adminUserController.revokeSession,
 );
 
 // Audit log viewer. ADMIN only — it can reveal other staff members' actions across every hotel.

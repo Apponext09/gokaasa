@@ -17,7 +17,7 @@ function tokenFromLastMail() {
  * FEATURE 2 -- guest checkout without mandatory login. POST /api/auth/guest-checkout issues a normal
  * access+refresh session (reusing the exact same authService#issueSession login/register already use),
  * backed by a real `users` row flagged is_guest. Everything downstream of that (hold creation, coupon
- * application, payment, webhook, invoice, cancellation, ownership checks) is the completely unmodified
+ * application, payment, invoice, cancellation, ownership checks) is the completely unmodified
  * authenticated flow -- this file only tests the new endpoint and its guest-specific guarantees; the
  * existing booking.test.js/payment tests already cover the pipeline itself end-to-end.
  */

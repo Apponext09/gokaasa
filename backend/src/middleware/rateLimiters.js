@@ -33,3 +33,17 @@ export const importSearchLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 20,
 });
+
+/** The AI natural-language assistant is a paid, public, per-message call -- a tighter window than general search. */
+export const aiAssistantLimiter = rateLimit({
+  ...common,
+  windowMs: 10 * 60 * 1000,
+  limit: 15,
+});
+
+/** Presence session/heartbeat/end. A tab heartbeats roughly every 30s, so generous headroom for retries and multiple tabs without allowing a runaway loop. */
+export const presenceLimiter = rateLimit({
+  ...common,
+  windowMs: 60 * 1000,
+  limit: 20,
+});

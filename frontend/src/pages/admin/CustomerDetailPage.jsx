@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
-import { EmptyState, PageHeader, formatMoney } from '@/components/shared/index.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table.jsx';
+import { BackLink, EmptyState, PageHeader, formatMoney } from '@/components/shared/index.jsx';
 import { BOOKING_STATUS_LABEL } from '@/features/booking/bookingFormat.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -43,7 +44,7 @@ export function CustomerDetailPage() {
   if (error) {
     return (
       <div className="space-y-4">
-        <Link to="/admin/customers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to customers</Link>
+        <BackLink to="/admin/customers">Back to customers</BackLink>
         <EmptyState title="We couldn't load this customer" description={error} action={<Button onClick={load}>Try again</Button>} />
       </div>
     );
@@ -52,7 +53,7 @@ export function CustomerDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/customers" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Back to customers</Link>
+      <BackLink to="/admin/customers">Back to customers</BackLink>
       <PageHeader
         title={customer.name || customer.email}
         description={customer.email}
@@ -88,20 +89,28 @@ export function CustomerDetailPage() {
           {customer.bookings.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">No bookings yet.</p>
           ) : (
-            <div className="divide-y divide-[var(--border-subtle)]">
-              {customer.bookings.map((b) => (
-                <Link key={b.id} to={`/admin/bookings/${b.id}`} className="flex items-center justify-between gap-3 py-3 text-sm hover:text-brand-700">
-                  <div>
-                    <p className="font-medium text-[var(--text-strong)]">{b.bookingRef}</p>
-                    <p className="text-xs text-[var(--text-muted)]">{b.hotel.name} · {b.checkIn} → {b.checkOut}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium text-[var(--text-strong)]">{formatMoney(b.amounts.total, b.amounts.currency)}</span>
-                    <Badge tone={BOOKING_STATUS_LABEL[b.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[b.status]?.label ?? b.status}</Badge>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <Table minWidth="520px">
+              <caption className="sr-only">Bookings</caption>
+              <TableHeader>
+                <tr>
+                  <TableHead>Booking</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {customer.bookings.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell>
+                      <Link to={`/admin/bookings/${b.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{b.bookingRef}</Link>
+                      <p className="text-xs text-[var(--text-muted)]">{b.hotel.name} · {b.checkIn} → {b.checkOut}</p>
+                    </TableCell>
+                    <TableCell><Badge tone={BOOKING_STATUS_LABEL[b.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[b.status]?.label ?? b.status}</Badge></TableCell>
+                    <TableCell className="text-right text-[var(--text-strong)]">{formatMoney(b.amounts.total, b.amounts.currency)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -110,14 +119,23 @@ export function CustomerDetailPage() {
         <Card>
           <CardHeader><CardTitle>Refunds</CardTitle></CardHeader>
           <CardContent className="pt-0">
-            <div className="divide-y divide-[var(--border-subtle)]">
-              {customer.refunds.map((r) => (
-                <div key={r.id} className="flex items-center justify-between py-3 text-sm">
-                  <span className="text-[var(--text-body)]">{r.bookingRef}</span>
-                  <span className="font-medium text-[var(--text-strong)]">{formatMoney(r.amountMinor)}</span>
-                </div>
-              ))}
-            </div>
+            <Table minWidth="320px">
+              <caption className="sr-only">Refunds</caption>
+              <TableHeader>
+                <tr>
+                  <TableHead>Booking</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {customer.refunds.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-[var(--text-body)]">{r.bookingRef}</TableCell>
+                    <TableCell className="text-right text-[var(--text-strong)]">{formatMoney(r.amountMinor)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}

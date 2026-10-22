@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Download, FileText, Search } from 'lucide-react';
-import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Select, Input } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, Pagination, PageHeader, formatMoney, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -95,54 +96,52 @@ export function InvoicesPage() {
 
       <Card className="overflow-hidden">
         {data === null && !error ? (
-          <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
+          <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (
           <EmptyState icon={FileText} title={hasFilters ? 'No invoices match these filters' : 'No invoices yet'} description={hasFilters ? 'Try changing or clearing your filters.' : 'Invoices appear here once a booking is paid.'} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-left text-sm">
-              <caption className="sr-only">Invoices</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Booking</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Customer</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Hotel</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Amount paid</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Payment</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Invoice</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {data?.items.map((b) => (
-                  <tr key={b.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/bookings/${b.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{b.bookingRef}</Link>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">
-                      <p>{b.customer.name}</p>
-                      <p className="text-xs text-[var(--text-muted)]">{b.customer.email}</p>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{b.hotel.name}</td>
-                    <td className="px-4 py-3 text-[var(--text-strong)]">{formatMoney(b.amounts.paid, b.amounts.currency)}</td>
-                    <td className="px-4 py-3"><Badge tone={PAYMENT_STATUS_TONE[b.paymentStatus] ?? 'neutral'}>{b.paymentStatus}</Badge></td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatDateTime(b.createdAt)}</td>
-                    <td className="px-4 py-3">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        disabled={b.amounts.paid <= 0}
-                        loading={downloadingId === b.id}
-                        onClick={() => downloadInvoice(b)}
-                      >
-                        <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="800px">
+            <caption className="sr-only">Invoices</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Booking</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Hotel</TableHead>
+                <TableHead>Amount paid</TableHead>
+                <TableHead>Payment</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Invoice</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data?.items.map((b) => (
+                <TableRow key={b.id}>
+                  <TableCell>
+                    <Link to={`/admin/bookings/${b.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{b.bookingRef}</Link>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">
+                    <p>{b.customer.name}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{b.customer.email}</p>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">{b.hotel.name}</TableCell>
+                  <TableCell className="text-[var(--text-strong)]">{formatMoney(b.amounts.paid, b.amounts.currency)}</TableCell>
+                  <TableCell><Badge tone={PAYMENT_STATUS_TONE[b.paymentStatus] ?? 'neutral'}>{b.paymentStatus}</Badge></TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(b.createdAt)}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={b.amounts.paid <= 0}
+                      loading={downloadingId === b.id}
+                      onClick={() => downloadInvoice(b)}
+                    >
+                      <Download className="h-3.5 w-3.5" aria-hidden="true" /> Download
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
 

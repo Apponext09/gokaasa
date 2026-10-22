@@ -12,9 +12,9 @@ let cached = null;
  */
 export function getGateway() {
   if (cached) return cached;
-  const { keyId, keySecret, webhookSecret } = config.payments;
+  const { keyId, keySecret } = config.payments;
   if (keyId && keySecret) {
-    cached = createRazorpayGateway({ keyId, keySecret, webhookSecret: webhookSecret ?? '' });
+    cached = createRazorpayGateway({ keyId, keySecret });
   } else if (!config.isProduction) {
     cached = createSimulatedGateway();
   } else {

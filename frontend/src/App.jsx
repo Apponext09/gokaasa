@@ -20,6 +20,7 @@ import { BookingConfirmationPage } from '@/pages/customer/booking/BookingConfirm
 import { MyTripsPage } from '@/pages/customer/booking/MyTripsPage.jsx';
 import { BookingDetailsPage } from '@/pages/customer/booking/BookingDetailsPage.jsx';
 import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/auth/AuthPages.jsx';
+import { PresenceTracker } from '@/features/presence/PresenceTracker.jsx';
 import { lazy } from 'react';
 
 // Lazy: none of this admin code is in the customer homepage's initial bundle, and within admin each
@@ -47,6 +48,8 @@ const AdminProfilePage = lazy(() => import('@/pages/admin/ProfilePage.jsx').then
 const InvoicesPage = lazy(() => import('@/pages/admin/InvoicesPage.jsx').then((m) => ({ default: m.InvoicesPage })));
 const AdminOffersPage = lazy(() => import('@/pages/admin/OffersPage.jsx').then((m) => ({ default: m.OffersPage })));
 const OfferFormPage = lazy(() => import('@/pages/admin/OfferFormPage.jsx').then((m) => ({ default: m.OfferFormPage })));
+const UsersPage = lazy(() => import('@/pages/admin/UsersPage.jsx').then((m) => ({ default: m.UsersPage })));
+const UserDetailPage = lazy(() => import('@/pages/admin/UserDetailPage.jsx').then((m) => ({ default: m.UserDetailPage })));
 
 function NotFoundPage() {
   return (
@@ -63,8 +66,10 @@ function NotFoundPage() {
 
 export function App() {
   return (
-    <Routes>
-      <Route element={<CustomerLayout />}>
+    <>
+      <PresenceTracker />
+      <Routes>
+        <Route element={<CustomerLayout />}>
         <Route index element={<HomePage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
@@ -124,6 +129,8 @@ export function App() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="customers/:id" element={<CustomerDetailPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="managers" element={<ManagersPage />} />
         <Route path="managers/:id" element={<ManagerDetailPage />} />
@@ -132,6 +139,8 @@ export function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
       </Route>
-    </Routes>
+      </Routes>
+    </>
   );
 }
+

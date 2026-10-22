@@ -47,8 +47,9 @@ myBookingsRouter.get('/', validate({ query: myBookingsQuery }), bookingControlle
 myBookingsRouter.get('/:id', validate({ params: bookingIdParam }), bookingController.getBooking);
 
 /**
- * Payments. Mounted at /api/payments. The webhook is registered separately in app.js, before the JSON parser.
- * Only the public key id is returned by /config.
+ * Payments. Mounted at /api/payments. No webhook is registered -- confirmation is entirely backend-authoritative
+ * via /verify, which re-fetches the payment from Razorpay before confirming. Only the public key id is returned
+ * by /config.
  */
 export const paymentRouter = Router();
 paymentRouter.get('/config', paymentController.config);

@@ -57,9 +57,5 @@ export function createSimulatedGateway() {
       const expected = sign(orderId, paymentId);
       return expected.length === String(signature).length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(signature)));
     },
-
-    verifyWebhookSignature() {
-      return false;
-    },
   };
 }

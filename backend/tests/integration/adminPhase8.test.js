@@ -243,7 +243,7 @@ describe('settings: readable by staff, writable by ADMIN only', () => {
   it('never exposes secrets such as the JWT secret, DB password or Razorpay keys', async () => {
     const res = await request(app).get('/api/admin/settings').set(bearer(adminToken));
     const text = JSON.stringify(res.body);
-    assert.equal(/jwtSecret|razorpay|keySecret|webhookSecret|dbPassword/i.test(text), false);
+    assert.equal(/jwtSecret|razorpay|keySecret|dbPassword/i.test(text), false);
   });
 });
 

@@ -41,3 +41,15 @@ export const PROPERTY_TYPE_LABEL = {
   HOSTEL: 'Hostel',
   GUEST_HOUSE: 'Guest house',
 };
+
+/** Mirrors the website's own BED_LABEL (RoomOffers.jsx) exactly -- the real, backend-validated bed_type
+ * enum (backend/src/validators/inventory.validator.js), never invented wording. */
+export const BED_TYPE_LABEL = {
+  KING: 'King bed',
+  QUEEN: 'Queen bed',
+  DOUBLE: 'Double bed',
+  TWIN: 'Twin beds',
+  SINGLE: 'Single bed',
+  SOFA_BED: 'Sofa bed',
+  BUNK: 'Bunk beds',
+};

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Trash2, XCircle } from 'lucide-react';
+import { Loader2, Trash2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, Badge, Card, CardContent, Skeleton } from '@/components/ui/surfaces.jsx';
-import { Button } from '@/components/ui/button.jsx';
+import { Button, buttonVariants } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
+import { BackLink } from '@/components/shared/index.jsx';
 import { HotelWorkspace } from '@/features/hotels/HotelWorkspace.jsx';
 import { ExternalPanel } from '@/features/hotels/components/ExternalPanel.jsx';
 import { adminApi } from '@/services/endpoints.js';
@@ -61,7 +62,7 @@ function ImportFailed({ review }) {
           </ol>
           <div className="flex flex-wrap gap-3 pt-2">
             <Button onClick={retry} loading={retrying}>Try the import again</Button>
-            <Link to="/admin/hotels/new" className="inline-flex h-10 items-center rounded-[var(--radius-control)] border border-[var(--border-subtle)] px-4 text-sm font-medium hover:bg-[var(--surface-muted)]">
+            <Link to="/admin/hotels/new" className={buttonVariants({ variant: 'secondary' })}>
               Create the hotel manually
             </Link>
           </div>
@@ -118,11 +119,7 @@ export function ImportReviewPage() {
     }
   };
 
-  const backLink = (
-    <Link to="/admin/hotels/onboarding" className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]">
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to hotel search
-    </Link>
-  );
+  const backLink = <BackLink to="/admin/hotels/onboarding">Back to hotel search</BackLink>;
 
   if (error) {
     return (

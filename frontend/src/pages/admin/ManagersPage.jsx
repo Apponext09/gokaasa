@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, UserCog } from 'lucide-react';
-import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -44,45 +45,43 @@ export function ManagersPage() {
 
       <Card className="overflow-hidden">
         {managers === null && !error ? (
-          <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
-        ) : filtered.length === 0 ? (
+          <TableSkeleton rows={3} />
+        ) : filtered?.length === 0 ? (
           <EmptyState icon={UserCog} title="No managers found" description="Assign a manager from a hotel's workspace to see them here." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <caption className="sr-only">Hotel managers</caption>
-              <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
-                <tr>
-                  <th scope="col" className="px-4 py-3 font-semibold">Manager</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Email</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Assigned Hotels</th>
-                  <th scope="col" className="px-4 py-3 font-semibold">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--border-subtle)]">
-                {filtered.map((manager) => (
-                  <tr key={manager.id} className="hover:bg-[var(--surface-muted)]/50">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/managers/${manager.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
-                        {manager.firstName} {manager.lastName}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-body)]">{manager.email}</td>
-                    <td className="px-4 py-3">
-                      {manager.hotels.length === 0 ? (
-                        <Badge tone="neutral">Unassigned</Badge>
-                      ) : (
-                        <div className="flex flex-wrap gap-1">
-                          {manager.hotels.map((hotel) => <Badge key={hotel.id} tone="brand">{hotel.name}</Badge>)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-[var(--text-muted)]">{formatDateTime(manager.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="720px">
+            <caption className="sr-only">Hotel managers</caption>
+            <TableHeader>
+              <tr>
+                <TableHead>Manager</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Assigned Hotels</TableHead>
+                <TableHead>Created</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {filtered?.map((manager) => (
+                <TableRow key={manager.id}>
+                  <TableCell>
+                    <Link to={`/admin/managers/${manager.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
+                      {manager.firstName} {manager.lastName}
+                    </Link>
+                  </TableCell>
+                  <TableCell className="text-[var(--text-body)]">{manager.email}</TableCell>
+                  <TableCell>
+                    {manager.hotels.length === 0 ? (
+                      <Badge tone="neutral">Unassigned</Badge>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {manager.hotels.map((hotel) => <Badge key={hotel.id} tone="brand">{hotel.name}</Badge>)}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-[var(--text-muted)]">{formatDateTime(manager.createdAt)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </Card>
     </div>

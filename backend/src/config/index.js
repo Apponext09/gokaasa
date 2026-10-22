@@ -40,10 +40,28 @@ const schema = z.object({
   BUSINESS_TIMEZONE: z.string().default('Asia/Kolkata'),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
-  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
 
   ADMIN_EMAIL: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
+
+  // AI-powered natural-language booking assistant (Mode B). All optional and unset by default: the
+  // guided chatbot (Mode A) works fully without any of these. When AI_API_BASE_URL and AI_API_KEY are
+  // both set, config.ai.enabled becomes true and an OpenAI-compatible chat-completions endpoint is used
+  // (works with OpenAI itself, or any self-hosted/OpenAI-compatible gateway, including an Ollama
+  // instance running its own OpenAI-compatible API surface) -- no provider-specific SDK dependency added.
+  AI_PROVIDER: z.string().default('openai-compatible'),
+  AI_MODEL: z.string().default('gpt-4o-mini'),
+  AI_API_BASE_URL: z.string().optional(),
+  AI_API_KEY: z.string().optional(),
+  AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(12_000),
+
+  // Authenticated session presence (admin "who's online" dashboard). Online/offline is derived live from
+  // last_heartbeat_at rather than written on timeout, so only the cleanup sweep interval causes writes.
+  PRESENCE_HEARTBEAT_SECONDS: z.coerce.number().int().min(10).max(120).default(30),
+  PRESENCE_ONLINE_TIMEOUT_SECONDS: z.coerce.number().int().min(30).max(600).default(90),
+  PRESENCE_AWAY_TIMEOUT_SECONDS: z.coerce.number().int().min(60).max(3600).default(300),
+  PRESENCE_SESSION_EXPIRE_MINUTES: z.coerce.number().int().min(5).max(1440).default(60),
+  PRESENCE_CLEANUP_INTERVAL_MS: z.coerce.number().int().min(60_000).max(3_600_000).default(300_000),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -106,11 +124,25 @@ export const config = Object.freeze({
   payments: {
     keyId: env.RAZORPAY_KEY_ID || null,
     keySecret: env.RAZORPAY_KEY_SECRET || null,
-    webhookSecret: env.RAZORPAY_WEBHOOK_SECRET || null,
   },
   media: {
     maxUploadBytes: 5 * 1024 * 1024,
     maxImagesPerHotel: 30,
     maxImagesPerRoom: 15,
+  },
+  ai: {
+    enabled: Boolean(env.AI_API_BASE_URL && env.AI_API_KEY),
+    provider: env.AI_PROVIDER,
+    model: env.AI_MODEL,
+    baseUrl: env.AI_API_BASE_URL || null,
+    apiKey: env.AI_API_KEY || null,
+    requestTimeoutMs: env.AI_REQUEST_TIMEOUT_MS,
+  },
+  presence: {
+    heartbeatSeconds: env.PRESENCE_HEARTBEAT_SECONDS,
+    onlineTimeoutSeconds: env.PRESENCE_ONLINE_TIMEOUT_SECONDS,
+    awayTimeoutSeconds: env.PRESENCE_AWAY_TIMEOUT_SECONDS,
+    sessionExpireMinutes: env.PRESENCE_SESSION_EXPIRE_MINUTES,
+    cleanupIntervalMs: env.PRESENCE_CLEANUP_INTERVAL_MS,
   },
 });

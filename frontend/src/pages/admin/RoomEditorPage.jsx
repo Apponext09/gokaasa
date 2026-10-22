@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Archive } from 'lucide-react';
+import { Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
 import { Tabs, TabPanel } from '@/components/ui/tabs.jsx';
-import { PageHeader } from '@/components/shared/index.jsx';
+import { BackLink, PageHeader } from '@/components/shared/index.jsx';
 import { ImageGallery } from '@/features/hotels/components/ImageGallery.jsx';
 import { AmenityPicker } from '@/features/hotels/components/AmenityPicker.jsx';
 import { RoomDetailsForm } from '@/features/rooms/components/RoomDetailsForm.jsx';
@@ -139,9 +139,7 @@ export function RoomEditorPage() {
   if (loadError) {
     return (
       <div className="space-y-4">
-        <Link to={backTo} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]">
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Rooms
-        </Link>
+        <BackLink to={backTo}>Rooms</BackLink>
         <Alert tone="error" title="Room unavailable">{loadError}</Alert>
       </div>
     );
@@ -149,9 +147,7 @@ export function RoomEditorPage() {
 
   return (
     <div className="space-y-6">
-      <Link to={backTo} className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-strong)]">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Rooms
-      </Link>
+      <BackLink to={backTo}>Rooms</BackLink>
 
       <PageHeader
         title={isNew ? 'New room type' : room?.name ?? <Skeleton className="h-8 w-64" />}

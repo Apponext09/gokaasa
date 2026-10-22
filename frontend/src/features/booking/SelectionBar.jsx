@@ -65,7 +65,7 @@ export function SelectionBar({ selection, onClear }) {
           startHold();
         }}
       />
-      <div role="region" aria-label="Your selection" className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:left-0">
+      <div role="region" aria-label="Your selection" className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:left-0 md:right-[var(--assistant-dock-offset,0px)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="min-w-0 text-sm">
             <p className="truncate font-semibold text-[var(--text-strong)]">

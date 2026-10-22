@@ -62,6 +62,7 @@ const NAV = [
     section: 'Settings',
     items: [
       { to: '/admin/notifications', label: 'Notifications', icon: Bell },
+      { to: '/admin/users', label: 'User Management', icon: Users, adminOnly: true },
       { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText, adminOnly: true },
       { to: '/admin/settings', label: 'Settings', icon: Settings },
     ],
@@ -192,20 +193,31 @@ export function AdminLayout() {
     });
   };
 
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [drawerOpen]);
+
   return (
-    <div className="min-h-screen md:flex">
+    <div className="h-screen overflow-hidden" style={{ '--admin-sidebar-width': collapsed ? '4.5rem' : '15rem' }}>
       <AdminCommandPalette />
 
-      <aside className={cn('hidden shrink-0 flex-col gap-6 overflow-y-auto border-r border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 transition-[width] duration-200 md:flex', collapsed ? 'w-[4.5rem]' : 'w-60')}>
-        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
+      <aside className={cn('fixed inset-y-0 left-0 z-30 hidden flex-col gap-6 overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 transition-[width] duration-200 md:flex', collapsed ? 'w-[4.5rem]' : 'w-60')}>
+        <div className={cn('shrink-0 flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
           {!collapsed && <Logo to="/admin/dashboard" />}
           {collapsed && <Logo to="/admin/dashboard" className="[&>span:last-child]:hidden" />}
         </div>
-        <SidebarNav collapsed={collapsed} />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <SidebarNav collapsed={collapsed} />
+        </div>
         <Button
           variant="ghost"
           size="sm"
-          className={cn('mt-auto', collapsed && 'justify-center px-0')}
+          className={cn('mt-auto shrink-0', collapsed && 'justify-center px-0')}
           onClick={toggleCollapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -228,8 +240,8 @@ export function AdminLayout() {
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 sm:px-6">
+      <div className="flex h-screen min-w-0 flex-col md:ml-[var(--admin-sidebar-width)]">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
               <Menu className="h-5 w-5" />
@@ -250,7 +262,7 @@ export function AdminLayout() {
             <AdminProfileMenu />
           </div>
         </header>
-        <main id="main" className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main id="main" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-6xl">
             <Suspense fallback={<FullPageSpinner label="Loading" />}>
               <Outlet />

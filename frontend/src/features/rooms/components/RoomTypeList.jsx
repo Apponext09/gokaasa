@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BedDouble, Plus, Users } from 'lucide-react';
 import { Alert, Badge, Card, CardContent, Skeleton } from '@/components/ui/surfaces.jsx';
-import { Button } from '@/components/ui/button.jsx';
+import { buttonVariants } from '@/components/ui/button.jsx';
 import { Checkbox } from '@/components/ui/form-controls.jsx';
 import { EmptyState, formatMoney } from '@/components/shared/index.jsx';
 import { roomApi } from '@/services/endpoints.js';
@@ -38,10 +38,8 @@ export function RoomTypeList({ hotelId, manageBasePath }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Checkbox label="Show archived" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-        <Link to={newPath}>
-          <Button>
-            <Plus className="h-4 w-4" aria-hidden="true" /> Add room type
-          </Button>
+        <Link to={newPath} className={buttonVariants({})}>
+          <Plus className="h-4 w-4" aria-hidden="true" /> Add room type
         </Link>
       </div>
 
@@ -97,8 +95,8 @@ export function RoomTypeList({ hotelId, manageBasePath }) {
                   )}
                 </p>
               </div>
-              <Link to={`${manageBasePath}/${room.id}`}>
-                <Button variant="secondary">Manage</Button>
+              <Link to={`${manageBasePath}/${room.id}`} className={buttonVariants({ variant: 'secondary' })}>
+                Manage
               </Link>
             </CardContent>
           </Card>

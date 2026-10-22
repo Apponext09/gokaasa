@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronDown, ChevronUp, ExternalLink, Globe, ImageOff, Loader2, MapPin, Plus, Search, Star, TriangleAlert, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronUp, ExternalLink, Globe, History, ImageOff, Loader2, MapPin, Plus, Search, Star, TriangleAlert, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, Badge, Card, CardContent, Skeleton } from '@/components/ui/surfaces.jsx';
-import { Button } from '@/components/ui/button.jsx';
+import { Button, buttonVariants } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table.jsx';
 import { EmptyState, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -184,10 +185,7 @@ function ImportProgress({ job, onDismiss }) {
             </Button>
           )}
           {job.hotelId && (
-            <Link
-              to={`/admin/hotels/onboarding/${job.id}/review`}
-              className="inline-flex h-9 items-center rounded-[var(--radius-control)] bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700"
-            >
+            <Link to={`/admin/hotels/onboarding/${job.id}/review`} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
               Review draft
             </Link>
           )}
@@ -277,10 +275,7 @@ export function HotelOnboardingPage() {
         title="Add a hotel"
         description="Search by name and city. Gokaasa fetches public hotel details from approved sources, then you review everything before it goes live."
         actions={
-          <Link
-            to="/admin/hotels/new"
-            className="inline-flex h-10 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 text-sm font-medium text-[var(--text-strong)] hover:bg-[var(--surface-muted)]"
-          >
+          <Link to="/admin/hotels/new" className={buttonVariants({ variant: 'secondary' })}>
             <Plus className="h-4 w-4" aria-hidden="true" /> Create hotel manually
           </Link>
         }
@@ -393,29 +388,42 @@ export function HotelOnboardingPage() {
           Recent imports
         </h2>
         {recentJobs === null ? (
-          <Skeleton className="h-24 w-full" />
+          <Card><div className="space-y-3 p-5">{[0, 1].map((row) => <Skeleton key={row} className="h-12 w-full" />)}</div></Card>
         ) : recentJobs.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">No imports yet. Your recent imports will appear here.</p>
-        ) : (
           <Card>
-            <ul className="divide-y divide-[var(--border-subtle)]">
-              {recentJobs.map((job) => (
-                <li key={job.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-[var(--text-strong)]">{job.searchQuery}</p>
-                    <p className="text-[var(--text-muted)]">{formatDateTime(job.createdAt)} · {job.provider}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <JobStatus status={job.status} />
-                    {job.status !== 'DISCARDED' && (
-                      <Link to={`/admin/hotels/onboarding/${job.id}/review`} className="font-medium text-brand-600 hover:underline">
-                        Review
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <EmptyState icon={History} title="No imports yet" description="Your recent imports will appear here." />
+          </Card>
+        ) : (
+          <Card className="overflow-hidden">
+            <Table minWidth="520px">
+              <caption className="sr-only">Recent imports</caption>
+              <TableHeader>
+                <tr>
+                  <TableHead>Search</TableHead>
+                  <TableHead>Started</TableHead>
+                  <TableHead>Source</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right"><span className="sr-only">Actions</span></TableHead>
+                </tr>
+              </TableHeader>
+              <TableBody>
+                {recentJobs.map((job) => (
+                  <TableRow key={job.id}>
+                    <TableCell className="max-w-[16rem] truncate font-medium text-[var(--text-strong)]">{job.searchQuery}</TableCell>
+                    <TableCell className="text-[var(--text-muted)]">{formatDateTime(job.createdAt)}</TableCell>
+                    <TableCell className="text-[var(--text-body)]">{job.provider}</TableCell>
+                    <TableCell><JobStatus status={job.status} /></TableCell>
+                    <TableCell className="text-right">
+                      {job.status !== 'DISCARDED' && (
+                        <Link to={`/admin/hotels/onboarding/${job.id}/review`} className="font-medium text-brand-600 hover:underline">
+                          Review
+                        </Link>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Card>
         )}
       </section>
