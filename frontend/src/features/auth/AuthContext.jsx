@@ -1,20 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authApi, partnerApi } from '@/services/endpoints.js';
 import { refreshAccessToken, SESSION_EXPIRED_EVENT, tokenStore } from '@/services/api.js';
+import { isApprovedStaff } from './routing.js';
 
 const AuthContext = createContext(null);
 
-export const ADMIN_ROLES = ['ADMIN', 'HOTEL_MANAGER'];
-
-/**
- * A HOTEL_OWNER reuses the same /admin/* surface as ADMIN/HOTEL_MANAGER, but only once their partner
- * application is APPROVED (the backend enforces this independently -- this is purely for routing).
- */
-export function isApprovedStaff(user) {
-  if (!user?.roles) return false;
-  if (user.roles.some((role) => ADMIN_ROLES.includes(role))) return true;
-  return user.roles.includes('HOTEL_OWNER') && user.partnerStatus === 'APPROVED';
-}
+export { isApprovedStaff };
 
 /**
  * Session state for the whole app. On first load the refresh cookie is exchanged for an access token,
@@ -28,6 +19,7 @@ export function AuthProvider({ children }) {
     tokenStore.set(session.accessToken);
     setUser(session.user);
     setStatus('authenticated');
+    if (import.meta.env.DEV) console.debug('[auth] session established', { userId: session.user.id, roles: session.user.roles });
     return session.user;
   }, []);
 
@@ -35,6 +27,7 @@ export function AuthProvider({ children }) {
     tokenStore.clear();
     setUser(null);
     setStatus('anonymous');
+    if (import.meta.env.DEV) console.debug('[auth] session cleared');
   }, []);
 
   useEffect(() => {

@@ -35,7 +35,7 @@ import { Input } from '@/components/ui/form-controls.jsx';
 import {
   FormField,
   Logo,
-  homePathFor,
+  resolvePostLoginTarget,
 } from '@/components/shared/index.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
@@ -439,8 +439,11 @@ export function LoginPage() {
     try {
       const user = await login(values);
 
-      const target =
-        location.state?.from ?? homePathFor(user);
+      const target = resolvePostLoginTarget(user, location.state?.from);
+
+      if (import.meta.env.DEV) {
+        console.debug('[auth] login navigation', { roles: user.roles, from: location.state?.from, target });
+      }
 
       navigate(target, {
         replace: true,

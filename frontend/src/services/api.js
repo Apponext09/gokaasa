@@ -63,6 +63,7 @@ api.interceptors.response.use(
         original.headers.Authorization = `Bearer ${accessToken}`;
         return api(original);
       } catch {
+        if (import.meta.env.DEV) console.debug('[auth] refresh failed after a 401, clearing session', { url: original.url });
         tokenStore.clear();
         window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
       }

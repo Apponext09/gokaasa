@@ -6,7 +6,10 @@ import { Label } from '@/components/ui/form-controls.jsx';
 import { cn } from '@/lib/utils.js';
 import logo from '@/assets/logo.png';
 
-import { isApprovedStaff, useAuth } from '@/features/auth/AuthContext.jsx';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { homePathFor, resolvePostLoginTarget } from '@/features/auth/routing.js';
+
+export { homePathFor, resolvePostLoginTarget };
 
 export function Logo({ className, to = '/' }) {
   return (
@@ -44,16 +47,14 @@ export function RequireAuth({ children, staff = false }) {
 
   if (status === 'loading') return <FullPageSpinner label="Checking your session" />;
   if (status !== 'authenticated') {
+    if (import.meta.env.DEV) console.debug('[auth] RequireAuth: not authenticated, redirecting to /login', { path: location.pathname, staffRequired: staff });
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
-  if (staff && !isStaff) return <Navigate to="/" replace />;
+  if (staff && !isStaff) {
+    if (import.meta.env.DEV) console.debug('[auth] RequireAuth: authenticated but not staff, redirecting to /', { path: location.pathname });
+    return <Navigate to="/" replace />;
+  }
   return children ?? <Outlet />;
-}
-
-export function homePathFor(user) {
-  if (isApprovedStaff(user)) return '/admin/dashboard';
-  if (user?.roles?.includes('HOTEL_OWNER')) return '/partner/status';
-  return '/';
 }
 
 /** A "back to parent" link used above sub-pages (room editor, import review, etc). */

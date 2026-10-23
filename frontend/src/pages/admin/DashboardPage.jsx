@@ -2359,10 +2359,13 @@ export function DashboardPage() {
 
         setData(dashboardData);
         setAlerts(dashboardAlerts);
+        if (import.meta.env.DEV) console.debug('[dashboard] initial data loaded');
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(normalizeError(err).message);
+          const message = normalizeError(err).message;
+          if (import.meta.env.DEV) console.debug('[dashboard] initial data load failed', { message });
+          setError(message);
         }
       })
       .finally(() => {
