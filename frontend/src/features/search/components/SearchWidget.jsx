@@ -5,18 +5,21 @@ import { Button } from '@/components/ui/button.jsx';
 import { DestinationField } from '@/features/search/components/DestinationField.jsx';
 import { DateRangePicker } from '@/features/search/components/DateRangePicker.jsx';
 import { GuestsPopover } from '@/features/search/components/GuestsPopover.jsx';
-import { addDays, slugifyPlace, stayParams, todayIso, validateStay } from '@/features/search/searchParams.js';
+import { addDays, nightsBetween, slugifyPlace, stayParams, todayIso, validateStay } from '@/features/search/searchParams.js';
 
 const titleCase = (slug) => slug.split('-').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 
-/** Where the search goes for a chosen destination. Hotels open directly; places open the results list. */
+/** Where the search goes for a chosen destination. Hotels open directly; places open the Hotels listing page. */
 export function searchTargetFor(destination, stay, occupancy) {
   const params = stayParams({ ...stay, occupancy });
+  // A specific hotel — go straight to its detail page
   if (destination.type === 'HOTEL' && destination.hotelSlug) {
     return `/hotels/${destination.destination}/${destination.hotelSlug}?${params}`;
   }
+  // A city/area — go to HotelsPage with destination as query param
   if (destination.type === 'AREA' && destination.area) params.set('area', destination.area);
-  return `/hotels/${destination.destination}?${params}`;
+  if (destination.destination) params.set('destination', destination.destination);
+  return `/hotels?${params}`;
 }
 
 /**
@@ -76,7 +79,7 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted }) {
 
   if (compact) {
     return (
-      <form onSubmit={submit} noValidate aria-label="Search hotels" className="grid w-full grid-cols-1 gap-2 md:grid-cols-[1.4fr_1.3fr_1fr_auto] md:items-stretch">
+      <form onSubmit={submit} noValidate aria-label="Search hotels" className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-[1.6fr_1.6fr_1.2fr_auto] md:items-center">
         <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} />
         {dateRange}
         <GuestsPopover idPrefix={variant} rooms={occupancy} onChange={setOccupancy} />
@@ -93,14 +96,20 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted }) {
   }
 
   return (
-    <form onSubmit={submit} noValidate aria-label="Search hotels" className="w-full rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1.5 shadow-sm">
+    <form onSubmit={submit} noValidate aria-label="Search hotels" className="customer-search-widget w-full rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1.5 shadow-sm">
       <div className="grid grid-cols-1 divide-y divide-[var(--border-subtle)] lg:grid-cols-[1.5fr_1.4fr_1fr_auto] lg:items-stretch lg:divide-x lg:divide-y-0">
         <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} bare />
         {dateRange}
-        <GuestsPopover idPrefix={variant} rooms={occupancy} onChange={setOccupancy} bare />
-        <div className="flex items-center p-1.5 lg:pl-3">
+        <GuestsPopover
+          idPrefix={variant}
+          rooms={occupancy}
+          onChange={setOccupancy}
+          stayNights={nightsBetween(stay.checkIn, stay.checkOut)}
+          bare
+        />
+        <div className="customer-search-submit flex items-center p-1.5 lg:pl-3">
           <Button type="submit" size="lg" className="h-14 w-full">
-            <Search className="h-4 w-4" aria-hidden="true" /> Search Hotels
+            Search
           </Button>
         </div>
       </div>

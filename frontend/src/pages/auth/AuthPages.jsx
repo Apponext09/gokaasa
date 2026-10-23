@@ -158,7 +158,7 @@ function AuthShell({
   }, []);
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-slate-950">
+    <div className="customer-auth-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-slate-950">
 
       {/* ================================================================
           BACKGROUND DECORATION

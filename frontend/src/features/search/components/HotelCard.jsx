@@ -1,14 +1,23 @@
-import { Link } from 'react-router-dom';
-import { Check, MapPin, ShieldCheck, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Camera, Check, ChevronLeft, ChevronRight, MapPin, ShieldCheck, Sparkles, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { WishlistButton } from '@/components/shared/WishlistButton.jsx';
 import { formatMoney } from '@/components/shared/index.jsx';
-import { stayParams, slugifyPlace } from '@/features/search/searchParams.js';
+import { GuestContactModal } from '@/features/booking/GuestContactModal.jsx';
+import { saveSelection } from '@/features/booking/selection.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { HotelQuickViewModal } from '@/features/search/components/HotelQuickViewModal.jsx';
+import { nightsBetween, stayParams, slugifyPlace } from '@/features/search/searchParams.js';
 import { normalizeAmenities } from '@/features/search/amenities.js';
 import { discountDisplay } from '@/features/search/discountDisplay.js';
 import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
+import { bookingApi, discoveryApi } from '@/services/endpoints.js';
+import { normalizeError } from '@/services/api.js';
+import { cn } from '@/lib/utils.js';
 
 const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HALF_BOARD: 'Half board', FULL_BOARD: 'Full board' };
 const PROPERTY_LABEL = { HOTEL: 'Hotel', RESORT: 'Resort', VILLA: 'Villa', APARTMENT: 'Apartment', HOSTEL: 'Hostel', GUEST_HOUSE: 'Guest house' };
@@ -22,23 +31,194 @@ export function hotelPath(hotel, state) {
 
 /** One hotel in the results. Every value shown comes from the search response; nothing is estimated. */
 export function HotelCard({ hotel, state }) {
+  const navigate = useNavigate();
+  const { status: authStatus } = useAuth();
   const offer = hotel.bestOffer;
   const couponOffer = hotel.offer;
   const place = [hotel.area, hotel.city, hotel.country].filter(Boolean).join(', ');
   const { originalPerNightMinor, discountPercent } = discountDisplay(offer);
   const { shown: amenities, moreCount: moreAmenityCount } = normalizeAmenities(hotel.amenities, 3);
+  const fullPath = hotelPath(hotel, state);
+
+  const [details, setDetails] = useState(null);
+  const [detailsState, setDetailsState] = useState('idle');
+  const [hovered, setHovered] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
+  const [guestModalOpen, setGuestModalOpen] = useState(false);
+  const [pendingSelection, setPendingSelection] = useState(null);
+  const [reserving, setReserving] = useState(false);
+
+  const loadDetails = useCallback(() => {
+    if (details || detailsState === 'loading') return;
+    setDetailsState('loading');
+    discoveryApi
+      .hotel(hotel.slug)
+      .then((result) => {
+        setDetails(result);
+        setDetailsState('ready');
+      })
+      .catch(() => setDetailsState('error'));
+  }, [details, detailsState, hotel.slug]);
+
+  const gallery = useMemo(() => {
+    if (details?.images?.length) return details.images.filter((image) => image.url).slice(0, 6);
+    return hotel.image?.url ? [{ id: `cover-${hotel.id}`, ...hotel.image }] : [];
+  }, [details?.images, hotel.id, hotel.image]);
+
+  useEffect(() => {
+    if (!hovered) {
+      setPhotoIndex(0);
+    } else if (gallery.length > 1) {
+      setPhotoIndex(1);
+    }
+  }, [hovered, gallery.length]);
+
+  const startHold = async (selection) => {
+    if (!selection) return;
+    setReserving(true);
+    try {
+      const hold = await bookingApi.createHold({
+        hotelId: selection.hotelId,
+        roomTypeId: selection.roomTypeId,
+        ratePlanId: selection.ratePlanId,
+        checkIn: selection.checkIn,
+        checkOut: selection.checkOut,
+        rooms: selection.rooms,
+        occupancy: selection.occupancy,
+        idempotencyKey: selection.idempotencyKey,
+      });
+      navigate(`/booking/guest-details?holdId=${hold.id}`);
+    } catch (error) {
+      const normalized = normalizeError(error);
+      toast.error(normalized.status === 409 ? `This room just became unavailable. ${normalized.message}` : normalized.message);
+    } finally {
+      setReserving(false);
+    }
+  };
+
+  const beginReserve = (selection) => {
+    const saved = saveSelection(selection);
+    setPendingSelection(saved);
+    setQuickViewOpen(false);
+    if (authStatus !== 'authenticated') {
+      setGuestModalOpen(true);
+      return;
+    }
+    startHold(saved);
+  };
+
+  const quickReserve = () => {
+    if (!offer || !state?.checkIn || !state?.checkOut || !state?.occupancy?.length) return;
+    beginReserve({
+      hotelId: hotel.id,
+      hotelSlug: hotel.slug,
+      citySlug: slugifyPlace(hotel.city),
+      roomTypeId: offer.roomTypeId,
+      roomName: offer.roomName,
+      ratePlanId: offer.ratePlanId,
+      ratePlanName: offer.ratePlanName,
+      mealPlan: offer.mealPlan,
+      refundable: offer.refundable,
+      checkIn: state.checkIn,
+      checkOut: state.checkOut,
+      nights: offer.nights,
+      rooms: state.occupancy.length,
+      occupancy: state.occupancy.map((room) => ({ adults: room.adults, childAges: room.childAges })),
+      pricePerNightMinor: offer.pricePerNightMinor,
+      subtotalMinor: offer.baseTotalMinor,
+      discountMinor: offer.discountTotalMinor,
+      taxesMinor: offer.taxTotalMinor,
+      feesMinor: offer.feeTotalMinor,
+      finalAmountMinor: offer.finalTotalMinor,
+      currency: 'INR',
+      quotedAt: new Date().toISOString(),
+    });
+  };
+
+  const reserveRoom = (room, plan) => {
+    beginReserve({
+      hotelId: hotel.id,
+      hotelSlug: hotel.slug,
+      citySlug: slugifyPlace(hotel.city),
+      roomTypeId: room.id,
+      roomName: room.name,
+      ratePlanId: plan.ratePlanId,
+      ratePlanName: plan.name,
+      mealPlan: plan.mealPlan,
+      refundable: plan.refundable,
+      checkIn: state.checkIn,
+      checkOut: state.checkOut,
+      nights: nightsBetween(state.checkIn, state.checkOut),
+      rooms: state.occupancy.length,
+      occupancy: state.occupancy.map((item) => ({ adults: item.adults, childAges: item.childAges })),
+      pricePerNightMinor: plan.pricePerNight,
+      subtotalMinor: plan.subtotal,
+      discountMinor: plan.discount,
+      taxesMinor: plan.taxes,
+      feesMinor: plan.fees,
+      finalAmountMinor: plan.finalAmount,
+      currency: plan.currency ?? 'INR',
+      quotedAt: new Date().toISOString(),
+    });
+  };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row">
-      <div className="relative aspect-[4/3] w-full shrink-0 overflow-hidden md:aspect-auto md:w-72 lg:w-80">
-        <SafeImage
-          src={hotel.image?.url}
-          alt={hotel.image?.altText ?? hotel.name}
-          className="absolute inset-0 transition-transform duration-[650ms] ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-          sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 100vw"
-          fallbackLabel={`${hotel.name}: photos coming soon`}
-        />
+    <>
+      <article className="customer-hotel-card group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row">
+      <div
+        className="relative aspect-[4/3] w-full shrink-0 overflow-hidden md:aspect-auto md:w-72 lg:w-80"
+        onMouseEnter={() => {
+          setHovered(true);
+          loadDetails();
+        }}
+        onMouseLeave={() => setHovered(false)}
+      >
+        {gallery.length > 0 ? gallery.map((image, index) => (
+          <SafeImage
+            key={image.id ?? image.url}
+            src={image.url}
+            alt={image.altText ?? `${hotel.name} photo ${index + 1}`}
+            className={cn(
+              'absolute inset-0 transition-all duration-500 ease-out motion-reduce:transition-none',
+              index === photoIndex ? 'scale-100 opacity-100 group-hover:scale-[1.035]' : 'scale-[1.02] opacity-0',
+            )}
+            sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 100vw"
+            fallbackLabel={`${hotel.name}: photo ${index + 1}`}
+          />
+        )) : (
+          <SafeImage className="absolute inset-0" fallbackLabel={`${hotel.name}: photos coming soon`} />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/0 to-transparent transition-colors duration-500 group-hover:from-slate-950/15" />
+        {gallery.length > 1 && (
+          <>
+            <button
+              type="button"
+              className="absolute left-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100 focus:opacity-100"
+              aria-label="Previous hotel photo"
+              onClick={(event) => {
+                event.preventDefault();
+                setPhotoIndex((index) => (index - 1 + gallery.length) % gallery.length);
+              }}
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100 focus:opacity-100"
+              aria-label="Next hotel photo"
+              onClick={(event) => {
+                event.preventDefault();
+                setPhotoIndex((index) => (index + 1) % gallery.length);
+              }}
+            >
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <span className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-white">
+              <Camera className="h-3 w-3" aria-hidden="true" /> {photoIndex + 1}/{gallery.length}
+            </span>
+          </>
+        )}
         {/* A fixed top-left slot, always the same badge, so the discount never competes for space with the other badges below. */}
         {discountPercent > 0 && (
           <div className="absolute left-3 top-3">
@@ -68,13 +248,18 @@ export function HotelCard({ hotel, state }) {
               <span className="text-xs text-[var(--text-muted)]">{PROPERTY_LABEL[hotel.propertyType] ?? 'Stay'}</span>
             )}
             <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--text-strong)]">
-              <Link to={hotelPath(hotel, state)} className="hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-500">
+              <Link to={fullPath} className="hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-500">
                 {hotel.name}
               </Link>
             </h3>
-            <p className="flex items-center gap-1 text-sm text-[var(--text-muted)]">
-              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <p className="flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span className="truncate">{place}</span>
+              {hotel.distanceKm != null && (
+                <span className="shrink-0 font-medium text-[var(--text-strong)]">
+                  · {Number(hotel.distanceKm).toFixed(1)} km away
+                </span>
+              )}
             </p>
           </div>
           {/* The provider's guest rating, where there is one. Otherwise Gokaasa's own guest reviews fill the gap; with neither, "New" beats inventing a number. */}
@@ -106,7 +291,7 @@ export function HotelCard({ hotel, state }) {
         )}
 
         {offer && (
-          <div className="mt-auto space-y-3 border-t border-[var(--border-subtle)] pt-3">
+          <div className="space-y-1 border-t border-[var(--border-subtle)] pt-3">
             <div className="flex flex-wrap gap-1.5">
               <Badge tone="brand">
                 <UtensilsCrossed className="h-3 w-3" aria-hidden="true" /> {MEAL_LABEL[offer.mealPlan]}
@@ -123,38 +308,129 @@ export function HotelCard({ hotel, state }) {
                 </Badge>
               )}
               {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <Badge tone="warning">Only {offer.roomsLeft} left</Badge>}
-              {/* Server-computed from the admin's real, active offers against this exact price -- see
-                  hotelSearch.service.js#offerBadgeFor. Never a vague pointer, never a frontend guess. */}
               {couponOffer && (
                 <Badge tone="premium">
                   <Tag className="h-3 w-3" aria-hidden="true" /> {couponOffer.discountPercent}% OFF with code {couponOffer.code}
                 </Badge>
               )}
             </div>
+          </div>
+        )}
 
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="space-y-0.5">
-                <p className="text-xs text-[var(--text-muted)]">{offer.roomName}</p>
-                <p className="flex items-baseline gap-2">
-                  {originalPerNightMinor > 0 && (
-                    <span className="text-sm text-[var(--text-muted)] line-through">{formatMoney(originalPerNightMinor)}</span>
-                  )}
-                  <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(offer.pricePerNightMinor)}</span>
-                  <span className="text-sm text-[var(--text-muted)]">/ night</span>
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {offer.nights} night{offer.nights === 1 ? '' : 's'} · {formatMoney(offer.finalTotalMinor)} total
-                  {offer.taxTotalMinor + offer.feeTotalMinor > 0 && ` · incl. ${formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes & fees`}
-                </p>
-              </div>
-              <Link to={hotelPath(hotel, state)}>
-                <Button>View Hotel</Button>
-              </Link>
+        {/* Pricing + CTA: shown in 2-col layout (search results page). Hidden when hotel-card is in 3-col hotels page. */}
+        {offer && (
+          <div className="hcard-price-cta-inline flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-0.5">
+              <p className="text-xs text-[var(--text-muted)]">{offer.roomName}</p>
+              <p className="flex items-baseline gap-2">
+                {originalPerNightMinor > 0 && (
+                  <span className="text-sm text-[var(--text-muted)] line-through">{formatMoney(originalPerNightMinor)}</span>
+                )}
+                <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(offer.pricePerNightMinor)}</span>
+                <span className="text-sm text-[var(--text-muted)]">/ night</span>
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                {offer.nights} night{offer.nights === 1 ? '' : 's'} · {formatMoney(offer.finalTotalMinor)} total
+                {offer.taxTotalMinor + offer.feeTotalMinor > 0 && ` · incl. ${formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes & fees`}
+              </p>
+            </div>
+            <div className="grid min-w-44 gap-2">
+              <Button
+                onClick={() => setQuickViewOpen(true)}
+                className="bg-gradient-to-r from-brand-800 to-brand-600 font-semibold shadow-md hover:from-brand-900 hover:to-brand-700"
+              >
+                View Rooms &amp; Deals
+              </Button>
+              <Button variant="secondary" onClick={quickReserve} loading={reserving}>
+                {!reserving && <Sparkles className="h-4 w-4 text-brand-600" aria-hidden="true" />}
+                Quick Reserve
+              </Button>
             </div>
           </div>
         )}
       </div>
-    </article>
+
+      {/* RIGHT PRICING PANEL — visible only in hotels-page 3-column layout */}
+      {offer && (
+        <div className="hcard-pricing-panel">
+          <div className="hcard-price-top">
+            {originalPerNightMinor > 0 && (
+              <div className="hcard-strikethrough-row">
+                <span className="hcard-original-price">{formatMoney(originalPerNightMinor)}</span>
+                {discountPercent > 0 && (
+                  <span className="hcard-discount-pill">{discountPercent}% OFF</span>
+                )}
+              </div>
+            )}
+            <div className="hcard-final-price-row">
+              <span className="hcard-final-amount">{formatMoney(offer.pricePerNightMinor)}</span>
+              <span className="hcard-per-night">/ night</span>
+            </div>
+            {offer.taxTotalMinor + offer.feeTotalMinor > 0 && (
+              <p className="hcard-taxes-note">+{formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes &amp; fees for the stay</p>
+            )}
+            {offer.nights > 1 && (
+              <p className="hcard-total-nights">{formatMoney(offer.finalTotalMinor)} for {offer.nights} nights</p>
+            )}
+            {couponOffer ? (
+              <div className="hcard-coupon-badge">
+                <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span>
+                  Member Deal: Extra {couponOffer.discountMinor != null
+                    ? `${formatMoney(couponOffer.discountMinor)} off`
+                    : `${couponOffer.discountPercent}% off`} with code <strong>{couponOffer.code}</strong>
+                </span>
+              </div>
+            ) : offer.memberDealCode ? (
+              <div className="hcard-member-deal">
+                <Sparkles className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" aria-hidden="true" />
+                <span>Member Deal: Extra {offer.memberDealAmount ? formatMoney(offer.memberDealAmount) : 'savings'} with code <strong>{offer.memberDealCode}</strong></span>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="hcard-cta-group">
+            <button
+              type="button"
+              className="hcard-btn-view"
+              onClick={() => setQuickViewOpen(true)}
+            >
+              VIEW ROOMS &amp; DEALS
+            </button>
+            <button
+              type="button"
+              className="hcard-btn-reserve"
+              onClick={quickReserve}
+              disabled={reserving}
+            >
+              {reserving ? 'Reserving…' : 'Quick Reserve'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      </article>
+
+      <HotelQuickViewModal
+        open={quickViewOpen}
+        hotel={hotel}
+        initialDetails={details}
+        state={state}
+        fullPath={fullPath}
+        reserving={reserving}
+        onClose={() => setQuickViewOpen(false)}
+        onReserve={reserveRoom}
+      />
+
+      <GuestContactModal
+        open={guestModalOpen}
+        onClose={() => setGuestModalOpen(false)}
+        onContinue={() => {
+          setGuestModalOpen(false);
+          startHold(pendingSelection);
+        }}
+      />
+    </>
   );
 }
 

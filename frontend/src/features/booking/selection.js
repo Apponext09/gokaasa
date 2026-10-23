@@ -17,11 +17,13 @@ function newIdempotencyKey() {
 }
 
 export function saveSelection(selection) {
+  const saved = { ...selection, idempotencyKey: newIdempotencyKey(), savedAt: new Date().toISOString() };
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({ ...selection, idempotencyKey: newIdempotencyKey(), savedAt: new Date().toISOString() }));
+    sessionStorage.setItem(KEY, JSON.stringify(saved));
   } catch {
     // Private browsing or disabled storage: the selection simply does not persist.
   }
+  return saved;
 }
 
 export function readSelection() {

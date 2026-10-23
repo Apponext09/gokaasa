@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { nightsBetween, isIsoDate } from '@/features/search/searchParams.js';
 import { cn } from '@/lib/utils.js';
 
@@ -9,6 +9,14 @@ const longDate = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 const shortDate = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const weekday = (iso) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-IN', { weekday: 'long', timeZone: 'UTC' });
+const referenceDate = (iso) => {
+  const date = new Date(`${iso}T00:00:00Z`);
+  const day = date.getUTCDate();
+  const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  return `${day} ${month} '${String(date.getUTCFullYear()).slice(-2)}`;
+};
 
 /** Month grid for a given year and month (0-based), Monday first, all in UTC date arithmetic. */
 function monthGrid(year, month) {
@@ -72,10 +80,11 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
   const hint = !checkIn ? 'Select check-in' : !checkOut ? 'Now select check-out' : null;
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={cn('relative', bare && 'customer-date-range')}>
       <div
         className={cn(
-          'grid grid-cols-2 divide-x divide-[var(--border-subtle)]',
+          'grid grid-cols-2',
+          bare ? 'customer-date-fields gap-3' : 'divide-x divide-[var(--border-subtle)]',
           !bare && 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)]',
         )}
       >
@@ -84,27 +93,36 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
           id={`${idPrefix}-checkin`}
           disabled={disabled}
           onClick={() => setOpen(true)}
-          className="flex min-h-14 flex-col items-start px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand-500"
+          className={cn(
+            'flex min-h-14 flex-col items-start px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand-500',
+            bare && 'customer-date-field',
+          )}
         >
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Check-in</span>
-          <span className="text-sm font-medium text-[var(--text-strong)]">{checkIn ? longDate(checkIn).replace(/^\w+, /, '') : 'Add date'}</span>
+          <span className="customer-date-value flex w-full items-center justify-between gap-1 text-sm font-semibold whitespace-nowrap text-[var(--text-strong)]">
+            {checkIn ? referenceDate(checkIn) : 'Add date'}
+            {bare && <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />}
+          </span>
+          {bare && checkIn && <span className="text-xs text-[var(--text-muted)]">{weekday(checkIn)}</span>}
         </button>
         <button
           type="button"
           id={`${idPrefix}-checkout`}
           disabled={disabled}
           onClick={() => setOpen(true)}
-          className="flex min-h-14 flex-col items-start px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand-500"
+          className={cn(
+            'flex min-h-14 flex-col items-start px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand-500',
+            bare && 'customer-date-field',
+          )}
         >
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Check-out</span>
-          <span className="text-sm font-medium text-[var(--text-strong)]">{checkOut ? longDate(checkOut).replace(/^\w+, /, '') : 'Add date'}</span>
+          <span className="customer-date-value flex w-full items-center justify-between gap-1 text-sm font-semibold whitespace-nowrap text-[var(--text-strong)]">
+            {checkOut ? referenceDate(checkOut) : 'Add date'}
+            {bare && <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />}
+          </span>
+          {bare && checkOut && <span className="text-xs text-[var(--text-muted)]">{weekday(checkOut)}</span>}
         </button>
       </div>
-      {nights > 0 && (
-        <p className="mt-1.5 text-xs font-medium text-brand-700" aria-live="polite">
-          {checkIn && checkOut ? `${shortDate(checkIn)} → ${shortDate(checkOut)} · ${nights} night${nights === 1 ? '' : 's'}` : ''}
-        </p>
-      )}
 
       {open && (
         <div className="fixed inset-x-3 bottom-3 z-40 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-2 sm:w-[22rem]" role="dialog" aria-label="Choose dates">

@@ -130,9 +130,9 @@ export function SearchResultsPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
+    <div className="customer-results-page mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
       {/* Search summary. The full search widget opens in place, so the results never leave the page. */}
-      <section aria-label="Search summary" className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-sm">
+      <section aria-label="Search summary" className="customer-results-search rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-sm">
         {!modifying ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 space-y-0.5">
@@ -202,7 +202,7 @@ export function SearchResultsPage() {
 
       {hasStay && (
         <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-          <aside className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:pr-2">
+          <aside className="customer-filter-sidebar hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto lg:pr-2">
             {filtersPanel}
           </aside>
 

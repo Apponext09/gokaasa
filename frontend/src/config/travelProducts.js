@@ -1,4 +1,4 @@
-import { Bus, Building2, Car, Hotel, Palmtree, Plane, TrainFront } from 'lucide-react';
+import { Bus, Building2, Car, Clock3, Hotel, Palmtree, Plane, TrainFront } from 'lucide-react';
 
 /**
  * Primary travel-product navigation shown in the header, mobile drawer, and homepage hero tabs.
@@ -12,6 +12,20 @@ export const TRAVEL_PRODUCTS = [
     icon: Hotel,
     status: 'active',
     to: '/',
+  },
+  {
+    key: 'homestays-villas',
+    label: 'Homestays & Villas',
+    icon: Building2,
+    status: 'coming-soon',
+    description: 'Private homestays and villas for a more personal kind of stay.',
+  },
+  {
+    key: 'hourly-stays',
+    label: 'Hourly & Day Stays',
+    icon: Clock3,
+    status: 'coming-soon',
+    description: 'Flexible short stays for work, rest, and quick city stopovers.',
   },
   {
     key: 'flights',
@@ -47,12 +61,5 @@ export const TRAVEL_PRODUCTS = [
     icon: Palmtree,
     status: 'coming-soon',
     description: 'Curated holiday packages that take care of your whole trip, start to finish.',
-  },
-  {
-    key: 'homestays-villas',
-    label: 'Homestays & Villas',
-    icon: Building2,
-    status: 'coming-soon',
-    description: 'Private homestays and villas for a more personal kind of stay.',
   },
 ];

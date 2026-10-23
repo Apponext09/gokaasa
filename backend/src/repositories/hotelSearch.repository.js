@@ -191,6 +191,7 @@ export const hotelSearchRepository = {
        ),
        listing AS (
          SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
+                h.distance_km, h.latitude, h.longitude,
                 h.property_type,
                 hb.room_type_id, rt.name AS room_name, rt.room_code, rt.bed_type, rt.room_size_sqm, rt.view,
                 hb.plan_id, hb.plan_code, hb.plan_name, hb.meal_plan, hb.is_refundable,

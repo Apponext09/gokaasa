@@ -83,7 +83,7 @@ export function FilterPanel({ filters, priceBounds, onChange, onClear, disabled 
   ].filter(Boolean).length;
 
   return (
-    <div className="space-y-5" aria-disabled={disabled || undefined}>
+    <div className="customer-filter-panel space-y-5" aria-disabled={disabled || undefined}>
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-[var(--text-strong)]">Filters</h2>
         {activeCount > 0 && (

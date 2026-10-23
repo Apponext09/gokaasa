@@ -693,7 +693,7 @@ export function HotelDetailsPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="pb-28">
+    <div className="customer-hotel-details pb-28">
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-6 sm:px-6 lg:py-8">
 
         {/* 1. Breadcrumb */}

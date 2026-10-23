@@ -28,12 +28,11 @@ import {
   FullPageSpinner,
   homePathFor,
 } from '@/components/shared/index.jsx';
-import { ComingSoonModal } from '@/components/shared/ComingSoonModal.jsx';
-
-import { TRAVEL_PRODUCTS } from '@/config/travelProducts.js';
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
 import { NearbyHotelsSection } from '@/features/home/NearbyHotelsSection.jsx';
-import { HandpickedHotelsSection } from '@/features/home/HandpickedHotelsSection.jsx';
+import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
+import { HotelCard, HotelCardSkeleton } from '@/features/search/components/HotelCard.jsx';
+import { cn } from '@/lib/utils.js';
 import { OfferCard } from '@/features/offers/OfferCard.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
@@ -45,7 +44,7 @@ import {
 } from '@/services/endpoints.js';
 
 import { normalizeError } from '@/services/api.js';
-import { slugifyPlace } from '@/features/search/searchParams.js';
+import { addDays, slugifyPlace, todayIso, toSearchParams } from '@/features/search/searchParams.js';
 
 const HERO_IMAGES = [
   {
@@ -136,17 +135,6 @@ const INDIA_DESTINATIONS = [
   'Bangalore',
   'Hyderabad',
   'Kashmir',
-];
-
-const INSPIRATION = [
-  'Mumbai',
-  'Goa',
-  'Jaipur',
-  'Kashmir',
-  'Bangalore',
-  'Pune',
-  'Hyderabad',
-  'Delhi',
 ];
 
 const STAY_CATEGORIES = [
@@ -313,11 +301,10 @@ function Reveal({
     <div
       ref={ref}
       style={{ transitionDelay: `${delay}ms` }}
-      className={`transform-gpu transition-[opacity,transform] duration-700 ease-out ${
-        visible
+      className={`transform-gpu transition-[opacity,transform] duration-700 ease-out ${visible
           ? 'translate-x-0 translate-y-0 scale-100 opacity-100'
           : `${hiddenTransform[direction] || hiddenTransform.up} opacity-0`
-      } ${className}`}
+        } ${className}`}
     >
       {children}
     </div>
@@ -475,6 +462,182 @@ function NewsletterSection() {
   );
 }
 
+const HOME_SORT_OPTIONS = [
+  { value: 'recommended', label: 'Popularity' },
+  { value: 'price_asc', label: 'Price: Low to High' },
+  { value: 'price_desc', label: 'Price: High to Low' },
+  { value: 'guest_rating', label: 'Customer Ratings' },
+  { value: 'star_rating', label: 'Star Rating' },
+];
+
+function HomeHotelListing() {
+  const [hotels, setHotels] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [filters, setFilters] = useState({});
+  const [sort, setSort] = useState('recommended');
+  const [nameQuery, setNameQuery] = useState('');
+  const [priceBounds, setPriceBounds] = useState(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [listingError, setListingError] = useState(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const today = todayIso();
+  const listingState = {
+    checkIn: addDays(today, 1),
+    checkOut: addDays(today, 2),
+    occupancy: [{ adults: 2, childAges: [] }],
+    filters,
+    sort,
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setStatus('loading');
+    setListingError(null);
+    const params = Object.fromEntries(toSearchParams(listingState));
+    params.limit = 12;
+    discoveryApi
+      .search(params, { signal: controller.signal })
+      .then((result) => {
+        setHotels(result.items ?? []);
+        if (result.priceBounds) setPriceBounds(result.priceBounds);
+        setStatus('ready');
+      })
+      .catch((requestError) => {
+        if (controller.signal.aborted) return;
+        setListingError(normalizeError(requestError).message);
+        setStatus('error');
+      });
+    return () => controller.abort();
+    // listingState is intentionally represented by its URL-backed inputs here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort, filters, retryKey]);
+
+  const filtered = nameQuery.trim()
+    ? hotels.filter((h) => h.name.toLowerCase().includes(nameQuery.toLowerCase()))
+    : hotels;
+
+  const filtersPanel = (
+    <HotelsFilterPanel
+      filters={filters}
+      priceBounds={priceBounds}
+      nameQuery={nameQuery}
+      onNameQueryChange={setNameQuery}
+      onChange={setFilters}
+      onClear={() => { setFilters({}); setNameQuery(''); }}
+    />
+  );
+
+  return (
+    <section className="home-hotel-listing-section" aria-label="Browse Hotels">
+      <div className="home-hotel-listing-inner">
+        {/* Section header */}
+        <div className="home-hl-header">
+          <div>
+            <p className="home-hl-eyebrow">Explore top stays</p>
+            <h2 className="home-hl-title">Browse All Hotels</h2>
+          </div>
+        </div>
+
+        {/* Sort tabs */}
+        <div className="hotels-sort-tabs-bar">
+          <span className="hotels-sort-label">Sort by:</span>
+          <div className="hotels-sort-buttons">
+            {HOME_SORT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={cn('hotels-sort-tab-btn', sort === opt.value && 'active')}
+                onClick={() => setSort(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 2-col grid */}
+        <div className="hotels-page-grid">
+          {/* Sidebar */}
+          <aside className="hotels-filter-sidebar hidden lg:block">
+            {filtersPanel}
+          </aside>
+
+          {/* Cards */}
+          <div className="hotels-results-col">
+            <div className="hotels-results-header">
+              <h3 className="hotels-results-heading">
+                Hotels{' '}
+                {status === 'ready' && (
+                  <span className="hotels-results-count">({filtered.length} Properties Found)</span>
+                )}
+              </h3>
+              <button
+                type="button"
+                className="hotels-mobile-filter-btn inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm lg:hidden"
+                onClick={() => setSheetOpen(true)}
+              >
+                Filters
+              </button>
+            </div>
+
+            {status === 'loading' && (
+              <div className="hotels-cards-stream">
+                {[0, 1, 2, 3].map((i) => <HotelCardSkeleton key={i} />)}
+              </div>
+            )}
+
+            {status === 'error' && (
+              <div className="hotels-no-results-card" role="alert">
+                <h3>Hotels could not be loaded</h3>
+                <p>{listingError}</p>
+                <Button variant="secondary" onClick={() => setRetryKey((key) => key + 1)}>Try Again</Button>
+              </div>
+            )}
+
+            {status === 'ready' && filtered.length > 0 && (
+              <div className="hotels-cards-stream">
+                {filtered.map((hotel) => (
+                  <HotelCard key={hotel.id} hotel={hotel} state={listingState} />
+                ))}
+              </div>
+            )}
+
+            {status === 'ready' && filtered.length === 0 && (
+              <div className="hotels-no-results-card">
+                <h3>No Hotels Match Your Filters</h3>
+                <p>Try clearing some filters to see available stays.</p>
+                <Button variant="secondary" onClick={() => { setFilters({}); setNameQuery(''); }}>
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+
+
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile filter sheet */}
+      {sheetOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+          <button className="absolute inset-0 bg-black/40" aria-label="Close filters" onClick={() => setSheetOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-base font-semibold">Filters</p>
+              <button type="button" className="rounded-full p-1 hover:bg-slate-100" onClick={() => setSheetOpen(false)}>✕</button>
+            </div>
+            {filtersPanel}
+            <div className="sticky bottom-0 -mx-5 mt-5 border-t border-slate-100 bg-white px-5 py-3">
+              <Button className="w-full" onClick={() => setSheetOpen(false)}>Show {filtered.length} hotels</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function HomePage() {
   const { status, user, isStaff } = useAuth();
 
@@ -483,7 +646,6 @@ export function HomePage() {
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
   const [heroIndex, setHeroIndex] = useState(0);
-  const [comingSoonProduct, setComingSoonProduct] = useState(null);
 
   useDocumentMeta({
     title: 'Gokaasa | Discover Your Next Beautiful Stay',
@@ -494,9 +656,7 @@ export function HomePage() {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setHeroIndex(
-        (current) => (current + 1) % HERO_IMAGES.length,
-      );
+      setHeroIndex((current) => (current + 1) % HERO_IMAGES.length);
     }, 6000);
 
     return () => window.clearInterval(interval);
@@ -527,7 +687,7 @@ export function HomePage() {
           setStats(data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     offerApi
       .list()
@@ -536,7 +696,7 @@ export function HomePage() {
           setOffers(items.slice(0, 6));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       cancelled = true;
@@ -559,172 +719,46 @@ export function HomePage() {
   const extraStats = buildStats(stats);
 
   return (
-    <div className="min-h-screen overflow-hidden bg-sky-50 text-[var(--text-body)]">
-      {/* PREMIUM HERO SECTION */}
-      <section className="bg-sky-50 px-3 pb-10 pt-5 sm:px-6 sm:pb-14 sm:pt-8 lg:px-8 lg:pt-10">
-        <div className="relative mx-auto max-w-7xl">
-          <div className="group relative isolate min-h-[520px] overflow-hidden rounded-[28px] bg-slate-950 shadow-[0_25px_80px_rgba(15,23,42,0.18)] sm:min-h-[580px] sm:rounded-[36px] lg:min-h-[620px]">
-            <div className="absolute inset-0 -z-20">
-              {HERO_IMAGES.map((image, index) => (
-                <img
-                  key={image.src}
-                  src={image.src}
-                  alt={index === heroIndex ? image.alt : ''}
-                  aria-hidden={index !== heroIndex}
-                  fetchPriority={index === 0 ? 'high' : 'auto'}
-                  decoding="async"
-                  className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1800ms] ease-in-out ${
-                    index === heroIndex
-                      ? 'scale-105 opacity-100'
-                      : 'scale-100 opacity-0'
-                  }`}
-                />
-              ))}
-            </div>
-
-            <div className="absolute inset-0 -z-10 bg-slate-950/20" />
-            <div className="absolute inset-0 -z-10 bg-gradient-to-b from-slate-950/35 via-slate-950/15 to-slate-950/65" />
-            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-slate-950/30 via-transparent to-slate-950/10" />
-
-            <div className="relative mx-auto flex min-h-[520px] max-w-6xl items-center justify-center px-4 py-16 sm:min-h-[580px] sm:px-8 sm:py-20 lg:min-h-[620px] lg:px-12">
-              <div className="w-full max-w-5xl">
-                <div
-                  key={heroIndex}
-                  className="mb-8 text-center animate-[heroQuote_800ms_ease-out]"
-                >
-                  <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-md">
-                    <Sparkles className="h-4 w-4 text-amber-200" />
-                    Your journey, beautifully planned
-                  </div>
-
-                  <h1 className="mx-auto max-w-4xl font-[var(--font-display)] text-3xl font-semibold leading-tight tracking-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
-                    {HERO_IMAGES[heroIndex].quote}
-                  </h1>
-
-                  <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/90 sm:text-base lg:text-lg">
-                    {HERO_IMAGES[heroIndex].caption}
-                  </p>
-                </div>
-
-                <div
-                  role="tablist"
-                  aria-label="Travel products"
-                  className="mb-4 flex flex-wrap items-center justify-center gap-2"
-                >
-                  {TRAVEL_PRODUCTS.map((product) => {
-                    const Icon = product.icon;
-                    const isActive = product.status === 'active';
-
-                    return (
-                      <button
-                        key={product.key}
-                        type="button"
-                        role="tab"
-                        aria-selected={isActive}
-                        onClick={() => {
-                          if (!isActive) setComingSoonProduct(product);
-                        }}
-                        className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-all duration-300 sm:text-sm ${
-                          isActive
-                            ? 'bg-white text-brand-700 shadow-lg'
-                            : 'bg-white/10 text-white/85 hover:bg-white/20'
-                        }`}
-                      >
-                        <Icon className="h-4 w-4" aria-hidden="true" />
-                        {product.label}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="animate-[heroSearch_900ms_ease-out_150ms_both] rounded-[22px] border border-white/70 bg-white/95 p-2 shadow-[0_25px_80px_rgba(2,6,23,0.35)] backdrop-blur-2xl sm:rounded-[28px] sm:p-3">
-                  <div className="overflow-hidden rounded-[16px] bg-white sm:rounded-[22px]">
-                    <SearchWidget variant="hero" />
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-xs font-medium text-white/90 sm:text-sm">
-                  <span className="inline-flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-emerald-300" />
-                    Secure booking experience
-                  </span>
-
-                  <span className="hidden h-1 w-1 rounded-full bg-white/60 sm:block" />
-
-                  <span className="inline-flex items-center gap-2">
-                    <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
-                    Stays for every journey
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 sm:bottom-7">
-              <div className="flex items-center gap-2 rounded-full border border-white/25 bg-slate-950/30 px-3 py-2 shadow-lg backdrop-blur-lg">
-                {HERO_IMAGES.map((image, index) => (
-                  <button
-                    key={image.src}
-                    type="button"
-                    aria-label={`Show hero image ${index + 1}`}
-                    aria-current={index === heroIndex ? 'true' : undefined}
-                    onClick={() => setHeroIndex(index)}
-                    className={`h-1.5 rounded-full transition-all duration-500 ${
-                      index === heroIndex
-                        ? 'w-8 bg-white'
-                        : 'w-2 bg-white/50 hover:bg-white/85'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
+    <div className="customer-home min-h-screen overflow-hidden text-[var(--text-body)]">
+      {/* Hotel-booking hero adapted from the reference project. */}
+      <section className="customer-booking-hero">
+        <div className="customer-hero-arch">
+          <div className="customer-hero-slides" aria-hidden="true">
+            {HERO_IMAGES.map((image, index) => (
+              <img
+                key={image.src}
+                src={image.src}
+                alt=""
+                fetchPriority={index === 0 ? 'high' : 'auto'}
+                decoding="async"
+                className={`customer-hero-slide ${index === heroIndex ? 'is-active' : ''}`}
+              />
+            ))}
           </div>
 
-          <div className="mx-auto mt-5 grid max-w-5xl grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-            <div className="flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:justify-start">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-brand-700">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
+          <div className="customer-hero-overlay" aria-hidden="true" />
 
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Book with confidence
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  A smoother booking experience
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:justify-start">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <Sparkles className="h-5 w-5" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Discover special stays
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Find your next favourite place
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 rounded-2xl border border-white bg-white/90 px-4 py-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:justify-start">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <Headphones className="h-5 w-5" />
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  Support when needed
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Help for your travel plans
-                </p>
-              </div>
-            </div>
+          <div className="customer-hero-content">
+            <h1>Book Hotels and Homestays</h1>
+            <p>{HERO_IMAGES[heroIndex].caption}</p>
           </div>
+
+          <div className="customer-hero-dots" role="group" aria-label="Choose hero image">
+            {HERO_IMAGES.map((image, index) => (
+              <button
+                key={image.src}
+                type="button"
+                aria-label={`Show background image ${index + 1}`}
+                aria-current={index === heroIndex ? 'true' : undefined}
+                onClick={() => setHeroIndex(index)}
+                className={index === heroIndex ? 'is-active' : ''}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="customer-search-shell">
+          <SearchWidget variant="hero" />
         </div>
       </section>
 
@@ -732,7 +766,7 @@ export function HomePage() {
       {offers && offers.length > 0 && (
         <section
           aria-labelledby="offers-heading"
-          className="mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6 lg:py-16"
+          className="customer-offers-section mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6 lg:py-16"
         >
           <Reveal>
             <SectionHeading
@@ -774,12 +808,7 @@ export function HomePage() {
         </div>
       </Reveal>
 
-      {/* HANDPICKED HOTELS */}
-      <Reveal>
-        <div className="py-5">
-          <HandpickedHotelsSection />
-        </div>
-      </Reveal>
+
 
       {/* INDIA DESTINATIONS */}
       <section
@@ -788,9 +817,9 @@ export function HomePage() {
       >
         <Reveal>
           <SectionHeading
-            eyebrow="Explore closer to home"
+            eyebrow="A little travel inspiration."
             title="Discover India, one stay at a time."
-            subtitle="From energetic cities to serene escapes, find a destination for your next memorable trip."
+            subtitle="Explore guest-favourite destinations, from energetic cities to serene escapes, and find your next memorable stay."
           />
         </Reveal>
 
@@ -800,7 +829,7 @@ export function HomePage() {
               <PremiumImageCard
                 title={name}
                 image={DESTINATION_IMAGES[name]}
-                href={`/hotels/${slugifyPlace(name)}`}
+                href={`/hotels?destination=${slugifyPlace(name)}`}
                 subtitle="Discover destination"
                 aspect="aspect-[4/3]"
                 className="h-full"
@@ -809,6 +838,9 @@ export function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
+      <HomeHotelListing />
 
       {/* FIND YOUR PERFECT STAY */}
       <section
@@ -834,8 +866,8 @@ export function HomePage() {
                   image={STAY_CATEGORY_IMAGES[category.title]}
                   href={
                     categoryDestination
-                      ? `/hotels/${slugifyPlace(categoryDestination)}?propertyTypes=${category.propertyType}`
-                      : '/destinations'
+                      ? `/hotels?destination=${slugifyPlace(categoryDestination)}&propertyTypes=${category.propertyType}`
+                      : '/hotels'
                   }
                   subtitle="Find your stay"
                   aspect="aspect-[4/5]"
@@ -845,40 +877,6 @@ export function HomePage() {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* TRAVEL INSPIRATION */}
-      <section
-        aria-labelledby="inspiration-heading"
-        className="mx-auto max-w-7xl space-y-8 px-4 py-16 sm:px-6 lg:py-20"
-      >
-        <Reveal>
-          <SectionHeading
-            eyebrow="Ideas for your next trip"
-            title="A little travel inspiration."
-            subtitle="Explore guest-favourite destinations and find a new place to fall in love with."
-          />
-        </Reveal>
-
-        <Reveal direction="left">
-          <Carousel aria-label="Travel inspiration">
-            {INSPIRATION.map((name) => (
-              <CarouselItem
-                key={name}
-                className="w-52 sm:w-60 md:w-64"
-              >
-                <PremiumImageCard
-                  title={name}
-                  image={DESTINATION_IMAGES[name]}
-                  href={`/hotels/${slugifyPlace(name)}`}
-                  subtitle="Explore hotels"
-                  aspect="aspect-[3/4]"
-                  className="h-full"
-                />
-              </CarouselItem>
-            ))}
-          </Carousel>
-        </Reveal>
       </section>
 
       {/* WHY CHOOSE GOKAASA */}
@@ -1056,7 +1054,7 @@ export function HomePage() {
               })}
             </dl>
 
-          
+
           </div>
         </section>
       </Reveal>
@@ -1121,11 +1119,6 @@ export function HomePage() {
 
       <NewsletterSection />
 
-      <ComingSoonModal
-        product={comingSoonProduct}
-        open={Boolean(comingSoonProduct)}
-        onClose={() => setComingSoonProduct(null)}
-      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { AdminLayout } from '@/layouts/AdminLayout.jsx';
 import { RequireAuth } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { HomePage } from '@/pages/customer/HomePage.jsx';
+import { HotelsPage } from '@/pages/customer/HotelsPage.jsx';
 import { DestinationsPage } from '@/pages/customer/DestinationsPage.jsx';
 import { OffersPage } from '@/pages/customer/OffersPage.jsx';
 import { WishlistPage } from '@/pages/customer/WishlistPage.jsx';
@@ -77,6 +78,7 @@ export function App() {
       <Routes>
         <Route element={<CustomerLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="hotels" element={<HotelsPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />

@@ -45,7 +45,7 @@ export function OfferCard({ offer, compact = false, showUse = true }) {
   };
 
   return (
-    <article className={`flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 shadow-sm transition-shadow hover:shadow-md ${compact ? 'w-72 shrink-0' : ''}`}>
+    <article className={`customer-offer-card flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 shadow-sm transition-shadow hover:shadow-md ${compact ? 'w-72 shrink-0' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <Badge tone="premium" className="text-sm">{discountLabel(offer)}</Badge>
         {endingSoon && <Badge tone="warning">{daysLeft <= 0 ? 'Ending soon' : `Ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}</Badge>}

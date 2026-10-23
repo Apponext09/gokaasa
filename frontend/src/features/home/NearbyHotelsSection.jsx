@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, MapPin, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Compass, MapPin, Navigation, RotateCcw, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Alert } from '@/components/ui/surfaces.jsx';
 import { Carousel, CarouselItem } from '@/components/ui/carousel.jsx';
@@ -48,11 +48,83 @@ export function NearbyHotelsSection() {
       </div>
 
       {geoStatus === 'idle' && (
-        <div className="flex flex-col items-start gap-3 rounded-[var(--radius-card)] border border-dashed border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 p-8">
-          <p className="text-sm text-[var(--text-body)]">Allow location access to see hotels close to where you are right now.</p>
-          <Button onClick={request}>
-            <MapPin className="h-4 w-4" aria-hidden="true" /> Find Hotels Near Me
-          </Button>
+        <div className="nearby-idle-card">
+          {/* Left: text content */}
+          <div className="nearby-idle-content">
+            <div className="nearby-idle-eyebrow">
+              <span className="nearby-idle-eyebrow-ping" />
+              <Navigation className="h-3 w-3 text-sky-400" aria-hidden="true" />
+              <span>RADIUS DISCOVERY &bull; {RADIUS_KM} KM</span>
+            </div>
+
+            <h3 className="nearby-idle-heading">Find Hotels Around You</h3>
+            <p className="nearby-idle-desc">
+              Allow one-time location access to instantly view verified stays near you — live rates, real-time availability, no sign-in required.
+            </p>
+
+            <div className="nearby-idle-perks">
+              <span className="nearby-idle-perk">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+                Instant results
+              </span>
+              <span className="nearby-idle-perk">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+                Live prices
+              </span>
+              <span className="nearby-idle-perk">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+                Free cancellation prioritized
+              </span>
+            </div>
+
+            <div className="nearby-idle-actions">
+              <Button onClick={request} size="sm" className="nearby-idle-btn">
+                <Navigation className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+                Find Hotels Near Me
+              </Button>
+              <div className="nearby-idle-privacy">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+                <span>Your location is private & never stored.</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: modern high-tech radar map */}
+          <div className="nearby-idle-map" aria-hidden="true">
+            {/* Crosshair coordinate lines */}
+            <div className="nearby-idle-crosshair nearby-idle-crosshair--h" />
+            <div className="nearby-idle-crosshair nearby-idle-crosshair--v" />
+
+            {/* Concentric radar rings */}
+            <div className="nearby-idle-map-circle nearby-idle-map-circle--outer" />
+            <div className="nearby-idle-map-circle nearby-idle-map-circle--mid" />
+            <div className="nearby-idle-map-circle nearby-idle-map-circle--inner" />
+
+            {/* Rotating radar scanner sweep */}
+            <div className="nearby-idle-radar-sweep" />
+
+            {/* Center Beacon */}
+            <div className="nearby-idle-center-beacon">
+              <div className="nearby-idle-beacon-ping" />
+              <div className="nearby-idle-beacon-core">
+                <Navigation className="h-3.5 w-3.5 text-sky-400 fill-sky-400/40" />
+              </div>
+            </div>
+
+            {/* Discovery node points with subtle distance indicators */}
+            <div className="nearby-idle-node" style={{ top: '22%', left: '16%' }}>
+              <span className="nearby-idle-node-dot" />
+            </div>
+            <div className="nearby-idle-node" style={{ top: '68%', left: '20%' }}>
+              <span className="nearby-idle-node-dot nearby-idle-node-dot--alt" />
+            </div>
+            <div className="nearby-idle-node" style={{ top: '26%', right: '14%' }}>
+              <span className="nearby-idle-node-dot" />
+            </div>
+            <div className="nearby-idle-node" style={{ top: '72%', right: '22%' }}>
+              <span className="nearby-idle-node-dot" />
+            </div>
+          </div>
         </div>
       )}
 

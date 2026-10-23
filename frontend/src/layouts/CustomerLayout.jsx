@@ -14,17 +14,20 @@ import {
   ShieldCheck,
   Headphones,
   Sparkles,
+  House,
+  Hotel,
+  Tag,
+  Info,
+  Mail,
 } from 'lucide-react';
 
 import { Logo } from '@/components/shared/index.jsx';
 import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
-import { ComingSoonModal } from '@/components/shared/ComingSoonModal.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
 import { SupportLauncher } from '@/features/support/SupportLauncher.jsx';
-import { TRAVEL_PRODUCTS } from '@/config/travelProducts.js';
 import { cn } from '@/lib/utils.js';
 
 /* =========================================================
@@ -129,103 +132,107 @@ function SocialButton({ label, children }) {
 }
 
 /* =========================================================
-   PRODUCT NAV LINKS
-   Hotels is the only fully functional product; every other
-   entry opens ComingSoonModal instead of navigating.
+   CUSTOMER NAV LINKS
 ========================================================= */
 
-function ProductNavLinks({ className, onNavigate, onSelectComingSoon }) {
-  const location = useLocation();
+const CUSTOMER_NAV_ITEMS = [
+  {
+    label: 'Home',
+    to: '/',
+    icon: House,
+    isActive: (pathname) => pathname === '/',
+  },
+  {
+    label: 'Hotels',
+    to: '/hotels',
+    icon: Hotel,
+    isActive: (pathname) =>
+      pathname === '/hotels' || pathname.startsWith('/hotels/'),
+  },
+  {
+    label: 'Top Destinations',
+    to: '/destinations',
+    icon: MapPin,
+    isActive: (pathname) => pathname.startsWith('/destinations'),
+  },
+  {
+    label: 'Offers',
+    to: '/offers',
+    icon: Tag,
+    isActive: (pathname) => pathname.startsWith('/offers'),
+  },
+  {
+    label: 'About Us',
+    to: '/about',
+    icon: Info,
+    isActive: (pathname) => pathname.startsWith('/about'),
+  },
+  {
+    label: 'Contact Us',
+    to: '/contact',
+    icon: Mail,
+    isActive: (pathname) => pathname.startsWith('/contact'),
+  },
+];
 
-  const isHotelsActive =
-    location.pathname === '/' ||
-    location.pathname.startsWith('/hotels') ||
-    location.pathname.startsWith('/destinations');
+function ProductNavLinks({ className, onNavigate }) {
+  const location = useLocation();
 
   return (
     <>
-      {TRAVEL_PRODUCTS.map((product) => {
-        const Icon = product.icon;
-
-        if (product.status === 'active') {
-          return (
-            <Link
-              key={product.key}
-              to={product.to}
-              onClick={onNavigate}
-              className={cn(
-                className,
-                `
-                  relative
-                  flex
-                  items-center
-                  gap-1.5
-                  transition-all
-                  duration-300
-                  hover:text-brand-600
-                `,
-                isHotelsActive
-                  ? 'text-brand-700'
-                  : 'text-[var(--text-body)]',
-              )}
-            >
-              <Icon
-                className="h-4 w-4"
-                aria-hidden="true"
-              />
-              {product.label}
-
-              <span
-                className={cn(
-                  `
-                    absolute
-                    -bottom-[7px]
-                    left-0
-                    h-[2px]
-                    rounded-full
-                    bg-gradient-to-r
-                    from-brand-600
-                    to-[#E7BD62]
-                    transition-all
-                    duration-300
-                  `,
-                  isHotelsActive
-                    ? 'w-full opacity-100'
-                    : 'w-0 opacity-0',
-                )}
-              />
-            </Link>
-          );
-        }
+      {CUSTOMER_NAV_ITEMS.map((item) => {
+        const active = item.isActive(location.pathname);
+        const Icon = item.icon;
 
         return (
-          <button
-            key={product.key}
-            type="button"
-            onClick={() => {
-              onNavigate?.();
-              onSelectComingSoon(product);
-            }}
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate}
+            aria-current={active ? 'page' : undefined}
             className={cn(
               className,
               `
+                customer-nav-link
+                relative
                 flex
                 items-center
-                gap-1.5
-                text-left
-                text-[var(--text-body)]
                 transition-all
                 duration-300
                 hover:text-brand-600
               `,
+              active
+                ? 'text-brand-700'
+                : 'text-[var(--text-body)]',
             )}
           >
             <Icon
-              className="h-4 w-4"
+              className="customer-nav-icon h-4 w-4"
+              strokeWidth={active ? 2.2 : 1.8}
               aria-hidden="true"
             />
-            {product.label}
-          </button>
+            {item.label}
+            <span
+              className={cn(
+                `
+                  customer-nav-active-bar
+                  absolute
+                  -bottom-[7px]
+                  left-0
+                  h-[2px]
+                  rounded-full
+                  bg-gradient-to-r
+                  from-brand-600
+                  to-[#E7BD62]
+                  transition-all
+                  duration-300
+                `,
+                active
+                  ? 'w-full opacity-100'
+                  : 'w-0 opacity-0',
+              )}
+            />
+          </Link>
         );
       })}
     </>
@@ -307,7 +314,7 @@ function useBodyScrollLock(locked) {
    MOBILE DRAWER
 ========================================================= */
 
-function MobileDrawer({ open, onClose, onSelectComingSoon }) {
+function MobileDrawer({ open, onClose }) {
   useBodyScrollLock(open);
 
   const {
@@ -328,7 +335,7 @@ function MobileDrawer({ open, onClose, onSelectComingSoon }) {
           fixed
           inset-0
           z-50
-          md:hidden
+          xl:hidden
           transition-opacity
           duration-300
         `,
@@ -491,7 +498,7 @@ function MobileDrawer({ open, onClose, onSelectComingSoon }) {
             Explore
           </p>
 
-          <nav className="flex flex-col gap-1">
+          <nav className="customer-drawer-nav flex flex-col gap-1">
             <ProductNavLinks
               className="
                 rounded-xl
@@ -501,7 +508,6 @@ function MobileDrawer({ open, onClose, onSelectComingSoon }) {
                 font-medium
               "
               onNavigate={onClose}
-              onSelectComingSoon={onSelectComingSoon}
             />
           </nav>
         </div>
@@ -839,7 +845,7 @@ function Footer() {
   `;
 
   return (
-    <footer className="bg-[#0B1422] text-white">
+    <footer className="customer-footer bg-[#0B1422] text-white">
       {/* =====================================================
           PREMIUM CTA
       ===================================================== */}
@@ -861,7 +867,7 @@ function Footer() {
             lg:py-14
           "
         >
-          <div className="max-w-2xl">
+          <div className="min-w-0 max-w-2xl">
             <div className="mb-3 flex items-center gap-2">
               <Sparkles
                 size={16}
@@ -899,6 +905,7 @@ function Footer() {
                 max-w-xl
                 text-sm
                 leading-7
+                break-words
                 text-[#CBD5E1]
               "
             >
@@ -1334,7 +1341,6 @@ export function CustomerLayout() {
   const { isAuthenticated, status } = useAuth();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [comingSoonProduct, setComingSoonProduct] = useState(null);
 
   const location = useLocation();
 
@@ -1347,6 +1353,7 @@ export function CustomerLayout() {
   return (
     <div
       className="
+        customer-ui
         assistant-dock-shift
         flex
         min-h-screen
@@ -1360,6 +1367,7 @@ export function CustomerLayout() {
 
       <header
         className="
+          customer-header
           sticky
           top-0
           z-30
@@ -1372,6 +1380,7 @@ export function CustomerLayout() {
       >
         <div
           className="
+            customer-header-inner
             mx-auto
             flex
             h-[72px]
@@ -1385,82 +1394,64 @@ export function CustomerLayout() {
         >
           {/* Logo + Desktop Navigation */}
 
-          <div className="flex min-w-0 items-center gap-8">
+          <div className="customer-header-primary flex min-w-0 items-center gap-8">
             <Logo />
 
             <nav
               aria-label="Main"
               className="
+                customer-product-nav
                 hidden
                 items-center
                 gap-7
-                md:flex
+                xl:flex
               "
             >
-              <ProductNavLinks
-                className="text-sm font-medium"
-                onSelectComingSoon={setComingSoonProduct}
-              />
+              <ProductNavLinks className="text-sm font-medium" />
             </nav>
           </div>
 
           {/* Right Actions */}
 
-          <div className="flex shrink-0 items-center gap-1.5">
-            {/* Wishlist */}
+          <div className="customer-header-actions flex shrink-0 items-center gap-2">
 
-            {isAuthenticated && (
-              <Link
-                to="/wishlist"
-                aria-label="Wishlist"
-                title="Wishlist"
-                className="
-                  hidden
-                  h-10
-                  w-10
-                  items-center
-                  justify-center
-                  rounded-full
-                  border
-                  border-transparent
-                  text-[var(--text-body)]
-                  transition-all
-                  duration-300
-                  hover:-translate-y-0.5
-                  hover:border-[var(--border-subtle)]
-                  hover:bg-[var(--surface-muted)]
-                  hover:text-brand-600
-                  md:inline-flex
-                "
-              >
-                <Heart
-                  className="h-[18px] w-[18px]"
-                  strokeWidth={1.8}
-                  aria-hidden="true"
-                />
-              </Link>
-            )}
-
-            {/* My Trips */}
-
+            {/* === My Trips (Manage Booking) — reference style === */}
             {isAuthenticated && (
               <Link
                 to="/my-trips"
                 className="
+                  go-nav-my-trips-btn
                   hidden
-                  rounded-full
-                  px-3
-                  py-2
-                  text-sm
-                  font-medium
-                  text-[var(--text-body)]
-                  transition-colors
-                  hover:bg-[var(--surface-muted)]
-                  hover:text-brand-600
-                  md:inline-flex
+                  xl:inline-flex
                 "
+                title="Manage Booking & Trips"
               >
-                My Trips
+                {/* Suitcase icon */}
+                <svg className="go-trips-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                  <line x1="12" y1="12" x2="12" y2="16" />
+                  <line x1="10" y1="14" x2="14" y2="14" />
+                </svg>
+                <div className="go-trips-text">
+                  <span className="go-trips-sub">Manage Booking</span>
+                  <strong className="go-trips-main">My Trips</strong>
+                </div>
+              </Link>
+            )}
+
+            {/* === Wishlist heart button — reference style === */}
+            {isAuthenticated && (
+              <Link
+                to="/wishlist"
+                aria-label="Saved Hotels / Wishlist"
+                title="Saved Hotels"
+                className="go-nav-wishlist-btn hidden xl:inline-flex"
+              >
+                <Heart
+                  className="go-nav-heart-icon"
+                  aria-hidden="true"
+                />
               </Link>
             )}
 
@@ -1489,7 +1480,6 @@ export function CustomerLayout() {
               <Link
                 to="/wishlist"
                 aria-label="Wishlist"
-                title="Wishlist"
                 className="
                   inline-flex
                   h-10
@@ -1501,7 +1491,7 @@ export function CustomerLayout() {
                   transition-all
                   hover:bg-[var(--surface-muted)]
                   hover:text-brand-600
-                  md:hidden
+                  xl:hidden
                 "
               >
                 <Heart
@@ -1546,7 +1536,7 @@ export function CustomerLayout() {
                 duration-300
                 hover:bg-[var(--surface-muted)]
                 hover:text-brand-600
-                md:hidden
+                xl:hidden
               "
             >
               {drawerOpen ? (
@@ -1570,14 +1560,13 @@ export function CustomerLayout() {
       <MobileDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        onSelectComingSoon={setComingSoonProduct}
       />
 
       {/* Main */}
 
       <main
         id="main"
-        className="flex-1"
+        className="customer-main flex-1"
       >
         <Outlet />
       </main>
@@ -1585,13 +1574,6 @@ export function CustomerLayout() {
       {/* Footer */}
 
       <Footer />
-
-      {/* Coming Soon modal for unsupported travel products (Flights, Trains, Buses, Cabs, Holiday Packages, Homestays & Villas) */}
-      <ComingSoonModal
-        product={comingSoonProduct}
-        open={Boolean(comingSoonProduct)}
-        onClose={() => setComingSoonProduct(null)}
-      />
 
       {/* Floating support launcher (WhatsApp / Booking Assistant) -- customer-facing pages only */}
       <SupportLauncher />

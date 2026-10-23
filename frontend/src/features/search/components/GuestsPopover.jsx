@@ -28,7 +28,7 @@ function Stepper({ label, hint, value, min, max, onChange, id }) {
  * Rooms and guests. Every room has its own adults and children, and each child has an age, because hotels
  * price and allocate by occupancy. The limits here match the server, so a valid form is always a valid search.
  */
-export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'guests', bare = false }) {
+export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'guests', bare = false, stayNights = 0 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -42,6 +42,8 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
   }, [open]);
 
   const updateRoom = (index, next) => onChange(rooms.map((room, i) => (i === index ? { ...room, ...next } : room)));
+  const guestCount = rooms.reduce((total, room) => total + room.adults + room.childAges.length, 0);
+  const bareSummary = `${guestCount} ${guestCount === 1 ? 'Adult' : 'Adults'} | ${rooms.length} ${rooms.length === 1 ? 'Room' : 'Rooms'}`;
 
   const setChildren = (index, count) => {
     const current = rooms[index].childAges;
@@ -52,7 +54,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className={cn('relative', bare && 'customer-guests-field')}>
       <button
         type="button"
         id={`${idPrefix}-trigger`}
@@ -61,12 +63,18 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left focus-visible:outline-2 focus-visible:outline-brand-500',
+          bare && 'customer-guests-control',
           !bare && 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)]',
         )}
       >
         <span className="flex min-w-0 flex-col">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Rooms &amp; guests</span>
-          <span className="truncate text-sm font-medium text-[var(--text-strong)]">{summarizeOccupancy(rooms)}</span>
+          <span className="customer-guests-value truncate text-sm font-medium text-[var(--text-strong)]">{bare ? bareSummary : summarizeOccupancy(rooms)}</span>
+          {bare && stayNights > 0 && (
+            <span className="text-xs text-[var(--text-muted)]">
+              {stayNights} Night{stayNights === 1 ? '' : 's'} Stay
+            </span>
+          )}
         </span>
         <ChevronDown className={cn('h-4 w-4 shrink-0 transition-transform', open && 'rotate-180')} />
       </button>
