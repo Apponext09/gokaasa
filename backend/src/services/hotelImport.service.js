@@ -43,6 +43,11 @@ export function setImportQueue(instance) {
   queue = instance;
 }
 
+/** Test-only accessor: lets teardown drain/stop whichever queue instance is currently active. */
+export function getImportQueue() {
+  return queue;
+}
+
 async function uniqueSlug(client, base) {
   let candidate = base || 'hotel';
   let suffix = 2;

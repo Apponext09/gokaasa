@@ -15,6 +15,9 @@ import {
   hotelIdFromRatePlan,
   hotelIdFromBlock,
 } from '../middleware/hotelAccess.js';
+import { requirePartnerApproved } from '../middleware/partnerAccess.js';
+import { partnerReviewController } from '../controllers/partnerReview.controller.js';
+import { partnerApplicationListQuery, partnerDecisionSchema, partnerDocumentParam, partnerUserIdParam } from '../validators/partner.validator.js';
 import {
   adminHotelListQuery,
   hotelAmenitiesSchema,
@@ -79,6 +82,18 @@ import {
   hotelPerformanceQuery,
 } from '../validators/adminBooking.validator.js';
 import { adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
+import { commissionConfigController } from '../controllers/commissionConfig.controller.js';
+import { commissionRateSchema } from '../validators/commissionConfig.validator.js';
+import { ledgerController } from '../controllers/ledger.controller.js';
+import { earningsBookingParam, earningsSummaryQuery, ledgerEntryListQuery } from '../validators/ledger.validator.js';
+import { settlementController } from '../controllers/settlement.controller.js';
+import {
+  settlementCreateSchema,
+  settlementIdParam,
+  settlementListQuery,
+  settlementMarkPaidSchema,
+  settlementReverseSchema,
+} from '../validators/settlement.validator.js';
 
 /**
  * Everything under /api/admin requires an authenticated staff member. Individual actions narrow this
@@ -86,6 +101,12 @@ import { adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserS
  * HOTEL_MANAGER is additionally scoped to hotels it is assigned to via `requireHotelAccess` below
  * (ADMIN always bypasses that check). A hotel a manager cannot access looks exactly like one that does
  * not exist — the same pattern already used for booking/payment ownership.
+ *
+ * HOTEL_OWNER (a self-service partner, see partner.routes.js) reuses this exact same surface once
+ * approved: `requirePartnerApproved` blocks every route below for an owner whose partner_profiles
+ * status isn't APPROVED yet (a no-op for ADMIN/HOTEL_MANAGER), then every existing scoping check
+ * (hotel_managers, dashboardService.managerScopeOf, ...) applies to them unchanged, since none of those
+ * checks are written as role-specific -- they already key off "ADMIN vs not-ADMIN, scoped by actor.id".
  */
 export const adminRouter = Router();
 
@@ -95,7 +116,7 @@ export const adminRouter = Router();
 // further down ('/users/stream-ticket'). It must stay above `adminRouter.use(staff)`.
 adminRouter.get('/users/stream', adminUserController.stream);
 
-const staff = [authenticate, authorize('ADMIN', 'HOTEL_MANAGER')];
+const staff = [authenticate, authorize('ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER'), requirePartnerApproved];
 adminRouter.use(staff);
 
 adminRouter.get('/dashboard/summary', hotelController.dashboard);
@@ -106,6 +127,50 @@ adminRouter.get('/search', validate({ query: adminSearchQuery }), adminSearchCon
 
 adminRouter.get('/settings', settingsController.get);
 adminRouter.patch('/settings', validate({ body: settingsUpdateSchema }), authorize('ADMIN'), settingsController.update);
+
+// Commission configuration. Global (hotel_id null) and per-hotel overrides. A hotel's own effective rate
+// is readable by that hotel's own manager/owner (requireHotelAccess, below); only ADMIN may add a new
+// rate row anywhere -- an admin-level pricing lever, same policy as /coupons and /settings' PATCH.
+adminRouter.get('/commission-config', commissionConfigController.getGlobal);
+adminRouter.put('/commission-config', validate({ body: commissionRateSchema }), authorize('ADMIN'), commissionConfigController.setGlobal);
+adminRouter.get(
+  '/hotels/:id/commission',
+  validate({ params: idParam }),
+  requireHotelAccess(hotelIdFromParam),
+  commissionConfigController.getForHotel,
+);
+adminRouter.put(
+  '/hotels/:id/commission',
+  validate({ params: idParam, body: commissionRateSchema }),
+  authorize('ADMIN'),
+  commissionConfigController.setForHotel,
+);
+
+// Partner earnings / ledger. HOTEL_MANAGER/HOTEL_OWNER are scoped to their own hotels exactly like
+// /bookings, /payments, /refunds below; ADMIN sees any hotel, or everything via no ?hotelId= at all.
+adminRouter.get('/earnings/summary', validate({ query: earningsSummaryQuery }), ledgerController.summary);
+adminRouter.get('/earnings/ledger', validate({ query: ledgerEntryListQuery }), ledgerController.entries);
+adminRouter.get('/earnings/bookings/:bookingId', validate({ params: earningsBookingParam }), ledgerController.bookingDetail);
+
+// Settlements. Creating/approving/paying/reversing a batch is a financial-operations action -- ADMIN
+// only, same policy as /customers status changes and /users. Listing/detail stay staff-visible so a
+// HOTEL_OWNER/HOTEL_MANAGER can see their own hotel's settlement history (scoped in the service).
+adminRouter.get('/settlements', validate({ query: settlementListQuery }), settlementController.list);
+adminRouter.get('/settlements/:id', validate({ params: settlementIdParam }), settlementController.detail);
+adminRouter.post('/settlements', validate({ body: settlementCreateSchema }), authorize('ADMIN'), settlementController.create);
+adminRouter.post('/settlements/:id/approve', validate({ params: settlementIdParam }), authorize('ADMIN'), settlementController.approve);
+adminRouter.post(
+  '/settlements/:id/mark-paid',
+  validate({ params: settlementIdParam, body: settlementMarkPaidSchema }),
+  authorize('ADMIN'),
+  settlementController.markPaid,
+);
+adminRouter.post(
+  '/settlements/:id/reverse',
+  validate({ params: settlementIdParam, body: settlementReverseSchema }),
+  authorize('ADMIN'),
+  settlementController.reverse,
+);
 
 adminRouter.get('/hotels', validate({ query: adminHotelListQuery }), hotelController.listAdmin);
 adminRouter.get('/exports/hotels', validate({ query: adminHotelListQuery }), hotelController.exportHotelsCsv);
@@ -427,3 +492,21 @@ adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), authorize('AD
 adminRouter.get('/reviews', validate({ query: adminReviewListQuery }), reviewController.listForModeration);
 adminRouter.get('/exports/reviews', validate({ query: adminReviewListQuery }), reviewController.exportReviewsCsv);
 adminRouter.post('/reviews/:id/moderate', validate({ params: reviewIdParam, body: moderateSchema }), authorize('ADMIN'), reviewController.moderate);
+
+// Partner (HOTEL_OWNER) application review queue. ADMIN only -- approving a partner grants them the
+// same hotel-management access as a HOTEL_MANAGER, so this is an admin-level action like /settings.
+adminRouter.get('/partners', validate({ query: partnerApplicationListQuery }), authorize('ADMIN'), partnerReviewController.list);
+adminRouter.get('/partners/:userId', validate({ params: partnerUserIdParam }), authorize('ADMIN'), partnerReviewController.detail);
+adminRouter.post('/partners/:userId/approve', validate({ params: partnerUserIdParam }), authorize('ADMIN'), partnerReviewController.approve);
+adminRouter.post(
+  '/partners/:userId/reject',
+  validate({ params: partnerUserIdParam, body: partnerDecisionSchema }),
+  authorize('ADMIN'),
+  partnerReviewController.reject,
+);
+adminRouter.get(
+  '/partners/:userId/documents/:docId/file',
+  validate({ params: partnerDocumentParam }),
+  authorize('ADMIN'),
+  partnerReviewController.getDocumentFile,
+);

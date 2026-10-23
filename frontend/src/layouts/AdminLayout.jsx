@@ -40,6 +40,7 @@ const NAV = [
       { to: '/admin/hotels', label: 'All Hotels', icon: Building2, end: true },
       { to: '/admin/hotels/onboarding', label: 'Add Hotel', icon: Search },
       { to: '/admin/managers', label: 'Managers', icon: UserCog },
+      { to: '/admin/partners', label: 'Partner Applications', icon: UserCog, adminOnly: true },
     ],
   },
   {

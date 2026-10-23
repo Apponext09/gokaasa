@@ -251,13 +251,21 @@ describe('recovery without a webhook: re-verification is the only path to CONFIR
     const order = await request(app).post('/api/payments/create-order').set(bearer(guestBToken)).send({ holdId: hold.id });
     assert.equal(order.status, 201);
 
-    for (const signature of ['', 'not-a-real-signature']) {
-      const res = await request(app).post('/api/payments/verify').set(bearer(guestBToken)).send({
-        razorpay_order_id: order.body.orderId, razorpay_payment_id: 'pay_unverified', razorpay_signature: signature,
-      });
-      assert.equal(res.status, 400);
-      assert.equal(res.body.error.details.code, 'PAYMENT_SIGNATURE_INVALID');
-    }
+    // An empty signature never reaches signature verification at all -- verifySchema's min(10) rejects
+    // its shape outright (422, the same validation-failure status every other malformed request gets
+    // in this app), before the request-level check this test is really about even runs.
+    const empty = await request(app).post('/api/payments/verify').set(bearer(guestBToken)).send({
+      razorpay_order_id: order.body.orderId, razorpay_payment_id: 'pay_unverified', razorpay_signature: '',
+    });
+    assert.equal(empty.status, 422);
+
+    // A signature that is shaped like a real one (long enough to pass validation) but wrong must be
+    // rejected by the actual HMAC check, not by validation -- this is the case the test name is about.
+    const wrong = await request(app).post('/api/payments/verify').set(bearer(guestBToken)).send({
+      razorpay_order_id: order.body.orderId, razorpay_payment_id: 'pay_unverified', razorpay_signature: 'not-a-real-signature',
+    });
+    assert.equal(wrong.status, 400);
+    assert.equal(wrong.body.error.details.code, 'PAYMENT_SIGNATURE_INVALID');
     assert.equal(await bookingStatus(order.body.bookingId), 'PAYMENT_PENDING', 'never confirmed without a valid signature, no matter how many times it is retried');
   });
 });

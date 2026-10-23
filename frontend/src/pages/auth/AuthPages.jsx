@@ -531,6 +531,13 @@ export function LoginPage() {
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           )}
         </Button>
+
+        <p className="text-center text-sm text-[var(--text-muted)]">
+          Own a hotel?{' '}
+          <Link to="/partner/register" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
+            List your property
+          </Link>
+        </p>
       </form>
     </AuthShell>
   );

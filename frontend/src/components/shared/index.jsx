@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/form-controls.jsx';
 import { cn } from '@/lib/utils.js';
 import logo from '@/assets/logo.png';
 
-import { ADMIN_ROLES, useAuth } from '@/features/auth/AuthContext.jsx';
+import { isApprovedStaff, useAuth } from '@/features/auth/AuthContext.jsx';
 
 export function Logo({ className, to = '/' }) {
   return (
@@ -51,7 +51,9 @@ export function RequireAuth({ children, staff = false }) {
 }
 
 export function homePathFor(user) {
-  return user?.roles?.some((role) => ADMIN_ROLES.includes(role)) ? '/admin/dashboard' : '/';
+  if (isApprovedStaff(user)) return '/admin/dashboard';
+  if (user?.roles?.includes('HOTEL_OWNER')) return '/partner/status';
+  return '/';
 }
 
 /** A "back to parent" link used above sub-pages (room editor, import review, etc). */

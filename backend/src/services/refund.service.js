@@ -6,6 +6,7 @@ import { BOOKING_STATUS, assertTransition } from '../domain/bookingStatus.js';
 import { REFUND_STATUS, canTransitionRefund } from '../domain/refundStatus.js';
 import { PAYMENT_STATUS } from '../domain/paymentStatus.js';
 import { auditService } from './audit.service.js';
+import { commissionService } from './commission.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { createLogger } from '../utils/logger.js';
 
@@ -59,6 +60,10 @@ export async function processRefund(refundId) {
       await bookingRepository.setBookingStatus(client, booking.id, BOOKING_STATUS.REFUNDED, {
         refunded_minor: Number(booking.refunded_minor) + Number(refund.amount_minor),
       });
+      // Phase 2: reverses the booking's commission/earnings proportionally. No-ops if this booking never
+      // earned a commission (e.g. the "payment arrived after hold expired" refund path, which never
+      // reaches CONFIRMED) -- see commission.service.js.
+      await commissionService.reverseForRefund(client, refund, booking);
     }
     await paymentRepository.updatePayment(client, refund.payment_id, PAYMENT_STATUS.REFUNDED);
     await auditService.record(client, {

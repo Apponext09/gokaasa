@@ -4,7 +4,7 @@ import { pool } from '../../src/db/pool.js';
 import { runMigrations } from '../../src/db/migrate.js';
 import { seedAmenities } from '../../seeds/001_amenities.js';
 import { ImportQueue } from '../../src/jobs/importQueue.js';
-import { hotelImportService, setImportQueue } from '../../src/services/hotelImport.service.js';
+import { getImportQueue, hotelImportService, setImportQueue } from '../../src/services/hotelImport.service.js';
 import { createApp } from '../../src/app.js';
 
 const TABLES_TO_CLEAR = [
@@ -20,6 +20,13 @@ const TABLES_TO_CLEAR = [
   'reviews',
   'wishlists',
   'coupon_usages',
+  // Phase 2 ledger tables -- TRUNCATE ... CASCADE below would reach these transitively anyway (they FK
+  // into bookings/hotels/refunds/payments, all listed), but listed explicitly for clarity.
+  'settlement_line_items',
+  'partner_ledger_entries',
+  'settlements',
+  'booking_commissions',
+  'commission_configs',
   'refunds',
   'payments',
   'booking_guests',
@@ -66,6 +73,11 @@ export async function prepareTestDatabase() {
   try {
     await client.query('BEGIN');
     await seedAmenities(client);
+    // commission_configs is truncated above like any other table, but the platform MUST always have a
+    // global default rate (commission.service.js relies on one always existing) -- migration 022 seeds
+    // this once at migrate time, but the truncate above wipes it on every test run, so it's reseeded here
+    // the same way seedAmenities() re-seeds amenities.
+    await client.query(`INSERT INTO commission_configs (hotel_id, rate_percent, reason) VALUES (NULL, 15.00, 'Initial platform default')`);
     await client.query('COMMIT');
   } finally {
     client.release();
@@ -87,7 +99,16 @@ export async function waitForJob(request, token, jobId, timeoutMs = 10_000) {
   throw new Error(`Import job ${jobId} did not finish within ${timeoutMs}ms`);
 }
 
+/**
+ * Stops accepting new import work and waits for whatever is already running to finish BEFORE ending
+ * the shared pool. Without this, a job enqueued by a test (import jobs run detached, fire-and-forget,
+ * via ImportQueue.pump()) can still be mid-handler -- including trailing work after its DB status is
+ * already terminal -- when this same file's own teardown ends the pool, producing "Cannot use a pool
+ * after calling end on the pool" in whatever query the job happens to be running at that moment.
+ */
 export async function closeTestDatabase() {
+  const queue = getImportQueue();
+  if (queue) await queue.stop();
   await pool.end();
 }
 

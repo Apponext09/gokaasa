@@ -20,6 +20,10 @@ import { BookingConfirmationPage } from '@/pages/customer/booking/BookingConfirm
 import { MyTripsPage } from '@/pages/customer/booking/MyTripsPage.jsx';
 import { BookingDetailsPage } from '@/pages/customer/booking/BookingDetailsPage.jsx';
 import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/auth/AuthPages.jsx';
+import { PartnerRegisterPage } from '@/pages/partner/PartnerRegisterPage.jsx';
+import { PartnerOtpPage } from '@/pages/partner/PartnerOtpPage.jsx';
+import { PartnerDocumentsPage } from '@/pages/partner/PartnerDocumentsPage.jsx';
+import { ApplicationStatusPage } from '@/pages/partner/ApplicationStatusPage.jsx';
 import { PresenceTracker } from '@/features/presence/PresenceTracker.jsx';
 import { lazy } from 'react';
 
@@ -50,6 +54,8 @@ const AdminOffersPage = lazy(() => import('@/pages/admin/OffersPage.jsx').then((
 const OfferFormPage = lazy(() => import('@/pages/admin/OfferFormPage.jsx').then((m) => ({ default: m.OfferFormPage })));
 const UsersPage = lazy(() => import('@/pages/admin/UsersPage.jsx').then((m) => ({ default: m.UsersPage })));
 const UserDetailPage = lazy(() => import('@/pages/admin/UserDetailPage.jsx').then((m) => ({ default: m.UserDetailPage })));
+const PartnerApplicationsPage = lazy(() => import('@/pages/admin/PartnerApplicationsPage.jsx').then((m) => ({ default: m.PartnerApplicationsPage })));
+const PartnerApplicationDetailPage = lazy(() => import('@/pages/admin/PartnerApplicationDetailPage.jsx').then((m) => ({ default: m.PartnerApplicationDetailPage })));
 
 function NotFoundPage() {
   return (
@@ -74,6 +80,8 @@ export function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="partner/register" element={<PartnerRegisterPage />} />
+        <Route path="partner/verify-otp" element={<PartnerOtpPage />} />
         <Route path="destinations" element={<DestinationsPage />} />
         <Route path="offers" element={<OffersPage />} />
         <Route path="about" element={<AboutPage />} />
@@ -93,6 +101,8 @@ export function App() {
           <Route path="wishlist" element={<WishlistPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="partner/documents" element={<PartnerDocumentsPage />} />
+          <Route path="partner/status" element={<ApplicationStatusPage />} />
         </Route>
         <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<NotFoundPage />} />
@@ -134,6 +144,8 @@ export function App() {
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="managers" element={<ManagersPage />} />
         <Route path="managers/:id" element={<ManagerDetailPage />} />
+        <Route path="partners" element={<PartnerApplicationsPage />} />
+        <Route path="partners/:userId" element={<PartnerApplicationDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route path="settings" element={<SettingsPage />} />

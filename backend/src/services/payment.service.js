@@ -8,6 +8,7 @@ import { quoteStay } from './quote.service.js';
 import { processRefund } from './refund.service.js';
 import { closeHoldInTx, HOLD_EXPIRED_MESSAGE, requireOwnedHold } from './hold.service.js';
 import { couponService } from './coupon.service.js';
+import { commissionService } from './commission.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { auditService } from './audit.service.js';
 import { HOLD_STATUS, isHoldLive } from '../domain/holdStatus.js';
@@ -74,6 +75,10 @@ async function settlePayment({ orderId, paymentId, amountMinor, currency, provid
       await bookingRepository.setHoldStatus(client, hold.id, HOLD_STATUS.CONVERTED);
       await bookingRepository.setReservationsForHold(client, hold.id, 'CONFIRMED', booking.id);
       await couponService.confirmUsageForHold(client, hold.id, booking.id);
+      // Phase 2: commission becomes eligible the instant a booking reaches CONFIRMED -- this is the one
+      // and only trigger (see commission.service.js). `booking`/`payment` are the already-locked rows
+      // above, still carrying their price-breakdown columns untouched by the status updates.
+      await commissionService.computeAndRecordForBooking(client, booking, payment);
       await auditService.record(client, {
         actor: null,
         action: 'booking.confirmed',

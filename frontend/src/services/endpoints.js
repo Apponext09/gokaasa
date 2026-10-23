@@ -11,6 +11,26 @@ export const authApi = {
   resetPassword: (body) => api.post('/auth/reset-password', body).then((r) => r.data),
 };
 
+/** Self-service hotel-partner registration, OTP verification and document upload. */
+export const partnerApi = {
+  register: (body) => api.post('/partner/register', body).then((r) => r.data),
+  resendOtp: (body) => api.post('/partner/resend-otp', body).then((r) => r.data),
+  verifyOtp: (body) => api.post('/partner/verify-otp', body).then((r) => r.data),
+  getApplication: () => api.get('/partner/application').then((r) => r.data.application),
+  submit: () => api.post('/partner/application/submit').then((r) => r.data.application),
+  uploadDocument: (file, docType, onProgress) => {
+    const form = new FormData();
+    form.append('document', file);
+    form.append('docType', docType);
+    return api
+      .post('/partner/documents', form, {
+        onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
+      })
+      .then((r) => r.data.document);
+  },
+  documentBlob: (docId) => api.get(`/partner/documents/${docId}/file`, { responseType: 'blob' }).then((r) => r.data),
+};
+
 export const hotelApi = {
   listPublic: (params) => api.get('/hotels', { params }).then((r) => r.data),
   getPublic: (idOrSlug) => api.get(`/hotels/${encodeURIComponent(idOrSlug)}`).then((r) => r.data.hotel),
@@ -112,6 +132,13 @@ export const adminApi = {
   updateCoupon: (id, body) => api.patch(`/admin/coupons/${id}`, body).then((r) => r.data.coupon),
   setCouponStatus: (id, isActive) => api.patch(`/admin/coupons/${id}/status`, { isActive }).then((r) => r.data.coupon),
   deleteCoupon: (id) => api.delete(`/admin/coupons/${id}`),
+
+  // Partner (HOTEL_OWNER) application review queue (ADMIN only; the backend enforces this)
+  listPartnerApplications: (params) => api.get('/admin/partners', { params }).then((r) => r.data),
+  getPartnerApplication: (userId) => api.get(`/admin/partners/${userId}`).then((r) => r.data.application),
+  approvePartnerApplication: (userId) => api.post(`/admin/partners/${userId}/approve`).then((r) => r.data.application),
+  rejectPartnerApplication: (userId, reason) => api.post(`/admin/partners/${userId}/reject`, { reason }).then((r) => r.data.application),
+  partnerDocumentBlob: (userId, docId) => api.get(`/admin/partners/${userId}/documents/${docId}/file`, { responseType: 'blob' }).then((r) => r.data),
 };
 
 /** Room inventory: room types, room images, rate plans, cancellation policies, calendar and blocks. */

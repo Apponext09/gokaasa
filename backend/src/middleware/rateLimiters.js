@@ -27,6 +27,23 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: false,
 });
 
+/** Partner self-registration: same brute-force/enumeration exposure as authLimiter, same limits. */
+export const partnerRegisterLimiter = rateLimit({
+  ...common,
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  skipSuccessfulRequests: false,
+});
+
+/** OTP resend/verify: a 6-digit code is only safe against brute force if attempts are also capped
+ * per-code (see otpService.js) -- this just bounds how many codes/guesses one IP can burn through. */
+export const otpLimiter = rateLimit({
+  ...common,
+  windowMs: 10 * 60 * 1000,
+  limit: 10,
+  skipSuccessfulRequests: false,
+});
+
 /** External provider search is paid and rate-limited upstream, so keep admins from hammering it. */
 export const importSearchLimiter = rateLimit({
   ...common,

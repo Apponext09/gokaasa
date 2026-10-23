@@ -92,4 +92,9 @@ export const userRepository = {
   async touchLastLogin(userId) {
     await pool.query(`UPDATE users SET last_login_at = now() WHERE id = $1`, [userId]);
   },
+
+  /** Partner self-service registration verifies the account's email via OTP before it can sign in with it. */
+  async markEmailVerified(client, userId) {
+    await client.query(`UPDATE users SET email_verified_at = now(), updated_at = now() WHERE id = $1`, [userId]);
+  },
 };

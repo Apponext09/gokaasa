@@ -135,4 +135,21 @@ export const notificationService = {
   async sendManagerAssigned(userId, hotel) {
     await notify({ userId, type: 'manager.assigned', title: 'New hotel assigned', message: `You have been assigned to manage ${hotel.name}.`, entityType: 'hotel', entityId: hotel.id });
   },
+
+  /** Sent to every ADMIN once a partner submits their application, so the approval queue is visible without polling. */
+  async sendPartnerApplicationSubmitted(partner) {
+    const admins = await adminUserIds();
+    await Promise.all(admins.map((userId) =>
+      notify({ userId, type: 'partner.submitted', title: 'New partner application', message: `${partner.businessName} submitted a partner application.`, entityType: 'partner', entityId: partner.id })));
+  },
+
+  /** Sent to the applicant once an ADMIN approves their partner account. */
+  async sendPartnerApplicationApproved(userId) {
+    await notify({ userId, type: 'partner.approved', title: 'Partner application approved', message: 'Your partner application has been approved. You can now add your property.', entityType: 'partner', entityId: userId });
+  },
+
+  /** Sent to the applicant once an ADMIN rejects their partner account, with the reason given. */
+  async sendPartnerApplicationRejected(userId, reason) {
+    await notify({ userId, type: 'partner.rejected', title: 'Partner application not approved', message: `Your partner application was not approved: ${reason}`, entityType: 'partner', entityId: userId });
+  },
 };

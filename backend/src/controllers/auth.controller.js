@@ -1,27 +1,6 @@
 import { config } from '../config/index.js';
 import { authService } from '../services/auth.service.js';
-
-const REFRESH_COOKIE_PATH = '/api/auth';
-
-function refreshCookieOptions() {
-  return {
-    httpOnly: true,
-    secure: config.isProduction,
-    // Strict + a dedicated path keeps the refresh cookie away from cross-site requests (CSRF).
-    sameSite: 'strict',
-    path: REFRESH_COOKIE_PATH,
-    maxAge: config.auth.refreshTtlDays * 24 * 60 * 60 * 1000,
-  };
-}
-
-function requestMeta(req) {
-  return { userAgent: req.get('user-agent')?.slice(0, 500), ipAddress: req.ip };
-}
-
-function sendSession(res, status, session) {
-  res.cookie(config.auth.refreshCookieName, session.refreshToken, refreshCookieOptions());
-  return res.status(status).json({ accessToken: session.accessToken, user: session.user });
-}
+import { refreshCookieOptions, requestMeta, sendSession } from './sessionCookie.js';
 
 export const authController = {
   async register(req, res) {

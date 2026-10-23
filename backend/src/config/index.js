@@ -44,6 +44,12 @@ const schema = z.object({
   ADMIN_EMAIL: z.string().optional(),
   ADMIN_PASSWORD: z.string().optional(),
 
+  // Hotel Partner Portal: self-service registration. Verification documents are stored outside the
+  // publicly-served MEDIA_DIR on purpose -- see storage/privateStorage.js.
+  PARTNER_DOCS_DIR: z.string().default('uploads-private'),
+  OTP_TTL_MINUTES: z.coerce.number().int().positive().default(10),
+  OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+
   // AI-powered natural-language booking assistant (Mode B). All optional and unset by default: the
   // guided chatbot (Mode A) works fully without any of these. When AI_API_BASE_URL and AI_API_KEY are
   // both set, config.ai.enabled becomes true and an OpenAI-compatible chat-completions endpoint is used
@@ -116,6 +122,11 @@ export const config = Object.freeze({
   seed: {
     adminEmail: env.ADMIN_EMAIL,
     adminPassword: env.ADMIN_PASSWORD,
+  },
+  partner: {
+    docsDir: env.PARTNER_DOCS_DIR,
+    otpTtlMinutes: env.OTP_TTL_MINUTES,
+    otpMaxAttempts: env.OTP_MAX_ATTEMPTS,
   },
   booking: {
     holdDurationMinutes: env.HOLD_DURATION_MINUTES,

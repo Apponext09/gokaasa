@@ -9,6 +9,7 @@ import { mailService } from './mail.service.js';
 import { AppError } from '../utils/AppError.js';
 import { generateToken, hashToken } from '../utils/crypto.js';
 import { createLogger } from '../utils/logger.js';
+import { partnerProfileRepository } from '../repositories/partnerProfile.repository.js';
 
 const log = createLogger('auth');
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -17,7 +18,10 @@ const MINUTE_MS = 60 * 1000;
 // Runs a bcrypt compare for unknown emails so login timing does not reveal which accounts exist.
 const DUMMY_HASH = bcrypt.hashSync('timing-equaliser-not-a-password', config.auth.bcryptRounds);
 
-function toPublicUser(user) {
+// Only a HOTEL_OWNER has a partner_profiles row; everyone else gets partnerStatus: null, which the
+// frontend treats as "not a partner, nothing to route around".
+async function toPublicUser(user) {
+  const partnerStatus = user.roles.includes('HOTEL_OWNER') ? await partnerProfileRepository.statusForUser(user.id) : null;
   return {
     id: user.id,
     email: user.email,
@@ -26,10 +30,16 @@ function toPublicUser(user) {
     phone: user.phone,
     roles: user.roles,
     isGuest: user.isGuest,
+    partnerStatus,
   };
 }
 
-async function issueSession(client, user, meta) {
+/**
+ * Issues a session (access + refresh token) for an already-authenticated user. Exported so the partner
+ * self-service OTP-verification flow (services/partnerApplication.service.js) can issue a normal session
+ * the same way login/register do, without duplicating refresh-token/JWT logic.
+ */
+export async function issueSession(client, user, meta) {
   const refreshToken = generateToken();
   await authRepository.insertRefreshToken(client, {
     userId: user.id,
@@ -41,7 +51,7 @@ async function issueSession(client, user, meta) {
   return {
     accessToken: tokenService.signAccessToken(user),
     refreshToken,
-    user: toPublicUser(user),
+    user: await toPublicUser(user),
   };
 }
 
