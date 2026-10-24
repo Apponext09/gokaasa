@@ -1538,14 +1538,14 @@ body {
   line-height: 1.15;
 }
 
-/* Keep the homepage hotel catalogue compact: cards fill the column and the list scrolls
-   inside the section instead of creating a long area of unused page space. */
-.hotels-page-root .hotels-results-col,
+/* Keep the homepage's embedded hotel catalogue compact: cards fill the column and the list scrolls
+   inside the section instead of creating a long area of unused page space. This is deliberately scoped
+   to .home-hotel-listing-section only -- the dedicated /hotels listing page shows every card at full
+   height and lets the page itself scroll, so results are never squeezed into a short inner scrollbox. */
 .home-hotel-listing-section .hotels-results-col {
   min-height: 0;
 }
 
-.hotels-page-root .hotels-cards-stream,
 .home-hotel-listing-section .hotels-cards-stream {
   max-height: min(72vh, 760px);
   overflow-y: auto;
@@ -1554,29 +1554,28 @@ body {
   scrollbar-color: #94a3b8 transparent;
 }
 
-.hotels-page-root .hotels-cards-stream::-webkit-scrollbar,
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar {
   width: 7px;
 }
 
-.hotels-page-root .hotels-cards-stream::-webkit-scrollbar-track,
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.hotels-page-root .hotels-cards-stream::-webkit-scrollbar-thumb,
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: #94a3b8;
 }
 
+/* The card sits inside a scrollable flex column (.hotels-cards-stream, above). Without flex-shrink: 0,
+   the flex algorithm treats the card's overflow: hidden as license to shrink it toward zero height to
+   fit the column's capped max-height, instead of letting the column scroll past full-height cards. */
 .home-hotel-listing-section .customer-hotel-card {
   width: 100%;
-  min-height: 0;
+  flex-shrink: 0;
 }
 
 @media (max-width: 1023px) {
-  .hotels-page-root .hotels-cards-stream,
   .home-hotel-listing-section .hotels-cards-stream {
     max-height: none;
     overflow-y: visible;

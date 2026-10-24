@@ -26,6 +26,7 @@ import { PartnerOtpPage } from '@/pages/partner/PartnerOtpPage.jsx';
 import { PartnerDocumentsPage } from '@/pages/partner/PartnerDocumentsPage.jsx';
 import { ApplicationStatusPage } from '@/pages/partner/ApplicationStatusPage.jsx';
 import { PresenceTracker } from '@/features/presence/PresenceTracker.jsx';
+import { ScrollToTop } from '@/components/shared/ScrollToTop.jsx';
 import { lazy } from 'react';
 
 // Lazy: none of this admin code is in the customer homepage's initial bundle, and within admin each
@@ -74,6 +75,7 @@ function NotFoundPage() {
 export function App() {
   return (
     <>
+      <ScrollToTop />
       <PresenceTracker />
       <Routes>
         <Route element={<CustomerLayout />}>
