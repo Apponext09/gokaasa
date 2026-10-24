@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, Compass, MapPin, Navigation, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Compass, MapPin, Navigation, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Alert } from '@/components/ui/surfaces.jsx';
 import { Carousel, CarouselItem } from '@/components/ui/carousel.jsx';
@@ -52,8 +52,8 @@ export function NearbyHotelsSection() {
           <div className="nearby-idle-map">
             <iframe
               className="nearby-idle-map-frame"
-              title="Interactive map around Mumbai"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=72.733%2C18.87%2C73.17%2C19.31&amp;layer=mapnik"
+              title="Map preview before location access"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=68.1%2C7.8%2C97.4%2C37.6&amp;layer=mapnik"
               loading="lazy"
               referrerPolicy="strict-origin-when-cross-origin"
             />
@@ -69,42 +69,14 @@ export function NearbyHotelsSection() {
 
           {/* Left: text content */}
           <div className="nearby-idle-content">
-            <div className="nearby-idle-eyebrow">
-              <span className="nearby-idle-eyebrow-ping" />
-              <Navigation className="h-3 w-3 text-sky-400" aria-hidden="true" />
-              <span>RADIUS DISCOVERY &bull; {RADIUS_KM} KM</span>
-            </div>
-
-            <h3 className="nearby-idle-heading">Find Hotels Around You</h3>
+            <h3 className="nearby-idle-heading">Explore nearby stays</h3>
             <p className="nearby-idle-desc">
-              Allow one-time location access to instantly view verified stays near you — live rates, real-time availability, no sign-in required.
+              Use your current location to find hotels near you. Your location is never stored.
             </p>
-
-            <div className="nearby-idle-perks">
-              <span className="nearby-idle-perk">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-                Instant results
-              </span>
-              <span className="nearby-idle-perk">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-                Live prices
-              </span>
-              <span className="nearby-idle-perk">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-                Free cancellation prioritized
-              </span>
-            </div>
-
-            <div className="nearby-idle-actions">
-              <Button onClick={request} size="sm" className="nearby-idle-btn">
-                <Navigation className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
-                Find Hotels Near Me
-              </Button>
-              <div className="nearby-idle-privacy">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
-                <span>Your location is private & never stored.</span>
-              </div>
-            </div>
+            <Button onClick={request} size="sm" className="nearby-idle-btn">
+              <Navigation className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
+              Find Hotels Near Me
+            </Button>
           </div>
 
         </div>

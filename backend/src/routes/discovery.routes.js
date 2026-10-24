@@ -8,6 +8,7 @@ import { destinationSuggestQuery, popularDestinationsQuery } from '../validators
 export const destinationRouter = Router();
 destinationRouter.get('/search', validate({ query: destinationSuggestQuery }), searchController.suggestDestinations);
 destinationRouter.get('/popular', validate({ query: popularDestinationsQuery }), searchController.popularDestinations);
+destinationRouter.get('/stay-types', validate({ query: popularDestinationsQuery }), searchController.stayTypes);
 destinationRouter.get('/stats', searchController.publicStats);
 
 export const wishlistRouter = Router();

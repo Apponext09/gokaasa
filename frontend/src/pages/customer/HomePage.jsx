@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   Award,
@@ -28,6 +28,7 @@ import {
   FullPageSpinner,
   homePathFor,
 } from '@/components/shared/index.jsx';
+import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
 import { NearbyHotelsSection } from '@/features/home/NearbyHotelsSection.jsx';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
@@ -44,64 +45,7 @@ import {
 } from '@/services/endpoints.js';
 
 import { normalizeError } from '@/services/api.js';
-import { addDays, slugifyPlace, todayIso, toSearchParams } from '@/features/search/searchParams.js';
-
-const HERO_IMAGES = [
-  {
-    src: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Elegant luxury hotel suite',
-    quote: 'Find your kind of extraordinary.',
-    caption: 'Beautiful stays. Unforgettable journeys.',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Luxury hotel interior',
-    quote: 'Your next escape starts here.',
-    caption: 'Discover stays that feel made for you.',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Luxury resort with swimming pool',
-    quote: 'Make room for remarkable moments.',
-    caption: 'From peaceful retreats to vibrant getaways.',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Premium resort pool',
-    quote: 'Go further. Stay beautifully.',
-    caption: 'The right stay changes everything.',
-  },
-  {
-    src: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=2400&q=90',
-    alt: 'Luxury resort surrounded by greenery',
-    quote: 'A better journey begins with a better stay.',
-    caption: 'Explore more of the places you love.',
-  },
-];
-
-const DESTINATION_IMAGES = {
-  Mumbai: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=1400&q=85',
-  Goa: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1400&q=85',
-  Delhi: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1400&q=85',
-  Pune: 'https://images.unsplash.com/photo-1595658658481-d53d3f999875?auto=format&fit=crop&w=1400&q=85',
-  Jaipur: 'https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1400&q=85',
-  Bangalore: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=1400&q=85',
-  Hyderabad: 'https://images.unsplash.com/photo-1572449043416-55f4685c9bb7?auto=format&fit=crop&w=1400&q=85',
-  Kashmir: 'https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=1400&q=85',
-};
-
-/** Fallback imagery for real popular destinations we don't have curated city photography for. */
-function destinationImageFor(label, index) {
-  return DESTINATION_IMAGES[label] || HERO_IMAGES[index % HERO_IMAGES.length].src;
-}
-
-const STAY_CATEGORY_IMAGES = {
-  Resort: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=85',
-  'Airport Hotel': 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=1400&q=85',
-  'Mountain Hotel': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=1400&q=85',
-  'Heritage Hotel': 'https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=1400&q=85',
-  'Beach Hotel': 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1400&q=85',
-};
+import { addDays, destinationSearchPath, todayIso, toSearchParams } from '@/features/search/searchParams.js';
 
 const WHY_GOKAASA = [
   {
@@ -124,25 +68,6 @@ const WHY_GOKAASA = [
     title: 'Made for Travellers',
     text: 'A simpler way to find a stay that fits your plans.',
   },
-];
-
-const INDIA_DESTINATIONS = [
-  'Mumbai',
-  'Goa',
-  'Delhi',
-  'Pune',
-  'Jaipur',
-  'Bangalore',
-  'Hyderabad',
-  'Kashmir',
-];
-
-const STAY_CATEGORIES = [
-  { title: 'Resort', propertyType: 'RESORT' },
-  { title: 'Airport Hotel', propertyType: 'HOTEL' },
-  { title: 'Mountain Hotel', propertyType: 'HOTEL' },
-  { title: 'Heritage Hotel', propertyType: 'HOTEL' },
-  { title: 'Beach Hotel', propertyType: 'RESORT' },
 ];
 
 const TESTIMONIALS = [
@@ -325,12 +250,11 @@ function PremiumImageCard({
       className={`group relative block overflow-hidden rounded-3xl border border-white/70 bg-slate-900 shadow-[0_8px_30px_rgba(15,23,42,0.08)] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2 ${className}`}
     >
       <div className={`relative overflow-hidden ${aspect}`}>
-        <img
+        <SafeImage
           src={image}
           alt={`${title} hotels`}
-          loading="lazy"
-          decoding="async"
           className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+          fallbackLabel={`${title} image coming soon`}
         />
 
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent transition-opacity duration-500 group-hover:from-slate-950/90" />
@@ -642,10 +566,15 @@ export function HomePage() {
   const { status, user, isStaff } = useAuth();
 
   const [popular, setPopular] = useState(null);
+  const [stayTypes, setStayTypes] = useState(null);
   const [stats, setStats] = useState(null);
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
   const [heroIndex, setHeroIndex] = useState(0);
+  const heroSlides = useMemo(
+    () => (popular ?? []).filter((place) => place.imageUrl),
+    [popular],
+  );
 
   useDocumentMeta({
     title: 'Gokaasa | Discover Your Next Beautiful Stay',
@@ -655,12 +584,17 @@ export function HomePage() {
   });
 
   useEffect(() => {
+    if (heroSlides.length <= 1) return undefined;
     const interval = window.setInterval(() => {
-      setHeroIndex((current) => (current + 1) % HERO_IMAGES.length);
+      setHeroIndex((current) => (current + 1) % heroSlides.length);
     }, 6000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    setHeroIndex(0);
+  }, [heroSlides.length]);
 
   useEffect(() => {
     if (isStaff) return undefined;
@@ -689,11 +623,18 @@ export function HomePage() {
       })
       .catch(() => { });
 
+    discoveryApi
+      .stayTypes({ limit: 6 })
+      .then((items) => {
+        if (!cancelled) setStayTypes(items);
+      })
+      .catch(() => { });
+
     offerApi
       .list()
       .then((items) => {
         if (!cancelled) {
-          setOffers(items.slice(0, 6));
+          setOffers(items);
         }
       })
       .catch(() => { });
@@ -711,8 +652,6 @@ export function HomePage() {
     return <Navigate to={homePathFor(user)} replace />;
   }
 
-  const categoryDestination = popular?.[0]?.destination;
-
   const realConfirmedBookings =
     stats?.bookings?.confirmed || 0;
 
@@ -721,13 +660,13 @@ export function HomePage() {
   return (
     <div className="customer-home min-h-screen overflow-hidden text-[var(--text-body)]">
       {/* Hotel-booking hero adapted from the reference project. */}
-      <section className="customer-booking-hero">
-        <div className="customer-hero-arch">
+      <section className="customer-booking-hero !pb-[31px] max-md:!pb-5">
+        <div className="customer-hero-arch !min-h-[226px] !px-5 !pb-[94px] !pt-[41px] max-md:!min-h-[202px] max-md:!px-4 max-md:!pb-[83px] max-md:!pt-[33px]">
           <div className="customer-hero-slides" aria-hidden="true">
-            {HERO_IMAGES.map((image, index) => (
+            {heroSlides.map((place, index) => (
               <img
-                key={image.src}
-                src={image.src}
+                key={place.destination}
+                src={place.imageUrl}
                 alt=""
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding="async"
@@ -740,13 +679,17 @@ export function HomePage() {
 
           <div className="customer-hero-content">
             <h1>Book Hotels and Homestays</h1>
-            <p>{HERO_IMAGES[heroIndex].caption}</p>
+            <p>
+              {heroSlides[heroIndex]
+                ? `Explore ${heroSlides[heroIndex].hotelCount} stay${heroSlides[heroIndex].hotelCount === 1 ? '' : 's'} in ${heroSlides[heroIndex].label}.`
+                : 'Search published stays with live availability.'}
+            </p>
           </div>
 
-          <div className="customer-hero-dots" role="group" aria-label="Choose hero image">
-            {HERO_IMAGES.map((image, index) => (
+          {heroSlides.length > 1 && <div className="customer-hero-dots !bottom-[42px] max-md:!bottom-[39px]" role="group" aria-label="Choose hero image">
+            {heroSlides.map((place, index) => (
               <button
-                key={image.src}
+                key={place.destination}
                 type="button"
                 aria-label={`Show background image ${index + 1}`}
                 aria-current={index === heroIndex ? 'true' : undefined}
@@ -754,10 +697,10 @@ export function HomePage() {
                 className={index === heroIndex ? 'is-active' : ''}
               />
             ))}
-          </div>
+          </div>}
         </div>
 
-        <div className="customer-search-shell">
+        <div className="customer-search-shell !-mt-9 max-md:!-mt-[35px]">
           <SearchWidget variant="hero" />
         </div>
       </section>
@@ -766,23 +709,21 @@ export function HomePage() {
       {offers && offers.length > 0 && (
         <section
           aria-labelledby="offers-heading"
-          className="customer-offers-section mx-auto max-w-7xl space-y-7 px-4 py-14 sm:px-6 lg:py-16"
+          className="mx-auto max-w-7xl space-y-5 px-4 py-10 sm:px-6 lg:py-12"
         >
           <Reveal>
-            <SectionHeading
-              eyebrow="Limited-time savings"
-              title="Exclusive Offers"
-              subtitle="Make your next getaway even more rewarding with special offers on stays you'll love."
-              action={
-                <Link
-                  to="/offers"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-700/30 hover:bg-brand-700/5"
-                >
-                  View all offers
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              }
-            />
+            <div className="flex items-center justify-between gap-4">
+              <h2 id="offers-heading" className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-[var(--text-strong)]">
+                Offers for you
+              </h2>
+              <Link
+                to="/offers"
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-sm transition hover:border-brand-700/30 hover:bg-brand-700/5"
+              >
+                View all offers
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
           </Reveal>
 
           <Reveal direction="left">
@@ -810,40 +751,41 @@ export function HomePage() {
 
 
 
-      {/* INDIA DESTINATIONS */}
-      <section
-        aria-labelledby="india-heading"
-        className="mx-auto max-w-7xl space-y-8 px-4 py-16 sm:px-6 lg:py-20"
-      >
-        <Reveal>
-          <SectionHeading
-            eyebrow="A little travel inspiration."
-            title="Discover India, one stay at a time."
-            subtitle="Explore guest-favourite destinations, from energetic cities to serene escapes, and find your next memorable stay."
-          />
-        </Reveal>
+      {popular?.length > 0 && (
+        <section
+          aria-labelledby="destinations-heading"
+          className="mx-auto max-w-7xl space-y-8 px-4 py-16 sm:px-6 lg:py-20"
+        >
+          <Reveal>
+            <SectionHeading
+              eyebrow="A little travel inspiration."
+              title="Explore our most popular destinations."
+              subtitle="Browse places ranked by the published stays currently available on Gokaasa."
+            />
+          </Reveal>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-          {INDIA_DESTINATIONS.map((name, index) => (
-            <Reveal key={name} delay={index * 65} direction="zoom">
-              <PremiumImageCard
-                title={name}
-                image={DESTINATION_IMAGES[name]}
-                href={`/hotels?destination=${slugifyPlace(name)}`}
-                subtitle="Discover destination"
-                aspect="aspect-[4/3]"
-                className="h-full"
-              />
-            </Reveal>
-          ))}
-        </div>
-      </section>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
+            {popular.map((place, index) => (
+              <Reveal key={place.destination} delay={index * 65} direction="zoom">
+                <PremiumImageCard
+                  title={place.label}
+                  image={place.imageUrl}
+                  href={destinationSearchPath(place.destination)}
+                  subtitle={`${place.hotelCount} hotel${place.hotelCount === 1 ? '' : 's'}`}
+                  aspect="aspect-[4/3]"
+                  className="h-full"
+                />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
       <HomeHotelListing />
 
       {/* FIND YOUR PERFECT STAY */}
-      <section
+      {stayTypes?.length > 0 && <section
         aria-labelledby="stay-type-heading"
         className="relative bg-white py-16 lg:py-20"
       >
@@ -859,17 +801,13 @@ export function HomePage() {
           </Reveal>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
-            {STAY_CATEGORIES.map((category, index) => (
-              <Reveal key={category.title} delay={index * 75} direction="zoom">
+            {stayTypes.map((category, index) => (
+              <Reveal key={category.value} delay={index * 75} direction="zoom">
                 <PremiumImageCard
-                  title={category.title}
-                  image={STAY_CATEGORY_IMAGES[category.title]}
-                  href={
-                    categoryDestination
-                      ? `/hotels?destination=${slugifyPlace(categoryDestination)}&propertyTypes=${category.propertyType}`
-                      : '/hotels'
-                  }
-                  subtitle="Find your stay"
+                  title={category.label}
+                  image={category.imageUrl}
+                  href={destinationSearchPath(null, new Date(), { propertyTypes: [category.value] })}
+                  subtitle={`${category.hotelCount} hotel${category.hotelCount === 1 ? '' : 's'}`}
                   aspect="aspect-[4/5]"
                   className="h-full"
                 />
@@ -877,7 +815,7 @@ export function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section>}
 
       {/* WHY CHOOSE GOKAASA */}
       <section
@@ -914,39 +852,6 @@ export function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* MORE DESTINATIONS -- real, searchable places only, sourced from /destinations/popular */}
-      {popular && popular.length > 0 && (
-        <section
-          aria-labelledby="world-heading"
-          className="bg-sky-50 py-16 lg:py-20"
-        >
-          <div className="mx-auto max-w-7xl space-y-8 px-4 sm:px-6">
-            <Reveal>
-              <SectionHeading
-                eyebrow="Keep exploring"
-                title="More destinations to explore."
-                subtitle="Real stays, real places -- discover more cities with hotels ready to book on Gokaasa."
-              />
-            </Reveal>
-
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5">
-              {popular.map((place, index) => (
-                <Reveal key={place.destination} delay={index * 75} direction="zoom">
-                  <PremiumImageCard
-                    title={place.label}
-                    image={destinationImageFor(place.label, index)}
-                    href={`/hotels/${place.destination}`}
-                    subtitle={place.hotelCount > 0 ? `${place.hotelCount} hotels` : 'Explore stays'}
-                    aspect="aspect-[4/3]"
-                    className="h-full"
-                  />
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       <section
         aria-labelledby="testimonials-heading"

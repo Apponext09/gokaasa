@@ -10,6 +10,7 @@ import {
   validateStay,
   slugifyPlace,
   DINNER_INCLUDED_MEAL_PLANS,
+  destinationSearchPath,
 } from '../../src/features/search/searchParams.js';
 
 test('a shared URL restores the same search after a reload', () => {
@@ -73,4 +74,15 @@ test('stay validation explains what is wrong', () => {
 test('place slugs match the server rule for accents and punctuation', () => {
   assert.equal(slugifyPlace('São Paulo'), 'sao-paulo');
   assert.equal(slugifyPlace('Taj Lands End, Mumbai'), 'taj-lands-end-mumbai');
+});
+
+test('destination cards link directly to dated hotel results with default occupancy', () => {
+  const path = destinationSearchPath('Navi Mumbai', new Date('2026-10-24T08:00:00Z'));
+  const [pathname, query] = path.split('?');
+  const params = new URLSearchParams(query);
+  assert.equal(pathname, '/hotels');
+  assert.equal(params.get('destination'), 'navi-mumbai');
+  assert.equal(params.get('checkIn'), '2026-10-25');
+  assert.equal(params.get('checkOut'), '2026-10-27');
+  assert.equal(params.get('occ'), '2');
 });

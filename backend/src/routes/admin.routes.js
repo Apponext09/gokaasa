@@ -218,6 +218,13 @@ adminRouter.post('/coupons', validate({ body: couponCreateSchema }), authorize('
 adminRouter.get('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.detail);
 adminRouter.patch('/coupons/:id', validate({ params: couponIdParam, body: couponUpdateSchema }), authorize('ADMIN'), couponController.update);
 adminRouter.patch('/coupons/:id/status', validate({ params: couponIdParam, body: couponStatusSchema }), authorize('ADMIN'), couponController.setStatus);
+adminRouter.post(
+  '/coupons/:id/image',
+  validate({ params: couponIdParam }),
+  authorize('ADMIN'),
+  uploadSingleImage,
+  couponController.uploadImage,
+);
 adminRouter.delete('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.remove);
 
 // Verification and provider reconciliation

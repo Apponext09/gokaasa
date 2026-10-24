@@ -16,6 +16,7 @@ let hotelId, otherHotelId, roomTypeId, planId;
 
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 const day = (offset) => addDays(D0, offset);
+const pngBytes = () => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(64, 1)]);
 
 async function loginAs(email) {
   return (await request(app).post('/api/auth/login').send({ email, password: PASSWORD })).body.accessToken;
@@ -95,6 +96,28 @@ describe('public offers discovery (GET /api/offers)', () => {
     assert.equal(item.discountType, 'PERCENT');
     assert.equal(item.discountValue, 15);
     assert.ok(item.title.includes('15%'));
+  });
+
+  it('uploads one promotional image and exposes its public URL on the offer card data', async () => {
+    const created = await request(app).post('/api/admin/coupons').set(bearer(adminToken)).send(couponBody({ code: 'IMAGEOFF1' }));
+    const id = created.body.coupon.id;
+    const uploaded = await request(app)
+      .post(`/api/admin/coupons/${id}/image`)
+      .set(bearer(adminToken))
+      .attach('image', pngBytes(), { filename: 'offer.png', contentType: 'image/png' });
+
+    assert.equal(uploaded.status, 201, JSON.stringify(uploaded.body));
+    assert.match(uploaded.body.coupon.imageUrl, new RegExp(`^/media/offers/${id}/[0-9a-f-]{36}\\.png$`));
+
+    const publicOffers = await request(app).get('/api/offers');
+    const item = publicOffers.body.items.find((offer) => offer.code === 'IMAGEOFF1');
+    assert.equal(item.imageUrl, uploaded.body.coupon.imageUrl);
+
+    const stored = await pool.query(`SELECT image_storage_key FROM coupons WHERE id = $1`, [id]);
+    assert.match(stored.rows[0].image_storage_key, new RegExp(`^offers/${id}/`));
+
+    const removed = await request(app).delete(`/api/admin/coupons/${id}`).set(bearer(adminToken));
+    assert.equal(removed.status, 204);
   });
 
   it('excludes an inactive coupon', async () => {

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { pool, withTransaction } from '../db/pool.js';
 import { couponRepository } from '../repositories/coupon.repository.js';
 import { bookingRepository } from '../repositories/booking.repository.js';
@@ -6,6 +7,11 @@ import { isHoldLive, HOLD_STATUS } from '../domain/holdStatus.js';
 import { AppError } from '../utils/AppError.js';
 import { auditService } from './audit.service.js';
 import { toPage } from './presenters.js';
+import { getStorage } from '../storage/index.js';
+import { detectImageType } from '../utils/imageSignature.js';
+import { createLogger } from '../utils/logger.js';
+
+const log = createLogger('coupon-images');
 
 function toCouponRow(row) {
   return {
@@ -26,6 +32,7 @@ function toCouponRow(row) {
     stayFrom: row.stay_from,
     stayTo: row.stay_to,
     description: row.description,
+    imageUrl: row.image_storage_key ? getStorage().publicUrl(row.image_storage_key) : null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -52,6 +59,7 @@ function toPublicCoupon(row, hotels = [], cities = []) {
     code: row.code,
     title,
     description: row.description || `Save on your next stay with code ${row.code}.`,
+    imageUrl: row.image_storage_key ? getStorage().publicUrl(row.image_storage_key) : null,
     discountType: row.discount_type,
     discountValue: row.discount_type === 'PERCENT' ? Number(row.discount_value) : rupees(row.discount_value),
     maxDiscount: row.max_discount_minor == null ? null : rupees(row.max_discount_minor),
@@ -211,17 +219,58 @@ export const couponService = {
     return this.detail(id);
   },
 
+  async uploadImage(id, file, actor) {
+    if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
+    const detected = detectImageType(file.buffer);
+    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+    if (detected.mime !== file.mimetype) throw AppError.unsupportedMediaType('The file contents do not match its declared type');
+
+    const storage = getStorage();
+    const storageKey = `offers/${id}/${randomUUID()}.${detected.ext}`;
+    await storage.put(storageKey, file.buffer);
+
+    let previousKey = null;
+    try {
+      await withTransaction(async (client) => {
+        const existing = await couponRepository.lockById(id, client);
+        if (!existing) throw AppError.notFound('Coupon not found');
+        previousKey = existing.image_storage_key;
+        await couponRepository.update(client, id, { image_storage_key: storageKey });
+        await auditService.record(client, {
+          actor,
+          action: previousKey ? 'coupon.image_replaced' : 'coupon.image_uploaded',
+          entity: 'coupon',
+          entityId: id,
+          newValue: { storageKey },
+        });
+      });
+    } catch (error) {
+      await storage.remove(storageKey).catch((cleanupError) => log.error('orphan cleanup failed', { storageKey, message: cleanupError.message }));
+      throw error;
+    }
+
+    if (previousKey) {
+      await storage.remove(previousKey).catch((error) => log.error('could not remove replaced offer image', { storageKey: previousKey, message: error.message }));
+    }
+    return this.detail(id);
+  },
+
   /** A coupon that has never been used can be deleted outright; one that has must be deactivated instead. */
   async remove(id, actor) {
+    let imageStorageKey = null;
     await withTransaction(async (client) => {
       const existing = await couponRepository.findById(id, client);
       if (!existing) throw AppError.notFound('Coupon not found');
       if (existing.used_count > 0) {
         throw AppError.conflict('This coupon has already been used and cannot be deleted. Deactivate it instead.');
       }
+      imageStorageKey = existing.image_storage_key;
       await couponRepository.remove(client, id);
       await auditService.record(client, { actor, action: 'coupon.deleted', entity: 'coupon', entityId: id, oldValue: { code: existing.code } });
     });
+    if (imageStorageKey) {
+      await getStorage().remove(imageStorageKey).catch((error) => log.error('could not remove deleted offer image', { storageKey: imageStorageKey, message: error.message }));
+    }
   },
 
   // ---- customer-facing discovery -----------------------------------------------------------------------

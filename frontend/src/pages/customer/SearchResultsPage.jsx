@@ -50,7 +50,7 @@ const shortDate = (iso) =>
 
 /** Builds the API request from the URL. The URL and the request use the same parameter names. */
 function buildRequest(state, destination) {
-  const params = toSearchParams(state);
+  const params = toSearchParams(state, { includeCoupon: false });
   if (destination) params.set('destination', destination);
   if (state.area) params.set('area', state.area);
   return params;

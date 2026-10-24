@@ -36,7 +36,9 @@ export function SelectionBar({ selection, onClear }) {
         occupancy: selection.occupancy,
         idempotencyKey: selection.idempotencyKey,
       });
-      navigate(`/booking/guest-details?holdId=${hold.id}`);
+      const nextParams = new URLSearchParams({ holdId: String(hold.id) });
+      if (selection.coupon) nextParams.set('coupon', selection.coupon);
+      navigate(`/booking/guest-details?${nextParams}`);
     } catch (err) {
       const normalized = normalizeError(err);
       toast.error(normalized.status === 409 ? `This room just became unavailable. ${normalized.message}` : normalized.message);

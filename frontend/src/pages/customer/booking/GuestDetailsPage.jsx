@@ -21,6 +21,12 @@ export function GuestDetailsPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const holdId = params.get('holdId');
+  const coupon = params.get('coupon');
+  const bookingPath = (path, id) => {
+    const next = new URLSearchParams({ holdId: String(id) });
+    if (coupon) next.set('coupon', coupon);
+    return `${path}?${next}`;
+  };
   const { hold, loading, error, reload } = useHold(holdId);
 
   useDocumentMeta({ title: 'Guest details | Gokaasa', description: 'Enter your guest details to continue your booking.' });
@@ -31,7 +37,7 @@ export function GuestDetailsPage() {
     bookingApi
       .activeHold()
       .then((active) => {
-        if (active) navigate(`/booking/guest-details?holdId=${active.id}`, { replace: true });
+        if (active) navigate(bookingPath('/booking/guest-details', active.id), { replace: true });
         else navigate('/', { replace: true });
       })
       .catch(() => navigate('/', { replace: true }));
@@ -40,7 +46,7 @@ export function GuestDetailsPage() {
   useEffect(() => {
     if (!hold) return;
     if (hold.status === 'CONVERTED' && hold.bookingId) navigate(`/booking/confirmation/${hold.bookingId}`, { replace: true });
-    else if (hold.status === 'HELD' && hold.bookingId) navigate(`/booking/review?holdId=${hold.id}`, { replace: true });
+    else if (hold.status === 'HELD' && hold.bookingId) navigate(bookingPath('/booking/review', hold.id), { replace: true });
   }, [hold, navigate]);
 
   if (!holdId) return <FullPageSpinner label="Finding your room" />;
@@ -68,7 +74,7 @@ export function GuestDetailsPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="min-w-0 space-y-4">
             <HoldCountdown expiresAt={hold.expiresAt} onExpire={reload} />
-            <GuestForm hold={hold} onSaved={() => navigate(`/booking/review?holdId=${hold.id}`)} onExpired={reload} />
+            <GuestForm hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
           </div>
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <StaySummary quote={hold.quote} />

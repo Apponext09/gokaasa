@@ -26,6 +26,7 @@ export function BookingReviewPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const holdId = params.get('holdId');
+  const coupon = params.get('coupon');
   const { hold, loading, error, reload, setHold } = useHold(holdId);
   const [phase, setPhase] = useState('idle'); // idle | creating | checkout | verifying
   const [priceChange, setPriceChange] = useState(null);
@@ -93,7 +94,11 @@ export function BookingReviewPage() {
 
   useEffect(() => {
     if (!hold) return;
-    if (hold.guestDetails == null && hold.status === 'HELD') navigate(`/booking/guest-details?holdId=${hold.id}`, { replace: true });
+    if (hold.guestDetails == null && hold.status === 'HELD') {
+      const next = new URLSearchParams({ holdId: String(hold.id) });
+      if (coupon) next.set('coupon', coupon);
+      navigate(`/booking/guest-details?${next}`, { replace: true });
+    }
     if (hold.status === 'CONVERTED' && hold.bookingId) navigate(`/booking/confirmation/${hold.bookingId}`, { replace: true });
   }, [hold, navigate]);
 
@@ -295,7 +300,15 @@ export function BookingReviewPage() {
               {hold.guestDetails?.companyName && <p className="text-sm text-[var(--text-body)]">Company: {hold.guestDetails.companyName}</p>}
               {hold.guestDetails?.gstNumber && <p className="text-sm text-[var(--text-body)]">GST: {hold.guestDetails.gstNumber}</p>}
               {hold.guestDetails?.specialRequest && <p className="text-sm text-[var(--text-body)]">Requests: {hold.guestDetails.specialRequest}</p>}
-              <Button variant="link" size="sm" onClick={() => navigate(`/booking/guest-details?holdId=${hold.id}`)}>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => {
+                  const next = new URLSearchParams({ holdId: String(hold.id) });
+                  if (coupon) next.set('coupon', coupon);
+                  navigate(`/booking/guest-details?${next}`);
+                }}
+              >
                 Edit guest details
               </Button>
             </Card>

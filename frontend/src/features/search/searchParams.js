@@ -46,9 +46,16 @@ export function nightsBetween(checkIn, checkOut) {
   return Math.round((new Date(`${checkOut}T00:00:00Z`) - new Date(`${checkIn}T00:00:00Z`)) / DAY_MS);
 }
 
-/** Today in the hotel's reference calendar (date only, no time zone arithmetic). */
+/** Today in the business calendar. This avoids UTC returning yesterday between midnight and 05:30 IST. */
 export function todayIso(now = new Date()) {
-  return now.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map(({ type, value: part }) => [type, part]));
+  return `${value.year}-${value.month}-${value.day}`;
 }
 
 /** "Mumbai, India" -> "mumbai"; the same rule as the server, so URLs and matching agree. */
@@ -94,6 +101,7 @@ const csvList = (value, isValid) => {
 
 const oneOf = (values) => (item) => values.includes(item);
 const AMENITY_CODE = /^[A-Z][A-Z0-9_]{1,40}$/;
+const COUPON_CODE = /^[A-Z0-9_-]{3,40}$/;
 
 function dinnerOnly(mealPlans) {
   if (!mealPlans) return undefined;
@@ -127,6 +135,9 @@ export function parseSearchParams(params) {
   return {
     destination: slugifyPlace(get('destination') ?? '') || null,
     area: slugifyPlace(get('area') ?? '') || null,
+    coupon: COUPON_CODE.test(String(get('coupon') ?? '').toUpperCase())
+      ? String(get('coupon')).toUpperCase()
+      : null,
     checkIn,
     checkOut,
     occupancy,
@@ -146,7 +157,7 @@ export function parseSearchParams(params) {
 }
 
 /** The inverse of parseSearchParams. Empty filters are omitted so URLs stay short and shareable. */
-export function toSearchParams(state) {
+export function toSearchParams(state, { includeCoupon = true } = {}) {
   const params = new URLSearchParams();
   if (state.checkIn) params.set('checkIn', state.checkIn);
   if (state.checkOut) params.set('checkOut', state.checkOut);
@@ -162,6 +173,7 @@ export function toSearchParams(state) {
   if (f.amenities?.length) params.set('amenities', [...f.amenities].sort().join(','));
   if (f.freeCancellation) params.set('freeCancellation', 'true');
   if (f.mealPlans?.length) params.set('mealPlans', f.mealPlans.join(','));
+  if (includeCoupon && state.coupon) params.set('coupon', state.coupon);
   return params;
 }
 
@@ -171,7 +183,23 @@ export function stayParams(state) {
   if (state.checkIn) params.set('checkIn', state.checkIn);
   if (state.checkOut) params.set('checkOut', state.checkOut);
   if (state.occupancy) params.set('occ', formatOccupancy(state.occupancy));
+  if (state.coupon) params.set('coupon', state.coupon);
   return params;
+}
+
+/** Direct results-page link for destination cards, using the same default stay as the main search form. */
+export function destinationSearchPath(destination, now = new Date(), extras = {}) {
+  const today = todayIso(now);
+  const params = stayParams({
+    checkIn: addDays(today, 1),
+    checkOut: addDays(today, 3),
+    occupancy: [{ adults: 2, childAges: [] }],
+    coupon: extras.coupon,
+  });
+  const destinationSlug = slugifyPlace(destination);
+  if (destinationSlug) params.set('destination', destinationSlug);
+  if (extras.propertyTypes?.length) params.set('propertyTypes', extras.propertyTypes.join(','));
+  return `/hotels?${params}`;
 }
 
 export function summarizeOccupancy(rooms) {

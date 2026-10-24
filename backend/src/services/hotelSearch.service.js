@@ -284,6 +284,23 @@ export const hotelSearchService = {
         destination: slugifyPlace(row.city),
         country: countryName(row.country_code),
         hotelCount: row.hotel_count,
+        imageUrl: imageFor(row.cover)?.url ?? null,
+      })),
+    };
+  },
+
+  async stayTypes(limit = 6) {
+    const rows = await destinationRepository.popularPropertyTypes(limit);
+    return {
+      items: rows.map((row) => ({
+        value: row.property_type,
+        label: row.property_type
+          .toLowerCase()
+          .split('_')
+          .map((word) => word[0].toUpperCase() + word.slice(1))
+          .join(' '),
+        hotelCount: row.hotel_count,
+        imageUrl: imageFor(row.cover)?.url ?? null,
       })),
     };
   },

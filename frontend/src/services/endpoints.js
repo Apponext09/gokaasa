@@ -130,6 +130,15 @@ export const adminApi = {
   getCoupon: (id) => api.get(`/admin/coupons/${id}`).then((r) => r.data.coupon),
   createCoupon: (body) => api.post('/admin/coupons', body).then((r) => r.data.coupon),
   updateCoupon: (id, body) => api.patch(`/admin/coupons/${id}`, body).then((r) => r.data.coupon),
+  uploadCouponImage: (id, file, onProgress) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api
+      .post(`/admin/coupons/${id}/image`, form, {
+        onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
+      })
+      .then((r) => r.data.coupon);
+  },
   setCouponStatus: (id, isActive) => api.patch(`/admin/coupons/${id}/status`, { isActive }).then((r) => r.data.coupon),
   deleteCoupon: (id) => api.delete(`/admin/coupons/${id}`),
 
@@ -191,6 +200,7 @@ export const discoveryApi = {
   search: (params, { signal } = {}) => api.get('/hotels/search', { params, signal }).then((r) => r.data),
   suggestDestinations: (q, { signal } = {}) => api.get('/destinations/search', { params: { q }, signal }).then((r) => r.data.items),
   popularDestinations: (params) => api.get('/destinations/popular', { params }).then((r) => r.data.items),
+  stayTypes: (params) => api.get('/destinations/stay-types', { params }).then((r) => r.data.items),
   stats: () => api.get('/destinations/stats').then((r) => r.data),
   featuredHotels: () => api.get('/hotels', { params: { limit: 6 } }).then((r) => r.data.items),
   nearbyHotels: (params, { signal } = {}) => api.get('/hotels/nearby', { params, signal }).then((r) => r.data),

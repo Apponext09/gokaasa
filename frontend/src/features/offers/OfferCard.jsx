@@ -4,7 +4,8 @@ import { Check, Copy, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { slugifyPlace } from '@/features/search/searchParams.js';
+import { SafeImage } from '@/components/shared/SafeImage.jsx';
+import { destinationSearchPath } from '@/features/search/searchParams.js';
 import { discountLabel, formatValidUntil, daysUntilExpiry } from '@/features/offers/offerHelpers.js';
 
 async function copyToClipboard(text) {
@@ -16,11 +17,7 @@ async function copyToClipboard(text) {
   }
 }
 
-/**
- * One offer, shared by the Offers page, the homepage section, and the hotel-details section. `compact`
- * trims it to fit a horizontal scroller; `showUse` controls whether the "Use Offer" CTA appears (the
- * Booking Review page shows these as a plain Apply list instead, via a different component).
- */
+/** Shared promotional card used on the homepage, offers page and hotel details. */
 export function OfferCard({ offer, compact = false, showUse = true }) {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -40,43 +37,52 @@ export function OfferCard({ offer, compact = false, showUse = true }) {
 
   const useOffer = () => {
     const destination = offer.destinations?.[0];
-    const path = destination ? `/hotels/${slugifyPlace(destination)}` : '/destinations';
-    navigate(`${path}?coupon=${encodeURIComponent(offer.code)}`);
+    navigate(destinationSearchPath(destination, new Date(), { coupon: offer.code }));
   };
 
   return (
-    <article className={`customer-offer-card flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 shadow-sm transition-shadow hover:shadow-md ${compact ? 'w-72 shrink-0' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
-        <Badge tone="premium" className="text-sm">{discountLabel(offer)}</Badge>
-        {endingSoon && <Badge tone="warning">{daysLeft <= 0 ? 'Ending soon' : `Ends in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`}</Badge>}
+    <article className={`flex overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm transition hover:border-brand-300 hover:shadow-md ${compact ? 'h-[188px] w-[340px] max-w-[86vw] shrink-0' : 'h-[234px] w-full'}`}>
+      <div className={`relative shrink-0 overflow-hidden bg-brand-950 ${compact ? 'w-[35%]' : 'w-[36%]'}`}>
+        <SafeImage
+          src={offer.imageUrl}
+          alt={`${offer.title} promotional offer`}
+          className="h-full w-full"
+          sizes={compact ? '120px' : '(min-width: 1024px) 145px, 35vw'}
+          fallbackLabel="Offer image coming soon"
+        />
+        <div className="absolute inset-x-0 bottom-0 bg-brand-950/95 px-2 py-1.5 text-center text-[11px] font-bold tracking-[0.12em] text-white">
+          {discountLabel(offer)}
+        </div>
       </div>
 
-      <div>
-        <h3 className="text-base font-semibold text-[var(--text-strong)]">{offer.title}</h3>
-        <p className="mt-0.5 text-sm text-[var(--text-muted)]">{offer.description}</p>
-      </div>
-
-      <dl className="space-y-1 text-xs text-[var(--text-muted)]">
-        {offer.minBookingAmount > 0 && <div>Min booking: ₹{offer.minBookingAmount.toLocaleString('en-IN')}</div>}
-        {offer.minNights && <div>Minimum {offer.minNights}-night stay</div>}
-        {offer.destinations?.length > 0 && <div>Valid in: {offer.destinations.join(', ')}</div>}
-        {offer.hotels?.length > 0 && <div>Valid on selected hotels</div>}
-        <div>Valid until {formatValidUntil(offer.validUntil)}</div>
-      </dl>
-
-      <div className="mt-auto flex items-center gap-2 pt-1">
-        <button
-          type="button"
-          onClick={copyCode}
-          className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-dashed border-brand-300 bg-brand-50 px-3 py-2 font-mono text-sm font-semibold text-brand-700 transition-colors hover:bg-brand-100"
-        >
-          {copied ? <><Check className="h-3.5 w-3.5" aria-hidden="true" /> Copied</> : <><Copy className="h-3.5 w-3.5" aria-hidden="true" /> {offer.code}</>}
-        </button>
-        {showUse && (
-          <Button type="button" size="sm" onClick={useOffer}>
-            <Tag className="h-3.5 w-3.5" aria-hidden="true" /> Use Offer
-          </Button>
+      <div className={`flex min-w-0 flex-1 flex-col ${compact ? 'p-3' : 'p-4'}`}>
+        {!compact && (
+          <div className="flex items-start justify-between gap-2">
+            <Badge tone="premium" className="shrink-0 text-xs">{discountLabel(offer)}</Badge>
+            {endingSoon && <Badge tone="warning" className="text-[10px]">{daysLeft <= 0 ? 'Ending soon' : `${daysLeft}d left`}</Badge>}
+          </div>
         )}
+        <h3 className={`${compact ? 'line-clamp-2 text-sm' : 'mt-3 line-clamp-2 text-base'} font-bold leading-snug text-[var(--text-strong)]`}>{offer.title}</h3>
+        {!compact && <p className="mt-1 line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">{offer.description}</p>}
+        <div className="mt-2 text-xs text-[var(--text-muted)]">
+          <p>Valid till: {formatValidUntil(offer.validUntil)}</p>
+          {!compact && offer.minBookingAmount > 0 && <p>Min booking: ₹{offer.minBookingAmount.toLocaleString('en-IN')}</p>}
+        </div>
+
+        <div className={`mt-auto flex items-stretch gap-2 ${compact ? 'pt-2' : 'pt-3'}`}>
+          <button
+            type="button"
+            onClick={copyCode}
+            className="inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md bg-brand-50 px-2 py-2 font-mono text-[11px] font-bold text-brand-700 transition-colors hover:bg-brand-100"
+          >
+            {copied ? <><Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Copied</> : <><Copy className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> CODE: {offer.code}</>}
+          </button>
+          {showUse && (
+            <Button type="button" size="sm" variant="secondary" className="min-h-9 border-brand-200 px-3 text-xs text-brand-700" onClick={useOffer}>
+              {!compact && <Tag className="h-3.5 w-3.5" aria-hidden="true" />} {compact ? 'Apply Offer' : 'Use Offer'}
+            </Button>
+          )}
+        </div>
       </div>
     </article>
   );

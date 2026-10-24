@@ -4,7 +4,7 @@ const COUPON_COLUMNS = `
   c.id, c.code, c.discount_type, c.discount_value, c.max_discount_minor, c.min_amount_minor,
   c.valid_from, c.valid_to, c.usage_limit, c.used_count, c.is_active, c.per_user_limit, c.min_nights,
   c.customer_eligibility, c.stay_from::text AS stay_from, c.stay_to::text AS stay_to, c.description,
-  c.created_by, c.created_at, c.updated_at
+  c.image_storage_key, c.created_by, c.created_at, c.updated_at
 `;
 
 export const couponRepository = {

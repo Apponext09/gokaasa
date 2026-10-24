@@ -10,8 +10,8 @@ import { addDays, nightsBetween, slugifyPlace, stayParams, todayIso, validateSta
 const titleCase = (slug) => slug.split('-').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 
 /** Where the search goes for a chosen destination. Hotels open directly; places open the Hotels listing page. */
-export function searchTargetFor(destination, stay, occupancy) {
-  const params = stayParams({ ...stay, occupancy });
+export function searchTargetFor(destination, stay, occupancy, coupon = null) {
+  const params = stayParams({ ...stay, occupancy, coupon });
   // A specific hotel — go straight to its detail page
   if (destination.type === 'HOTEL' && destination.hotelSlug) {
     return `/hotels/${destination.destination}/${destination.hotelSlug}?${params}`;
@@ -54,7 +54,7 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted }) {
       return;
     }
     setError(null);
-    navigate(searchTargetFor(target, stay, occupancy));
+    navigate(searchTargetFor(target, stay, occupancy, initial?.coupon));
     onSubmitted?.();
   };
 

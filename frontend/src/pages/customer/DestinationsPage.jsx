@@ -36,7 +36,7 @@ export function DestinationsPage() {
 
       {!places && !error && (
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 12 }, (_, i) => <Skeleton key={i} className="h-24" />)}
+          {Array.from({ length: 12 }, (_, i) => <Skeleton key={i} className="h-[146px] rounded-2xl" />)}
         </div>
       )}
 

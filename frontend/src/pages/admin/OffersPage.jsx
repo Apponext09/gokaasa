@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Tag } from 'lucide-react';
+import { Pencil, Plus, Search, Tag } from 'lucide-react';
 import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
 import { buttonVariants } from '@/components/ui/button.jsx';
@@ -89,6 +89,7 @@ export function OffersPage() {
                 <TableHead>Usage</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </tr>
             </TableHeader>
             <TableBody>
@@ -102,6 +103,15 @@ export function OffersPage() {
                   <TableCell className="text-[var(--text-body)]">{c.usedCount}{c.usageLimit ? ` / ${c.usageLimit}` : ''}</TableCell>
                   <TableCell><Badge tone={c.isActive ? 'success' : 'neutral'}>{c.isActive ? 'Active' : 'Inactive'}</Badge></TableCell>
                   <TableCell className="text-[var(--text-muted)]">{formatDateTime(c.createdAt)}</TableCell>
+                  <TableCell className="text-right">
+                    <Link
+                      to={`/admin/offers/${c.id}`}
+                      aria-label={`Edit coupon ${c.code}`}
+                      className={buttonVariants({ variant: 'secondary', size: 'sm' })}
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Edit
+                    </Link>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

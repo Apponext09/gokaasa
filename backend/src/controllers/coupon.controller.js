@@ -1,4 +1,5 @@
 import { couponService } from '../services/coupon.service.js';
+import { AppError } from '../utils/AppError.js';
 
 function actorOf(req) {
   return { id: req.user.id, roles: req.user.roles };
@@ -24,6 +25,11 @@ export const couponController = {
 
   async setStatus(req, res) {
     return res.json({ coupon: await couponService.setActive(req.validated.params.id, req.validated.body.isActive, actorOf(req)) });
+  },
+
+  async uploadImage(req, res) {
+    if (!req.file) throw AppError.badRequest('Choose an image to upload');
+    return res.status(201).json({ coupon: await couponService.uploadImage(req.validated.params.id, req.file, actorOf(req)) });
   },
 
   async remove(req, res) {

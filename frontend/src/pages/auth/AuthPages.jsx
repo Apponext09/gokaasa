@@ -140,6 +140,7 @@ function AuthShell({
   children,
   footer,
   eyebrow = 'Welcome to Gokaasa',
+  compact = false,
 }) {
   const [activeImage, setActiveImage] = useState(0);
 
@@ -174,15 +175,15 @@ function AuthShell({
           MAIN CONTAINER
           ================================================================ */}
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center justify-center px-4 sm:px-6 lg:px-8 ${compact ? 'py-4' : 'py-8'}`}>
 
-        <div className="grid w-full max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface-card)] shadow-[0_30px_100px_rgba(0,0,0,0.30)] lg:grid-cols-[0.92fr_1.08fr]">
+        <div className={`grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface-card)] shadow-[0_30px_100px_rgba(0,0,0,0.30)] ${compact ? 'max-w-5xl lg:scale-[0.8] lg:grid-cols-[0.9fr_1.1fr]' : 'max-w-6xl lg:grid-cols-[0.92fr_1.08fr]'}`}>
 
           {/* ============================================================
               PREMIUM IMAGE PANEL
               ============================================================ */}
 
-          <div className="relative hidden min-h-[720px] overflow-hidden lg:block">
+          <div className={`relative hidden overflow-hidden lg:block ${compact ? 'min-h-[590px]' : 'min-h-[720px]'}`}>
 
             {/* ----------------------------------------------------------
                 SLIDESHOW IMAGES
@@ -223,7 +224,7 @@ function AuthShell({
                 IMAGE CONTENT
                 ========================================================== */}
 
-            <div className="relative z-10 flex h-full flex-col justify-between p-8 text-white xl:p-12">
+            <div className={`relative z-10 flex h-full flex-col justify-between text-white ${compact ? 'p-7 xl:p-8' : 'p-8 xl:p-12'}`}>
 
               {/* ========================================================
                   TOP CONTENT
@@ -235,7 +236,7 @@ function AuthShell({
                     LOGO
                     ------------------------------------------------------ */}
 
-                <div className="mb-12 inline-flex rounded-2xl bg-white px-5 py-3.5 shadow-[0_10px_35px_rgba(0,0,0,0.30)] ring-1 ring-white/30">
+                <div className={`inline-flex rounded-2xl bg-white px-5 py-3.5 shadow-[0_10px_35px_rgba(0,0,0,0.30)] ring-1 ring-white/30 ${compact ? 'mb-7' : 'mb-12'}`}>
                   <Logo />
                 </div>
 
@@ -246,14 +247,14 @@ function AuthShell({
                 <div className="max-w-xl">
 
                   {/* Eyebrow */}
-                  <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-md">
+                  <div className={`inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-md ${compact ? 'mb-4' : 'mb-6'}`}>
                     <Sparkles className="h-3.5 w-3.5 text-amber-300" />
 
                     Premium stays
                   </div>
 
                   {/* Main heading */}
-                  <h2 className="font-[var(--font-display)] text-4xl font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_14px_rgba(0,0,0,0.65)] xl:text-5xl">
+                  <h2 className={`font-[var(--font-display)] font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_14px_rgba(0,0,0,0.65)] ${compact ? 'text-3xl xl:text-4xl' : 'text-4xl xl:text-5xl'}`}>
                     Your next
                     <br />
                     unforgettable stay
@@ -262,7 +263,7 @@ function AuthShell({
                   </h2>
 
                   {/* Description */}
-                  <p className="mt-6 max-w-lg text-base font-medium leading-7 text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)]">
+                  <p className={`max-w-lg font-medium text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)] ${compact ? 'mt-4 text-sm leading-6' : 'mt-6 text-base leading-7'}`}>
                     Discover exceptional hotels, exclusive deals,
                     flexible bookings and memorable experiences
                     with Gokaasa.
@@ -347,9 +348,9 @@ function AuthShell({
               FORM PANEL
               ============================================================ */}
 
-          <div className="flex min-h-[650px] flex-col justify-center bg-[var(--surface-card)]">
+          <div className={`flex flex-col justify-center bg-[var(--surface-card)] ${compact ? 'min-h-[590px]' : 'min-h-[650px]'}`}>
 
-            <div className="px-5 py-8 sm:px-10 sm:py-10 xl:px-14">
+            <div className={compact ? 'px-5 py-6 sm:px-8 sm:py-7 xl:px-10' : 'px-5 py-8 sm:px-10 sm:py-10 xl:px-14'}>
 
               {/* --------------------------------------------------------
                   MOBILE LOGO
@@ -361,19 +362,19 @@ function AuthShell({
                 </div>
               </div>
 
-              <div className="mx-auto w-full max-w-md">
+              <div className={`mx-auto w-full ${compact ? 'max-w-sm' : 'max-w-md'}`}>
 
                 {/* ------------------------------------------------------
                     FORM HEADER
                     ------------------------------------------------------ */}
 
-                <div className="mb-8">
+                <div className={compact ? 'mb-6' : 'mb-8'}>
 
                   <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-600">
                     {eyebrow}
                   </p>
 
-                  <h1 className="font-[var(--font-display)] text-3xl font-bold tracking-tight text-[var(--text-strong)] sm:text-4xl">
+                  <h1 className={`font-[var(--font-display)] font-bold tracking-tight text-[var(--text-strong)] ${compact ? 'text-3xl' : 'text-3xl sm:text-4xl'}`}>
                     {title}
                   </h1>
 
@@ -387,7 +388,7 @@ function AuthShell({
 
                 {children}
 
-                <div className="mt-8">
+                <div className={compact ? 'mt-6' : 'mt-8'}>
                   <TrustPoints />
                 </div>
 
@@ -396,7 +397,7 @@ function AuthShell({
 
             {/* Footer */}
             {footer && (
-              <div className="border-t border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 px-5 py-5 text-center sm:px-10">
+              <div className={`border-t border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 px-5 text-center sm:px-10 ${compact ? 'py-4' : 'py-5'}`}>
                 {footer}
               </div>
             )}
@@ -460,6 +461,7 @@ export function LoginPage() {
       title="Welcome back"
       description="Sign in to manage your bookings, saved hotels and trips."
       eyebrow="Welcome back"
+      compact
       footer={
         <p className="text-sm text-[var(--text-muted)]">
           New to Gokaasa?{' '}
@@ -629,6 +631,7 @@ export function RegisterPage() {
       title="Create your account"
       description="Join Gokaasa to save hotels, manage bookings and get personalized trip updates."
       eyebrow="Join Gokaasa"
+      compact
       footer={
         <p className="text-sm text-[var(--text-muted)]">
           Already have an account?{' '}

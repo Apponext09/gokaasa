@@ -499,6 +499,8 @@ export function HotelDetailsPage() {
       currency:
         plan.currency ?? 'INR',
 
+      coupon: state.coupon,
+
       quotedAt:
         new Date().toISOString(),
     };

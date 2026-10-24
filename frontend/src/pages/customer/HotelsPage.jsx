@@ -37,7 +37,7 @@ const shortDate = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 
 function buildRequest(state, destination) {
-  const p = toSearchParams(state);
+  const p = toSearchParams(state, { includeCoupon: false });
   if (destination) p.set("destination", destination);
   if (state.area) p.set("area", state.area);
   return p;
@@ -130,6 +130,7 @@ export function HotelsPage() {
     occupancy: [{ adults: 2, childAges: [] }],
     filters: state.filters,
     sort: state.sort,
+    coupon: state.coupon,
   };
 
   return (
@@ -150,7 +151,7 @@ export function HotelsPage() {
           <div className="hotels-page-search-box">
             <SearchWidget
               variant="compact"
-              initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy }}
+              initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
             />
           </div>
         </div>

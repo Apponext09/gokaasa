@@ -2,7 +2,7 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // Only keys in this exact shape are ever read or written, which blocks path traversal outright.
-const KEY_PATTERN = /^(hotels|rooms)\/\d+\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+const KEY_PATTERN = /^(hotels|rooms|offers)\/\d+\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
 
 export class LocalStorage {
   constructor({ directory, publicBasePath }) {

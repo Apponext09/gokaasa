@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Trash2 } from 'lucide-react';
+import { ImagePlus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select, Textarea, Checkbox } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -11,6 +11,10 @@ import { BackLink, EmptyState, FormField, PageHeader, formatDateTime, formatMone
 import { minorToRupees, rupeesToMinor } from '@/features/rooms/roomForm.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { SafeImage } from '@/components/shared/SafeImage.jsx';
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 const toInputDate = (iso) => (iso ? new Date(iso).toISOString().slice(0, 16) : '');
 
@@ -75,6 +79,15 @@ export function OfferFormPage() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageError, setImageError] = useState(null);
+  const [imageProgress, setImageProgress] = useState(0);
+  const imageInputRef = useRef(null);
+
+  useEffect(() => () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+  }, [imagePreview]);
 
   useEffect(() => {
     adminApi.listHotels({ limit: 100, sort: 'name_asc' }).then((r) => setHotels(r.items)).catch(() => {});
@@ -100,16 +113,41 @@ export function OfferFormPage() {
     hotelIds: f.hotelIds.includes(hotelId) ? f.hotelIds.filter((h) => h !== hotelId) : [...f.hotelIds, hotelId],
   }));
 
+  const chooseImage = (file) => {
+    setImageError(null);
+    if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
+      setImageError('Only JPEG, PNG and WebP images can be uploaded.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setImageError('Images must be 5 MB or smaller.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
   const save = async (event) => {
     event.preventDefault();
     setSaving(true);
+    let saved = null;
     try {
       const body = toBody(form);
-      const saved = isNew ? await adminApi.createCoupon(body) : await adminApi.updateCoupon(id, body);
+      saved = isNew ? await adminApi.createCoupon(body) : await adminApi.updateCoupon(id, body);
+      if (imageFile) {
+        setImageProgress(0);
+        saved = await adminApi.uploadCouponImage(saved.id, imageFile, setImageProgress);
+      }
       toast.success(isNew ? 'Coupon created' : 'Coupon updated');
       navigate(`/admin/offers/${saved.id}`, { replace: true });
     } catch (err) {
-      toast.error(normalizeError(err).message);
+      const message = normalizeError(err).message;
+      if (saved && isNew) {
+        toast.error(`Coupon created, but its image could not be uploaded: ${message}`);
+        navigate(`/admin/offers/${saved.id}`, { replace: true });
+      } else {
+        toast.error(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -191,6 +229,42 @@ export function OfferFormPage() {
             <FormField id="description" label="Description (internal note)" className="sm:col-span-2">
               <Textarea id="description" value={form.description} onChange={set('description')} rows={2} />
             </FormField>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Offer image</CardTitle></CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col gap-4 rounded-lg border border-dashed border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center">
+              <SafeImage
+                key={imagePreview ?? coupon.imageUrl ?? 'empty-offer-image'}
+                src={imagePreview ?? coupon.imageUrl}
+                alt="Offer preview"
+                className="h-32 w-full shrink-0 rounded-lg sm:w-52"
+                fallbackLabel="No offer image"
+              />
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-strong)]">Promotional card image</p>
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">JPEG, PNG or WebP, up to 5 MB. A landscape image works best.</p>
+                </div>
+                <input
+                  ref={imageInputRef}
+                  id="offer-image"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={(event) => event.target.files?.[0] && chooseImage(event.target.files[0])}
+                />
+                <Button type="button" variant="secondary" size="sm" onClick={() => imageInputRef.current?.click()}>
+                  <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                  {imageFile || coupon.imageUrl ? 'Change image' : 'Choose image'}
+                </Button>
+                {imageFile && <p className="text-xs text-[var(--text-muted)]">Selected: {imageFile.name}. It will upload when you save the coupon.</p>}
+                {saving && imageFile && imageProgress > 0 && <p className="text-xs text-brand-700">Uploading image: {imageProgress}%</p>}
+              </div>
+            </div>
+            {imageError && <Alert tone="error" className="mt-3">{imageError}</Alert>}
           </CardContent>
         </Card>
 

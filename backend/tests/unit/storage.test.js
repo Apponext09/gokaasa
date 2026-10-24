@@ -14,6 +14,10 @@ test('local storage only accepts server-generated keys', async () => {
     await storage.put(good, Buffer.from([0xff, 0xd8, 0xff]));
     assert.equal(storage.publicUrl(good), `/media/${good}`);
 
+    const offer = 'offers/9/1b2d3c4e-5f60-4a71-8b82-9c93d4e5f612.webp';
+    await storage.put(offer, Buffer.from('RIFF\0\0\0\0WEBP', 'binary'));
+    assert.equal(storage.publicUrl(offer), `/media/${offer}`);
+
     for (const bad of ['../secret.jpg', 'hotels/7/../../x.jpg', 'hotels/7/photo.jpg', '/etc/passwd', 'hotels/7/0b1d2c3e-4f50-4a61-8b72-9c83d4e5f601.exe']) {
       await assert.rejects(() => storage.put(bad, Buffer.from('x')), /unsafe storage key/, bad);
       assert.throws(() => storage.publicUrl(bad), /unsafe storage key/, bad);
