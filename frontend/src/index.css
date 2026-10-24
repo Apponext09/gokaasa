@@ -749,12 +749,8 @@ body {
 }
 
 .customer-footer {
-  border-top: 3px solid #0a42ba;
+  border-top: 1px solid rgb(255 255 255 / 0.06);
   background: #0a0f1d;
-}
-
-.customer-footer a:hover {
-  color: #93c5fd;
 }
 
 /* Reference-style desktop alignment: logo left, navigation centered, account actions right. */
@@ -884,6 +880,24 @@ body {
   }
 }
 
+/* Keep customer hotel filters/results scrollable without showing nested scrollbar rails. */
+.no-scrollbar,
+.customer-filter-sidebar,
+.hotels-filter-sidebar,
+.home-hotel-listing-section .hotels-cards-stream {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.customer-filter-sidebar::-webkit-scrollbar,
+.hotels-filter-sidebar::-webkit-scrollbar,
+.home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .customer-hero-slide,
   .customer-hero-dots button {
@@ -903,8 +917,17 @@ body {
 
 .hotels-page-hero {
   background: linear-gradient(135deg, #071e4a 0%, #0a42ba 55%, #1877f2 100%);
+  background-position: center;
+  background-size: cover;
   padding: 48px 16px 56px;
   position: relative;
+  transition: background-image 0.6s ease-in-out;
+}
+
+.hotels-page-hero.has-location-image {
+  background-position: center 48%;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .hotels-page-hero::after {
@@ -1106,13 +1129,13 @@ body {
   box-shadow: 0 2px 8px rgba(15 23 42 / 0.06) !important;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  transition: border-color 0.2s ease !important;
 }
 
 .hotels-page-root .customer-hotel-card:hover,
 .home-hotel-listing-section .customer-hotel-card:hover {
-  box-shadow: 0 12px 30px rgba(15 23 42 / 0.12) !important;
-  transform: translateY(-3px) !important;
+  box-shadow: 0 2px 8px rgba(15 23 42 / 0.06) !important;
+  transform: none !important;
   border-color: #93c5fd !important;
 }
 
@@ -1502,7 +1525,7 @@ body {
 
 .home-hotel-listing-section {
   background: #f1f5f9;
-  padding: 56px 0 64px;
+  padding: 40px 0 36px;
 }
 
 .home-hotel-listing-inner {
@@ -1546,16 +1569,46 @@ body {
   min-height: 0;
 }
 
-.home-hotel-listing-section .hotels-cards-stream {
-  max-height: min(72vh, 760px);
+.home-hotel-listing-section .hotels-page-grid {
+  --home-hotel-stream-height: min(72vh, 760px);
+}
+
+.home-hotel-listing-section .hotels-filter-sidebar {
+  height: calc(var(--home-hotel-stream-height) + 40px);
+  max-height: calc(var(--home-hotel-stream-height) + 40px);
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.home-hotel-listing-section .hotels-filter-sidebar .customer-filter-panel {
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: #94a3b8 transparent;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.home-hotel-listing-section .hotels-filter-sidebar .customer-filter-panel::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.home-hotel-listing-section .hotels-cards-stream {
+  height: var(--home-hotel-stream-height);
+  max-height: var(--home-hotel-stream-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar {
-  width: 7px;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar-track {
@@ -1576,7 +1629,14 @@ body {
 }
 
 @media (max-width: 1023px) {
+  .home-hotel-listing-section .hotels-filter-sidebar {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
   .home-hotel-listing-section .hotels-cards-stream {
+    height: auto;
     max-height: none;
     overflow-y: visible;
   }
@@ -1618,13 +1678,14 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-/* Keep the copy legible while allowing the real map to remain visible on the right. */
+/* Separate the copy from the map so India remains clear and unobstructed. */
 .nearby-idle-card::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 0;
   z-index: 1;
-  background: linear-gradient(90deg, rgba(3, 15, 36, 0.98) 0%, rgba(5, 25, 55, 0.94) 43%, rgba(5, 25, 55, 0.54) 68%, rgba(5, 25, 55, 0.08) 100%);
+  width: 44%;
+  background: linear-gradient(90deg, #031026 0%, #071d3d 86%, rgba(7, 29, 61, 0.9) 100%);
   pointer-events: none;
 }
 
@@ -1633,6 +1694,8 @@ body {
     padding: 18px 20px;
   }
   .nearby-idle-card::before {
+    inset: 0;
+    width: 100%;
     background: rgba(3, 15, 36, 0.88);
   }
 }
@@ -1644,7 +1707,7 @@ body {
   align-items: flex-start;
   position: relative;
   z-index: 2;
-  width: min(720px, 72%);
+  width: 39%;
 }
 
 @media (max-width: 767px) {
@@ -1696,10 +1759,11 @@ body {
 /* Real OpenStreetMap preview fills the existing card without changing its footprint. */
 .nearby-idle-map {
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 42%;
   z-index: 0;
   overflow: hidden;
-  border-radius: inherit;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0 16px 16px 0;
   background: #dbeafe;
 }
 
@@ -1708,7 +1772,73 @@ body {
   width: 100%;
   height: calc(100% + 34px);
   border: 0;
-  filter: saturate(0.85) contrast(1.04);
+  filter: saturate(1.04) contrast(1.02);
+}
+
+.nearby-real-map {
+  width: 100%;
+  height: 100%;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.nearby-map-empty {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  background: #dbeafe;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nearby-hotel-marker {
+  display: grid !important;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #0a42ba;
+  box-shadow: 0 3px 10px rgb(7 30 74 / 0.42);
+}
+
+.nearby-hotel-marker span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.nearby-real-map .leaflet-popup-content {
+  display: flex;
+  min-width: 150px;
+  flex-direction: column;
+  gap: 3px;
+  margin: 12px 14px;
+  color: #0f172a;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.nearby-real-map .leaflet-popup-content strong {
+  font-size: 13px;
+}
+
+.nearby-map-popup-location {
+  color: #64748b;
+}
+
+.nearby-real-map .leaflet-popup-content a {
+  margin-top: 3px;
+  color: #0a42ba;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .nearby-idle-map {
+    inset: 0;
+    border-left: 0;
+    border-radius: inherit;
+  }
 }
 
 .nearby-idle-map-attribution {
@@ -1727,4 +1857,564 @@ body {
 
 .nearby-idle-map-attribution:hover {
   text-decoration: underline;
+}
+
+.nearby-idle-map-attribution.is-collapsed {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+}
+
+/* =========================================================
+   ADMIN UI — compact, modern operations workspace
+
+   This theme is intentionally scoped to AdminLayout. It follows the
+   customer reference's crisp blue, white and slate visual language
+   without affecting any customer-facing screen.
+========================================================= */
+.admin-ui {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #2563eb;
+  --color-brand-600: #1557c0;
+  --color-brand-700: #0a42a8;
+  --color-brand-800: #12377a;
+  --color-brand-900: #0b2454;
+  --surface-page: #f3f7fd;
+  --surface-card: #ffffff;
+  --surface-muted: #f1f5f9;
+  --surface-hover: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --text-strong: #0f172a;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --radius-control: 0.625rem;
+  --radius-card: 0.875rem;
+  --radius-sheet: 1.125rem;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.035), 0 8px 24px rgb(30 64 175 / 0.055);
+  --shadow-popover: 0 18px 48px rgb(15 23 42 / 0.14), 0 3px 10px rgb(15 23 42 / 0.06);
+  background: var(--surface-page);
+  color: var(--text-body);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.admin-ui h1,
+.admin-ui h2,
+.admin-ui h3,
+.admin-ui h4,
+.admin-ui h5,
+.admin-ui h6 {
+  font-family: 'Outfit', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.admin-main {
+  background:
+    linear-gradient(rgb(255 255 255 / 0.68), rgb(255 255 255 / 0.68)),
+    radial-gradient(circle at 95% 0%, #bfdbfe 0, transparent 28rem),
+    radial-gradient(circle at 0% 100%, #dbeafe 0, transparent 24rem),
+    #eef5ff;
+  scrollbar-gutter: stable;
+}
+
+.admin-sidebar {
+  border-color: rgb(255 255 255 / 0.08) !important;
+  background:
+    radial-gradient(circle at 10% 0%, rgb(96 165 250 / 0.46), transparent 20rem),
+    linear-gradient(180deg, #0a42ba 0%, #07358f 55%, #082967 100%) !important;
+  box-shadow: 8px 0 30px rgb(7 53 143 / 0.18);
+}
+
+.admin-sidebar-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.admin-sidebar-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.admin-brand {
+  display: flex;
+  min-height: 3.25rem;
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.76);
+  border-radius: 0.875rem;
+  background: rgb(255 255 255 / 0.96);
+  padding: 0.35rem 0.65rem;
+  box-shadow: 0 8px 24px rgb(2 6 23 / 0.18);
+}
+
+.admin-brand.is-collapsed {
+  height: 3rem;
+  width: 3rem;
+  overflow: hidden;
+  padding: 0.35rem;
+}
+
+.admin-sidebar img {
+  height: 2.5rem;
+  max-width: 12rem;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.admin-sidebar-nav > div:first-child {
+  padding-bottom: 0.25rem;
+}
+
+.admin-sidebar-nav p {
+  color: #a9c7fb !important;
+}
+
+.admin-nav-link {
+  position: relative;
+  min-height: 2.5rem;
+  color: #d9e7ff !important;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+}
+
+.admin-nav-link svg {
+  height: 1.125rem;
+  width: 1.125rem;
+  stroke-width: 1.9;
+}
+
+.admin-nav-link.is-active {
+  background: #ffffff !important;
+  color: #0a42ba !important;
+  box-shadow: 0 10px 24px rgb(2 28 78 / 0.24), inset 0 0 0 1px rgb(255 255 255 / 0.8);
+}
+
+.admin-nav-link:not(.is-active):hover {
+  background: rgb(255 255 255 / 0.08) !important;
+  color: #ffffff !important;
+}
+
+.admin-nav-link.is-active::before {
+  position: absolute;
+  left: -0.1rem;
+  width: 0.22rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: #f5ad35;
+  content: '';
+}
+
+.admin-sidebar-collapse {
+  border: 1px solid rgb(255 255 255 / 0.1) !important;
+  color: #bdc9df !important;
+}
+
+.admin-sidebar-collapse:hover {
+  background: rgb(255 255 255 / 0.08) !important;
+  color: #ffffff !important;
+}
+
+.admin-sidebar > div:first-child > .ui-button,
+.admin-sidebar > div:first-child + .ui-button {
+  color: #ffffff;
+}
+
+.admin-topbar {
+  position: relative;
+  z-index: 50;
+  height: 68px;
+  border-color: rgb(226 232 240 / 0.72) !important;
+  background: rgb(255 255 255 / 0.9) !important;
+  box-shadow: 0 5px 20px rgb(30 64 175 / 0.065);
+}
+
+.admin-topbar button,
+.admin-topbar a {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 13.5px;
+}
+
+.admin-search kbd {
+  color: #64748b;
+  box-shadow: 0 1px 1px rgb(15 23 42 / 0.04);
+}
+
+.admin-ui .page-header {
+  position: relative;
+  min-height: 5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.35rem 0.25rem 0.35rem 1.25rem;
+  box-shadow: none;
+}
+
+.admin-ui .page-header::before {
+  position: absolute;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  left: 0;
+  width: 5px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #4c91f4, #0a42ba 68%, #f2a93b);
+  box-shadow: 0 5px 14px rgb(37 99 235 / 0.22);
+  content: '';
+}
+
+.admin-ui .page-header h1 {
+  position: relative;
+  z-index: 1;
+  color: #0b2253;
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+
+.admin-ui .page-header p {
+  position: relative;
+  z-index: 1;
+  margin-top: 0.3rem;
+  color: #64748b;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.admin-ui .page-header-live-status {
+  border: 1px solid #b8e6c9;
+  border-radius: 999px;
+  background: #ecf9f0;
+  padding: 0.2rem 0.6rem;
+  color: #147a3c;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.admin-ui .page-header > div:last-child {
+  position: relative;
+  z-index: 1;
+}
+
+.admin-ui .page-header .ui-button:not(.bg-brand-600) {
+  border-color: #d3deeb;
+  background: #ffffff;
+  color: #0b2454;
+  box-shadow: 0 3px 10px rgb(15 23 42 / 0.06);
+}
+
+.admin-content > div {
+  animation: adminPageIn 240ms ease-out both;
+}
+
+@keyframes adminPageIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-ui .ui-card {
+  border-color: rgb(218 227 239 / 0.9);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.97);
+  box-shadow: var(--shadow-card);
+  transition: border-color 160ms ease;
+}
+
+.admin-ui .ui-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.admin-ui .ui-card-header {
+  border-bottom: 1px solid #eef2f7;
+  padding: 1.25rem 1.375rem 1rem;
+}
+
+.admin-ui .ui-card-content {
+  padding-inline: 1.375rem;
+}
+
+.admin-ui .ui-button {
+  border-radius: 0.625rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.admin-ui .ui-button.bg-brand-600 {
+  background: linear-gradient(135deg, #2878f0, #1557c0);
+  box-shadow: 0 6px 16px rgb(21 87 192 / 0.22);
+}
+
+.admin-ui .ui-button.bg-brand-600:hover {
+  background: linear-gradient(135deg, #1f6fe5, #0a42a8);
+}
+
+.admin-ui .ui-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.admin-ui .ui-control {
+  min-height: 2.625rem;
+  border-color: #dbe2ea;
+  background-color: #ffffff;
+  font-size: 0.8125rem;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.025);
+}
+
+.admin-ui .ui-label {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.admin-ui .filter-panel {
+  position: relative;
+  overflow: visible;
+  border-color: rgb(203 216 233 / 0.85);
+  border-radius: 1rem;
+  background: rgb(244 248 253 / 0.82);
+  padding: 0.75rem !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95), 0 4px 14px rgb(30 64 175 / 0.045);
+  backdrop-filter: blur(10px);
+}
+
+.admin-ui .filter-panel::before {
+  display: none;
+}
+
+.admin-ui .filter-panel .ui-control {
+  height: 2.875rem;
+  border-color: #d4e0ee;
+  border-radius: 0.75rem;
+  background: #ffffff;
+  box-shadow: 0 2px 7px rgb(15 23 42 / 0.045);
+}
+
+.admin-ui .filter-panel .ui-control:hover:not(:disabled) {
+  border-color: #afc7e5;
+}
+
+.admin-ui .filter-panel .ui-control:focus {
+  border-color: #2878f0;
+  box-shadow: 0 0 0 1px rgb(40 120 240 / 0.18);
+}
+
+.admin-ui .filter-panel svg {
+  color: #3970b7;
+}
+
+.admin-ui .filter-panel .relative > svg.pointer-events-none {
+  left: 0.35rem;
+  height: 2.15rem;
+  width: 2.15rem;
+  border: 1px solid #d9e8fb;
+  border-radius: 0.625rem;
+  background: #edf5ff;
+  padding: 0.55rem;
+  color: #1557c0;
+}
+
+.admin-ui .filter-panel .relative > .ui-control {
+  padding-left: 3rem !important;
+}
+
+.admin-ui .filter-panel.flex > .ui-control {
+  width: min(100%, 14rem);
+}
+
+.admin-ui .filter-location-row {
+  display: grid;
+  grid-template-columns: auto minmax(14rem, 22rem) minmax(10rem, 12rem) auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  border-top: 1px solid #dae5f1;
+  padding-top: 0.9rem;
+}
+
+.admin-ui .filter-group-label {
+  color: #547095;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.admin-ui .filter-location-row .ui-button {
+  height: 2.5rem;
+  padding-inline: 0.875rem;
+  color: #1557c0;
+}
+
+.admin-ui .ui-control:hover:not(:disabled) {
+  border-color: #cbd5e1;
+}
+
+.admin-ui .ui-control:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgb(59 130 246 / 0.18);
+}
+
+.admin-ui .ui-table-wrap {
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.admin-ui .ui-card:has(table) {
+  border-radius: 0;
+}
+
+.admin-ui .ui-table {
+  font-size: 0.8125rem;
+}
+
+.admin-ui .ui-table thead {
+  border-color: #e2e8f0;
+  background: linear-gradient(180deg, #f8fbff, #f2f7fd);
+  color: #64748b;
+  font-size: 0.6875rem;
+  letter-spacing: 0.055em;
+}
+
+.admin-ui table thead th {
+  text-align: center;
+}
+
+.admin-ui table th + th,
+.admin-ui table td + td {
+  border-left: 1px solid #e2e8f0;
+}
+
+.admin-content table:not(.ui-table) {
+  width: 100%;
+  font-size: 0.8125rem;
+}
+
+.admin-content table:not(.ui-table) thead {
+  background: linear-gradient(180deg, #f8fbff, #f2f7fd);
+  color: #5b6f8c;
+  font-size: 0.6875rem;
+  letter-spacing: 0.055em;
+}
+
+.admin-content table:not(.ui-table) tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.admin-content table:not(.ui-table) tbody tr:hover {
+  background: #f6faff;
+}
+
+.admin-ui .ui-table th {
+  height: 2.875rem;
+  padding-inline: 1.125rem;
+}
+
+.admin-ui .ui-table td {
+  padding: 0.875rem 1.125rem;
+  vertical-align: middle;
+}
+
+.admin-ui .ui-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.admin-ui .ui-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.admin-ui .ui-badge {
+  min-height: 1.625rem;
+  border: 1px solid rgb(15 23 42 / 0.04);
+  padding-inline: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.admin-ui .ui-alert {
+  border-radius: 0.875rem;
+  padding: 0.875rem 1rem;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 0.04);
+}
+
+.admin-ui .empty-state {
+  min-height: 15rem;
+  background:
+    radial-gradient(circle at 50% 45%, rgb(219 234 254 / 0.44), transparent 9rem);
+}
+
+.admin-ui .empty-state > span:first-child {
+  height: 3.5rem;
+  width: 3.5rem;
+  background: #e8f1ff;
+  color: #1557c0;
+  box-shadow: inset 0 0 0 1px #d5e5fb;
+}
+
+.admin-content section > div:first-child h2 {
+  color: #102447;
+  font-weight: 700;
+}
+
+.admin-ui input[type='checkbox'] {
+  accent-color: #1557c0;
+}
+
+.admin-ui ::selection {
+  background: #dbeafe;
+  color: #0b2454;
+}
+
+@media (max-width: 767px) {
+  .admin-ui {
+    font-size: 14px;
+  }
+
+  .admin-main {
+    background: var(--surface-page);
+  }
+
+  .admin-ui .page-header h1 {
+    font-size: 1.45rem;
+  }
+
+  .admin-ui .page-header {
+    min-height: auto;
+    padding: 0.25rem 0 0.25rem 1.1rem;
+  }
+
+  .admin-ui .filter-panel.flex > .ui-control {
+    width: 100%;
+  }
+
+  .admin-ui .filter-location-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-ui .filter-group-label {
+    margin-bottom: -0.2rem;
+  }
 }

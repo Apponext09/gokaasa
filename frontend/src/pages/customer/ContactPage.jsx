@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  CheckCircle2,
   ChevronDown,
   Clock3,
   Mail,
@@ -11,7 +12,11 @@ import {
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '@/components/shared/index.jsx';
+import { Button } from '@/components/ui/button.jsx';
+import { Input } from '@/components/ui/form-controls.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
+import { discoveryApi } from '@/services/endpoints.js';
+import { normalizeError } from '@/services/api.js';
 
 const FAQS = [
   {
@@ -95,6 +100,90 @@ function FAQItem({ question, answer, isOpen, onClick }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function NewsletterSection() {
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState('idle');
+  const [error, setError] = useState(null);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setState('loading');
+    setError(null);
+
+    try {
+      await discoveryApi.subscribeNewsletter(email);
+      setState('success');
+      setEmail('');
+    } catch (err) {
+      setError(normalizeError(err).message);
+      setState('error');
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="newsletter-heading"
+      className="border-t border-slate-200 bg-slate-50"
+    >
+      <div className="mx-auto grid max-w-5xl gap-5 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-10">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+            <Mail className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <h2
+              id="newsletter-heading"
+              className="font-[var(--font-display)] text-xl font-semibold text-[var(--text-strong)] sm:text-2xl"
+            >
+              Get travel offers by email
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Hotel deals and useful travel updates, without the noise.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          {state === 'success' ? (
+            <p
+              className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700"
+              role="status"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              You're subscribed! Keep an eye on your inbox.
+            </p>
+          ) : (
+            <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                type="email"
+                required
+                aria-label="Email address"
+                placeholder="Enter your email address"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={state === 'loading'}
+                className="min-h-11 flex-1 bg-white"
+              />
+              <Button
+                type="submit"
+                loading={state === 'loading'}
+                className="min-h-11 px-6"
+              >
+                Subscribe
+              </Button>
+            </form>
+          )}
+          {state === 'error' && (
+            <p role="alert" className="mt-2 text-sm text-danger-600">
+              {error}
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -341,6 +430,9 @@ export function ContactPage() {
           </div>
         </div>
       </section>
+
+      {/* Newsletter */}
+      <NewsletterSection />
     </div>
   );
 }

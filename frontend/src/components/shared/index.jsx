@@ -68,7 +68,7 @@ export function BackLink({ to, children }) {
 
 export function PageHeader({ title, description, actions, className }) {
   return (
-    <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
+    <div className={cn('page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-strong)]">{title}</h1>
         {description && <p className="max-w-2xl text-sm text-[var(--text-muted)]">{description}</p>}
@@ -98,7 +98,7 @@ export function FormField({ id, label, error, hint, children, className }) {
 
 export function EmptyState({ icon: Icon = Inbox, title, description, action, className }) {
   return (
-    <div className={cn('flex flex-col items-center gap-3 px-6 py-12 text-center', className)}>
+    <div className={cn('empty-state flex flex-col items-center gap-3 px-6 py-12 text-center', className)}>
       <span className="grid h-12 w-12 place-items-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)]">
         <Icon className="h-5 w-5" aria-hidden="true" />
       </span>

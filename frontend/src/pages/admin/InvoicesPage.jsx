@@ -76,20 +76,18 @@ export function InvoicesPage() {
     <div className="space-y-6">
       <PageHeader title="Invoices" description="Search and download invoices for any booking with a captured payment." />
 
-      <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-4">
-        <div className="relative sm:col-span-2">
+      <Card className="filter-panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-12">
+        <div className="relative sm:col-span-2 xl:col-span-5">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input aria-label="Search by reference, name or email" placeholder="Booking ref, customer name or email" className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} />
         </div>
-        <Select aria-label="Filter by payment status" value={paymentStatus} onChange={(e) => update({ paymentStatus: e.target.value, page: null })}>
+        <Select aria-label="Filter by payment status" value={paymentStatus} onChange={(e) => update({ paymentStatus: e.target.value, page: null })} className="xl:col-span-3">
           <option value="">All payment statuses</option>
           <option value="SUCCESS">Paid</option>
           <option value="REFUNDED">Refunded</option>
         </Select>
-        <div className="flex gap-2">
-          <Input aria-label="From date" type="date" value={from} onChange={(e) => update({ from: e.target.value, page: null })} />
-          <Input aria-label="To date" type="date" value={to} onChange={(e) => update({ to: e.target.value, page: null })} />
-        </div>
+        <Input aria-label="From date" type="date" value={from} onChange={(e) => update({ from: e.target.value, page: null })} className="xl:col-span-2" />
+        <Input aria-label="To date" type="date" value={to} onChange={(e) => update({ to: e.target.value, page: null })} className="xl:col-span-2" />
       </Card>
 
       {error && <Alert tone="error">{error}</Alert>}

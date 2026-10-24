@@ -113,7 +113,7 @@ export function ReviewsPage() {
         description={isAdmin ? 'Moderate guest reviews across every hotel.' : 'Guest reviews for your assigned hotels. Moderation is handled by an administrator.'}
       />
 
-      <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-4">
+      <Card className="filter-panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-4">
         <div className="relative sm:col-span-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input aria-label="Search by title, text or guest" placeholder="Title, review text or guest" className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} />

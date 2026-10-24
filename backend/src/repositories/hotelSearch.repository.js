@@ -86,7 +86,7 @@ export const hotelSearchRepository = {
           ORDER BY rt.hotel_id, rpr.final_price_minor ASC
        )
        SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
-              w.distance_km,
+              h.latitude, h.longitude, w.distance_km,
               c.base_price_minor, c.discount_minor, c.final_price_minor,
               (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL

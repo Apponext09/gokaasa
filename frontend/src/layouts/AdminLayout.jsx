@@ -73,14 +73,14 @@ const NAV = [
 function SidebarNav({ onNavigate, collapsed }) {
   const { isAdmin } = useAuth();
   return (
-    <nav aria-label="Admin" className="flex flex-col gap-4">
+    <nav aria-label="Admin" className="admin-sidebar-nav flex flex-col gap-5">
       {NAV.map((group, index) => {
         const items = group.items.filter((item) => !item.adminOnly || isAdmin);
         if (items.length === 0) return null;
         return (
-          <div key={group.section ?? index} className="flex flex-col gap-1">
+          <div key={group.section ?? index} className="flex flex-col gap-1.5">
             {group.section && !collapsed && (
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">{group.section}</p>
+              <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{group.section}</p>
             )}
             {items.map(({ to, label, icon: Icon, end }) => (
               <NavLink
@@ -91,9 +91,9 @@ function SidebarNav({ onNavigate, collapsed }) {
                 title={collapsed ? label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-sm font-medium transition-colors',
+                    'admin-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
                     collapsed && 'justify-center',
-                    isActive ? 'bg-brand-50 text-brand-700' : 'text-[var(--text-body)] hover:bg-[var(--surface-muted)]',
+                    isActive ? 'is-active bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
                   )
                 }
               >
@@ -204,21 +204,23 @@ export function AdminLayout() {
   }, [drawerOpen]);
 
   return (
-    <div className="h-screen overflow-hidden" style={{ '--admin-sidebar-width': collapsed ? '4.5rem' : '15rem' }}>
+    <div className="admin-ui h-screen overflow-hidden" style={{ '--admin-sidebar-width': collapsed ? '5rem' : '16.5rem' }}>
       <AdminCommandPalette />
 
-      <aside className={cn('fixed inset-y-0 left-0 z-30 hidden flex-col gap-6 overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 transition-[width] duration-200 md:flex', collapsed ? 'w-[4.5rem]' : 'w-60')}>
-        <div className={cn('shrink-0 flex items-center', collapsed ? 'justify-center' : 'justify-between')}>
-          {!collapsed && <Logo to="/admin/dashboard" />}
-          {collapsed && <Logo to="/admin/dashboard" className="[&>span:last-child]:hidden" />}
+      <aside className={cn('admin-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col gap-6 overflow-hidden border-r border-slate-200 bg-white p-4 transition-[width] duration-200 md:flex', collapsed ? 'w-20' : 'w-[16.5rem]')}>
+        <div className={cn('flex h-14 shrink-0 items-center', collapsed ? 'justify-center' : 'justify-between')}>
+          <div className={cn('admin-brand min-w-0', collapsed && 'is-collapsed [&_img]:h-9 [&_img]:w-9 [&_img]:object-cover [&_img]:object-left')}>
+            <Logo to="/admin/dashboard" />
+            {!collapsed && <p className="mt-0.5 pl-0.5 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-400">Admin console</p>}
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="admin-sidebar-scroll min-h-0 flex-1 overflow-y-auto">
           <SidebarNav collapsed={collapsed} />
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className={cn('mt-auto shrink-0', collapsed && 'justify-center px-0')}
+          className={cn('admin-sidebar-collapse mt-auto shrink-0', collapsed && 'justify-center px-0')}
           onClick={toggleCollapsed}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -229,9 +231,9 @@ export function AdminLayout() {
       {drawerOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <button className="absolute inset-0 bg-black/30" aria-label="Close menu" onClick={() => setDrawerOpen(false)} />
-          <aside className="relative flex h-full w-64 flex-col gap-6 overflow-y-auto bg-[var(--surface-card)] p-4 shadow-xl shadow-black/10">
+          <aside className="admin-sidebar admin-sidebar-scroll relative flex h-full w-72 flex-col gap-6 overflow-y-auto bg-white p-4 shadow-2xl shadow-slate-950/20">
             <div className="flex items-center justify-between">
-              <Logo to="/admin/dashboard" />
+              <div className="admin-brand"><Logo to="/admin/dashboard" /></div>
               <Button variant="ghost" size="icon" aria-label="Close menu" onClick={() => setDrawerOpen(false)}>
                 <X className="h-4 w-4" />
               </Button>
@@ -242,7 +244,7 @@ export function AdminLayout() {
       )}
 
       <div className="flex h-screen min-w-0 flex-col md:ml-[var(--admin-sidebar-width)]">
-        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 sm:px-6">
+        <header className="admin-topbar flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
               <Menu className="h-5 w-5" />
@@ -250,7 +252,7 @@ export function AdminLayout() {
             <button
               type="button"
               onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-              className="flex h-9 w-full max-w-xs items-center gap-2 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 text-sm text-[var(--text-muted)] hover:border-brand-300"
+              className="admin-search flex h-10 w-full max-w-md items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 transition hover:border-slate-300 hover:bg-white"
             >
               <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="truncate">Search bookings, hotels, customers…</span>
@@ -258,13 +260,13 @@ export function AdminLayout() {
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden text-sm text-[var(--text-muted)] lg:inline">{isAdmin ? 'Hotel operations' : 'My hotels'}</span>
+            <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:inline">{isAdmin ? 'Hotel operations' : 'My hotels'}</span>
             <NotificationBell />
             <AdminProfileMenu />
           </div>
         </header>
-        <main id="main" className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-6xl">
+        <main id="main" className="admin-main min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="admin-content mx-auto w-full max-w-[1440px]">
             <Suspense fallback={<FullPageSpinner label="Loading" />}>
               <Outlet />
             </Suspense>

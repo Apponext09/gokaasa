@@ -432,7 +432,17 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
     <div className="space-y-6 pb-28">
       <PageHeader
         title={hotel.name}
-        description={`Last updated ${formatDateTime(hotel.updatedAt)}${isImported ? ` · imported from ${hotel.externalProvider}` : ' · created by hand'}`}
+        description={(
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <span>Last updated {formatDateTime(hotel.updatedAt)}{isImported ? ` · imported from ${hotel.externalProvider}` : ' · created by hand'}</span>
+            {hotel.status === 'PUBLISHED' && (
+              <span className="page-header-live-status inline-flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                Live on Gokaasa
+              </span>
+            )}
+          </span>
+        )}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <HotelStatusBadge status={hotel.status} />
@@ -462,11 +472,13 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         </Alert>
       )}
 
-      <Card>
-        <CardContent className="p-5">
-          <ValidationSummary hotel={hotel} />
-        </CardContent>
-      </Card>
+      {hotel.status !== 'PUBLISHED' && (
+        <Card>
+          <CardContent className="p-5">
+            <ValidationSummary hotel={hotel} />
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs
         label="Hotel sections"

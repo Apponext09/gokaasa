@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/utils.js';
 
 const controlBase =
-  'w-full rounded-[var(--radius-control)] border bg-[var(--surface-card)] px-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-muted)] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)] disabled:opacity-70';
+  'ui-control w-full rounded-[var(--radius-control)] border bg-[var(--surface-card)] px-3 text-sm text-[var(--text-strong)] placeholder:text-[var(--text-muted)] transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-500 disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)] disabled:opacity-70';
 
 export const Input = forwardRef(function Input({ className, invalid = false, ...props }, ref) {
   return (
@@ -39,7 +39,7 @@ export const Select = forwardRef(function Select({ className, invalid = false, c
 });
 
 export function Label({ className, ...props }) {
-  return <label className={cn('text-sm font-medium text-[var(--text-strong)]', className)} {...props} />;
+  return <label className={cn('ui-label text-sm font-medium text-[var(--text-strong)]', className)} {...props} />;
 }
 
 export function Checkbox({ className, label, ...props }) {

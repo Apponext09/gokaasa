@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils.js';
 
 /** Primary: main actions (Search, Import, Publish). Secondary: Edit, Cancel, Save Draft. Danger: Delete, Unpublish. Premium: rare gold CTA for a single standout action (e.g. a featured deal) — don't use for routine actions. */
 export const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
+  'ui-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:pointer-events-none disabled:opacity-50 cursor-pointer',
   {
     variants: {
       variant: {

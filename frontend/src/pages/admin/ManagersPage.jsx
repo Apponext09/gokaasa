@@ -34,7 +34,7 @@ export function ManagersPage() {
     <div className="space-y-6">
       <PageHeader title="Hotel Managers" description="Every hotel manager account and the hotels each one is assigned to." />
 
-      <Card className="p-4">
+      <Card className="filter-panel p-4">
         <div className="relative max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input aria-label="Search managers" placeholder="Name or email" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />

@@ -114,16 +114,15 @@ function SocialButton({ label, children }) {
       aria-label={label}
       title={`${label} - Coming soon`}
       className="
-        flex h-10 w-10 items-center justify-center
+        flex h-9 w-9 items-center justify-center
         rounded-full
         border border-white/15
         bg-white/[0.06]
         text-white
-        transition-all duration-300
-        hover:-translate-y-1
-        hover:border-[#F2C66D]
-        hover:bg-[#F2C66D]/15
-        hover:text-[#F2C66D]
+        transition-colors duration-150
+        hover:border-[#38BDF8]
+        hover:bg-[#38BDF8]/10
+        hover:text-[#38BDF8]
       "
     >
       {children}
@@ -831,13 +830,13 @@ function Footer() {
 
   const linkClass = `
     inline-block
-    text-sm
-    font-medium
+    text-[13px]
+    font-normal
     text-[#CBD5E1]
-    transition-all
-    duration-300
-    hover:translate-x-1
-    hover:text-[#F2C66D]
+    transition-colors
+    duration-150
+    hover:text-[#38BDF8]
+    hover:underline
     focus-visible:outline-2
     focus-visible:outline-offset-2
     focus-visible:outline-[#F2C66D]
@@ -847,120 +846,23 @@ function Footer() {
   return (
     <footer className="customer-footer bg-[#0B1422] text-white">
       {/* =====================================================
-          PREMIUM CTA
-      ===================================================== */}
-
-      <section className="border-b border-white/10 bg-gradient-to-r from-[#0B1422] via-[#12223A] to-[#1B3150]">
-        <div
-          className="
-            mx-auto
-            flex
-            max-w-7xl
-            flex-col
-            gap-6
-            px-4
-            py-11
-            sm:px-6
-            lg:flex-row
-            lg:items-center
-            lg:justify-between
-            lg:py-14
-          "
-        >
-          <div className="min-w-0 max-w-2xl">
-            <div className="mb-3 flex items-center gap-2">
-              <Sparkles
-                size={16}
-                className="text-[#F2C66D]"
-              />
-
-              <span
-                className="
-                  text-[10px]
-                  font-bold
-                  uppercase
-                  tracking-[0.22em]
-                  text-[#F2C66D]
-                "
-              >
-                GOKAASA
-              </span>
-            </div>
-
-            <h2
-              className="
-                text-2xl
-                font-bold
-                tracking-tight
-                text-white
-                sm:text-3xl
-              "
-            >
-              Your perfect stay is waiting.
-            </h2>
-
-            <p
-              className="
-                mt-3
-                max-w-xl
-                text-sm
-                leading-7
-                break-words
-                text-[#CBD5E1]
-              "
-            >
-              Discover beautiful hotels, premium stays and
-              unforgettable experiences with Gokaasa.
-            </p>
-          </div>
-
-          <Link
-            to="/destinations"
-            className="
-              inline-flex
-              w-fit
-              shrink-0
-              items-center
-              gap-2
-              rounded-full
-              bg-white
-              px-6
-              py-3.5
-              text-sm
-              font-bold
-              text-[#0B1422]
-              shadow-lg
-              transition-all
-              duration-300
-              hover:-translate-y-1
-              hover:bg-[#F2C66D]
-              hover:shadow-xl
-            "
-          >
-            Explore Hotels
-            <ChevronRight size={17} />
-          </Link>
-        </div>
-      </section>
-
-      {/* =====================================================
           MAIN FOOTER
       ===================================================== */}
 
       <div
         className="
           mx-auto
-          max-w-7xl
+          max-w-[1340px]
           px-4
-          py-12
+          py-10
           sm:px-6
-          lg:py-14
+          lg:py-10
         "
       >
         <div
           className="
             grid
-            gap-10
+            gap-8
             sm:grid-cols-2
             lg:grid-cols-[1.45fr_1fr_1fr_1fr]
           "
@@ -969,7 +871,7 @@ function Footer() {
               BRAND
           ================================================= */}
 
-          <div className="space-y-5">
+          <div className="space-y-3">
             {/* Logo container */}
 
             <div
@@ -977,11 +879,10 @@ function Footer() {
                 inline-flex
                 w-fit
                 items-center
-                rounded-xl
+                rounded-lg
                 bg-white
-                px-4
-                py-3
-                shadow-lg
+                px-3
+                py-2
               "
             >
               <Logo />
@@ -990,8 +891,8 @@ function Footer() {
             <p
               className="
                 max-w-sm
-                text-sm
-                leading-7
+                text-[13px]
+                leading-6
                 text-[#CBD5E1]
               "
             >
@@ -1000,7 +901,7 @@ function Footer() {
 
             {/* Trust Badges */}
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               <span
                 className="
                   inline-flex
@@ -1010,8 +911,8 @@ function Footer() {
                   border
                   border-white/15
                   bg-white/[0.06]
-                  px-4
-                  py-2
+                  px-3
+                  py-1.5
                   text-xs
                   font-medium
                   text-white
@@ -1033,8 +934,8 @@ function Footer() {
                   border
                   border-white/15
                   bg-white/[0.06]
-                  px-4
-                  py-2
+                  px-3
+                  py-1.5
                   text-xs
                   font-medium
                   text-white
@@ -1098,20 +999,20 @@ function Footer() {
               ABOUT
           ================================================= */}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3
               className="
-                text-sm
+                text-[13px]
                 font-bold
                 uppercase
                 tracking-[0.12em]
-                text-white
+                text-[#94A3B8]
               "
             >
               About
             </h3>
 
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               <li>
                 <Link
                   to="/about"
@@ -1154,20 +1055,20 @@ function Footer() {
               EXPLORE
           ================================================= */}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3
               className="
-                text-sm
+                text-[13px]
                 font-bold
                 uppercase
                 tracking-[0.12em]
-                text-white
+                text-[#94A3B8]
               "
             >
               Explore
             </h3>
 
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               {destinations?.map((place) => (
                 <li key={place.destination}>
                   <Link
@@ -1186,13 +1087,13 @@ function Footer() {
                     inline-flex
                     items-center
                     gap-1
-                    text-sm
+                    text-[13px]
                     font-bold
                     text-[#F2C66D]
-                    transition-all
-                    duration-300
-                    hover:translate-x-1
+                    transition-colors
+                    duration-150
                     hover:text-white
+                    hover:underline
                   "
                 >
                   View All
@@ -1206,20 +1107,20 @@ function Footer() {
               OTHER LINKS
           ================================================= */}
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <h3
               className="
-                text-sm
+                text-[13px]
                 font-bold
                 uppercase
                 tracking-[0.12em]
-                text-white
+                text-[#94A3B8]
               "
             >
               Other Links
             </h3>
 
-            <ul className="space-y-3">
+            <ul className="space-y-2.5">
               <li>
                 <Link
                   to="/offers"
@@ -1293,7 +1194,7 @@ function Footer() {
           className="
             mx-auto
             flex
-            max-w-7xl
+            max-w-[1340px]
             flex-col
             gap-3
             px-4

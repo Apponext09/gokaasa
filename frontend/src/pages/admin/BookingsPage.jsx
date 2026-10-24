@@ -84,7 +84,7 @@ export function BookingsPage() {
         actions={<Button variant="secondary" size="sm" onClick={exportCsv} loading={exporting}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Export CSV</Button>}
       />
 
-      <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
+      <Card className="filter-panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
         <div className="relative sm:col-span-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input aria-label="Search by reference, name or email" placeholder="Booking ref, customer name or email" className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} />

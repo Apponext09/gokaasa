@@ -866,7 +866,7 @@ export function HotelDetailsPage() {
               Available Offers
             </h2>
 
-            <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {offers.map((offer) => (
                 <OfferCard
                   key={offer.id}

@@ -65,7 +65,7 @@ export function RefundsPage() {
         actions={<Button variant="secondary" size="sm" onClick={exportCsv} loading={exporting}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Export CSV</Button>}
       />
 
-      <Card className="flex flex-wrap items-end gap-3 p-4">
+      <Card className="filter-panel flex flex-wrap items-end gap-3 p-4">
         <Select aria-label="Filter by status" value={status} onChange={(e) => update({ status: e.target.value, page: null })} className="max-w-xs">
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}

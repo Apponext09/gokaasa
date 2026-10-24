@@ -111,6 +111,64 @@ export function HotelsPage() {
     return data.items.filter((h) => h.name.toLowerCase().includes(q));
   }, [data?.items, nameQuery]);
 
+  // Dynamically extract up to the first 5 unique hotel images for the searched location
+  const locationImages = useMemo(() => {
+    if (!data?.items?.length) return [];
+    const urls = [];
+    for (const h of data.items) {
+      const url =
+        h.image?.url ||
+        h.image?.sourceUrl ||
+        h.cover?.url ||
+        h.cover?.sourceUrl ||
+        h.imageUrl ||
+        (Array.isArray(h.images) ? h.images[0]?.url : null);
+      if (url && !urls.includes(url)) {
+        urls.push(url);
+        if (urls.length >= 5) break;
+      }
+    }
+    return urls;
+  }, [data?.items]);
+
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  // Automatically cycle through the location's hotel images every 5 seconds
+  useEffect(() => {
+    setActiveImageIndex(0);
+    if (locationImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveImageIndex((prev) => (prev + 1) % locationImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [locationImages]);
+
+  // Dynamically load popular destination covers from API (zero hardcoding)
+  const [popularCovers, setPopularCovers] = useState([]);
+  useEffect(() => {
+    discoveryApi
+      .popularDestinations({ limit: 6 })
+      .then((items) => setPopularCovers(items ?? []))
+      .catch(() => {});
+  }, []);
+
+  const currentHeroImage = useMemo(() => {
+    // 1. Prioritize real hotel photos returned for the searched location (cycles first 5)
+    if (locationImages.length > 0) {
+      return locationImages[activeImageIndex] || locationImages[0];
+    }
+    // 2. If results are still loading or empty, match destination against popular destinations
+    if (destination && popularCovers.length > 0) {
+      const destLower = destination.toLowerCase();
+      const match = popularCovers.find(
+        (p) => p.destination?.toLowerCase() === destLower || p.label?.toLowerCase() === destLower,
+      );
+      if (match?.imageUrl) return match.imageUrl;
+    }
+    // 3. Fallback to first popular destination cover if available
+    return popularCovers[0]?.imageUrl || null;
+  }, [locationImages, activeImageIndex, destination, popularCovers]);
+
   const filtersPanel = (
     <HotelsFilterPanel
       filters={state.filters}
@@ -136,7 +194,12 @@ export function HotelsPage() {
   return (
     <div className="hotels-page-root">
       {/* Hero */}
-      <div className="hotels-page-hero">
+      <div
+        className={cn("hotels-page-hero", currentHeroImage && "has-location-image")}
+        style={currentHeroImage
+          ? { backgroundImage: `linear-gradient(90deg, rgba(3, 18, 48, 0.82), rgba(10, 66, 186, 0.58)), url(${JSON.stringify(currentHeroImage)})` }
+          : undefined}
+      >
         <div className="hotels-page-hero-inner">
           <h1 className="hotels-page-hero-title">
             {label ? `Hotels in ${label}` : "Find Your Perfect Stay"}
@@ -154,6 +217,23 @@ export function HotelsPage() {
               initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
             />
           </div>
+
+          {locationImages.length > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-1.5" aria-label="Location hotel photos">
+              {locationImages.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveImageIndex(idx)}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all duration-300",
+                    activeImageIndex === idx ? "w-6 bg-white" : "w-2 bg-white/40 hover:bg-white/70"
+                  )}
+                  aria-label={`View location hotel image ${idx + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

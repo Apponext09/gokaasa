@@ -15,7 +15,7 @@ export function Card({ className, ...props }) {
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]',
+        'ui-card rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]',
         className,
       )}
       {...props}
@@ -27,7 +27,7 @@ export function CardHeader({ className, ...props }) {
   return (
     <div
       className={cn(
-        'flex flex-col gap-1 p-5 pb-3',
+        'ui-card-header flex flex-col gap-1 p-5 pb-3',
         className,
       )}
       {...props}
@@ -39,7 +39,7 @@ export function CardTitle({ className, ...props }) {
   return (
     <h2
       className={cn(
-        'text-base font-semibold text-[var(--text-strong)]',
+        'ui-card-title text-base font-semibold text-[var(--text-strong)]',
         className,
       )}
       {...props}
@@ -54,7 +54,7 @@ export function CardDescription({
   return (
     <p
       className={cn(
-        'text-sm text-[var(--text-muted)]',
+        'ui-card-description text-sm text-[var(--text-muted)]',
         className,
       )}
       {...props}
@@ -69,7 +69,7 @@ export function CardContent({
   return (
     <div
       className={cn(
-        'p-5 pt-2',
+        'ui-card-content p-5 pt-2',
         className,
       )}
       {...props}
@@ -84,7 +84,7 @@ export function CardFooter({
   return (
     <div
       className={cn(
-        'flex items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-5 py-4',
+        'ui-card-footer flex items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-5 py-4',
         className,
       )}
       {...props}
@@ -135,6 +135,7 @@ export function Badge({
   return (
     <span
       className={cn(
+        'ui-badge',
         badgeVariants({ tone }),
         className,
       )}
@@ -209,7 +210,7 @@ export function Alert({
           : 'status'
       }
       className={cn(
-        'flex gap-3 rounded-[var(--radius-control)] border p-3 text-sm',
+        'ui-alert flex gap-3 rounded-[var(--radius-control)] border p-3 text-sm',
         alertTones[safeTone],
         className,
       )}

@@ -89,18 +89,16 @@ export function AuditLogsPage() {
     <div className="space-y-6">
       <PageHeader title="Audit Logs" description="Every recorded staff action across the platform." />
 
-      <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <div className="relative lg:col-span-2">
+      <Card className="filter-panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-7">
+        <div className="relative sm:col-span-2 xl:col-span-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input aria-label="Search by actor name or email" placeholder="Actor name or email" className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} />
         </div>
         <Input aria-label="Filter by entity" placeholder="Entity (e.g. hotel)" value={filters.entity} onChange={(e) => updateFilters({ entity: e.target.value })} />
         <Input aria-label="Filter by entity id" placeholder="Entity ID" value={filters.entityId} onChange={(e) => updateFilters({ entityId: e.target.value })} />
         <Input aria-label="Filter by action" placeholder="Action (e.g. hotel.updated)" value={filters.action} onChange={(e) => updateFilters({ action: e.target.value })} />
-        <div className="flex gap-2">
-          <Input aria-label="From date" type="date" value={filters.from} onChange={(e) => updateFilters({ from: e.target.value })} />
-          <Input aria-label="To date" type="date" value={filters.to} onChange={(e) => updateFilters({ to: e.target.value })} />
-        </div>
+        <Input aria-label="From date" type="date" value={filters.from} onChange={(e) => updateFilters({ from: e.target.value })} />
+        <Input aria-label="To date" type="date" value={filters.to} onChange={(e) => updateFilters({ to: e.target.value })} />
       </Card>
 
       {error && <Alert tone="error">{error}</Alert>}

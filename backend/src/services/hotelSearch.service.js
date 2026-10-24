@@ -148,6 +148,8 @@ function toCuratedCard(row, { offers = [] } = {}) {
     reviewCount: row.review_count,
     rating: row.internal_rating?.count > 0 ? { average: Number(row.internal_rating.average), count: row.internal_rating.count } : null,
     distanceKm: row.distance_km == null ? null : Number(row.distance_km),
+    latitude: row.latitude == null ? null : Number(row.latitude),
+    longitude: row.longitude == null ? null : Number(row.longitude),
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),

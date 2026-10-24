@@ -65,7 +65,7 @@ export function CustomersPage() {
         actions={<Button variant="secondary" size="sm" onClick={exportCsv} loading={exporting}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Export CSV</Button>}
       />
 
-      <Card className="p-4">
+      <Card className="filter-panel p-4">
         <div className="relative max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input aria-label="Search customers" placeholder="Name, email or phone" className="pl-9" value={searchText} onChange={(e) => setSearchText(e.target.value)} />

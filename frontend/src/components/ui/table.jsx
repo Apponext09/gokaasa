@@ -4,8 +4,8 @@ import { Skeleton } from '@/components/ui/surfaces.jsx';
 /** Horizontal-scroll wrapper + the <table> element. Pair with TableHeader/TableBody/TableRow/TableHead/TableCell. */
 export function Table({ className, minWidth = '820px', children, ...props }) {
   return (
-    <div className="overflow-x-auto">
-      <table className={cn('w-full text-left text-sm', className)} style={{ minWidth }} {...props}>
+    <div className="ui-table-wrap overflow-x-auto">
+      <table className={cn('ui-table w-full text-left text-sm', className)} style={{ minWidth }} {...props}>
         {children}
       </table>
     </div>

@@ -94,8 +94,8 @@ export function HotelListPage() {
         }
       />
 
-      <Card className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6">
-        <div className="relative lg:col-span-2">
+      <Card className="filter-panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="relative xl:col-span-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
           <Input
             aria-label="Search hotels by name or city"
@@ -128,15 +128,15 @@ export function HotelListPage() {
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </Select>
-        <div className="flex gap-2 sm:col-span-2 lg:col-span-6">
-          <Input aria-label="Filter by city" placeholder="City" value={filters.city} onChange={(e) => updateFilters({ city: e.target.value.trim() })} className="max-w-xs" />
+        <div className="filter-location-row sm:col-span-2 xl:col-span-6">
+          <span className="filter-group-label">Location</span>
+          <Input aria-label="Filter by city" placeholder="City" value={filters.city} onChange={(e) => updateFilters({ city: e.target.value.trim() })} />
           <Input
             aria-label="Filter by country code"
             placeholder="Country code (IN)"
             maxLength={2}
             value={filters.countryCode}
             onChange={(e) => updateFilters({ countryCode: e.target.value.toUpperCase() })}
-            className="max-w-[10rem]"
           />
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={() => { setSearchText(''); updateFilters({ q: '', status: '', city: '', countryCode: '', starRating: '', propertyType: '' }); }}>
