@@ -1,6 +1,7 @@
 import { Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { t } from '@/features/support/bilingualContent.js';
+import { canSubmitMessage } from '@/features/support/messageComposer.js';
 import { VoiceControl } from '@/features/support/components/VoiceControl.jsx';
 
 /**
@@ -27,7 +28,7 @@ export function MessageComposer({
   const onKeyDown = (event) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      onSubmit();
+      if (canSubmitMessage({ submitting, value })) onSubmit();
     }
   };
 
@@ -62,7 +63,7 @@ export function MessageComposer({
           className="max-h-24 min-h-10 flex-1 resize-none rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-page)] px-3 py-2.5 text-sm leading-5 focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20"
         />
         {speechSupported && <VoiceControl lang={lang} listening={listening} processing={submitting} onToggle={onToggleMic} />}
-        <Button type="button" size="sm" onClick={onSubmit} disabled={submitting || !value.trim()} aria-label="Send" className="h-10 w-10 shrink-0 rounded-full p-0">
+        <Button type="button" size="sm" onClick={onSubmit} disabled={!canSubmitMessage({ submitting, value })} aria-label="Send" className="h-10 w-10 shrink-0 rounded-full p-0">
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Search className="h-4 w-4" aria-hidden="true" />}
         </Button>
       </div>

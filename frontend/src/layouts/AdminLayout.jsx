@@ -39,7 +39,7 @@ const NAV = [
     items: [
       { to: '/admin/hotels', label: 'All Hotels', icon: Building2, end: true },
       { to: '/admin/hotels/onboarding', label: 'Add Hotel', icon: Search },
-      { to: '/admin/managers', label: 'Managers', icon: UserCog },
+      { to: '/admin/managers', label: 'Managers', icon: UserCog, adminOnly: true },
       { to: '/admin/partners', label: 'Partner Applications', icon: UserCog, adminOnly: true },
     ],
   },
@@ -50,7 +50,7 @@ const NAV = [
       { to: '/admin/payments', label: 'Payments', icon: Wallet },
       { to: '/admin/refunds', label: 'Refunds', icon: ReceiptText },
       { to: '/admin/invoices', label: 'Invoices', icon: FileText },
-      { to: '/admin/offers', label: 'Offers & Coupons', icon: Tag },
+      { to: '/admin/offers', label: 'Offers & Coupons', icon: Tag, adminOnly: true },
       { to: '/admin/customers', label: 'Customers', icon: Users },
       { to: '/admin/reviews', label: 'Reviews', icon: Star },
     ],

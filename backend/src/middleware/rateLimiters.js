@@ -3,7 +3,17 @@ import rateLimit from 'express-rate-limit';
 const JSON_MESSAGE = { error: { code: 'RATE_LIMITED', message: 'Too many requests, please try again later' } };
 
 // Limits are bypassed only under NODE_ENV=test, so the integration suite can exercise many logins quickly.
-const skipInTests = () => process.env.NODE_ENV === 'test';
+// `forceEnabledForTests` is a narrow, explicit test seam (the same pattern as setGatewayForTests /
+// resetStorageForTests elsewhere in this codebase): it lets ONE test deliberately exercise real
+// enforcement without flipping NODE_ENV itself, which would also change unrelated app behavior and
+// re-enable every OTHER limiter for the whole suite.
+let forceEnabledForTests = false;
+const skipInTests = () => !forceEnabledForTests && process.env.NODE_ENV === 'test';
+
+/** Test seam: temporarily re-enables real rate-limit enforcement (every limiter) under NODE_ENV=test. */
+export function setRateLimitEnforcementForTests(enabled) {
+  forceEnabledForTests = enabled;
+}
 
 const common = {
   standardHeaders: 'draft-7',

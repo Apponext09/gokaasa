@@ -42,10 +42,10 @@ test('English: "Show me resorts with a swimming pool" extracts the real POOL ame
 
 // ---- Hindi text parsing -----------------------------------------------------------------------------
 
-test('Hindi: "Mujhe Lonavala mein resort chahiye" extracts destination and property type', () => {
+test('Hindi: "Mujhe Lonavala mein resort chahiye" extracts destination and property type, without the leading "Mujhe" filler word', () => {
   const { criteria } = parseUtterance('Mujhe Lonavala mein resort chahiye', TODAY);
   assert.equal(criteria.propertyType, 'RESORT');
-  assert.equal(criteria.destinationQuery, 'mujhe lonavala');
+  assert.equal(criteria.destinationQuery, 'lonavala');
 });
 
 test('Hindi: "Do logon ke liye hotel book karna hai" extracts two adults and hotel type', () => {
@@ -122,11 +122,54 @@ test('lakh and hundred multipliers resolve correctly', () => {
 test('extractDestinationQuery finds the place after "in"/"at"/"near", never hardcoding a destination list', () => {
   assert.equal(extractDestinationQuery('I need a resort in Lonavala'), 'lonavala');
   assert.equal(extractDestinationQuery('Find a hotel near Goa for two'), 'goa');
-  assert.equal(extractDestinationQuery('Mujhe Lonavala mein resort chahiye'), 'mujhe lonavala');
+  assert.equal(extractDestinationQuery('Mujhe Lonavala mein resort chahiye'), 'lonavala');
 });
 
 test('extractDestinationQuery returns null when nothing anchors a place name', () => {
   assert.equal(extractDestinationQuery('I need two adults and a pool'), null);
+});
+
+// ---- Regression: the destination must never bleed into unrelated leading/trailing words -------------
+
+test('English: "Find hotels in Pune" extracts exactly the city, with no trailing filler', () => {
+  assert.equal(extractDestinationQuery('Find hotels in Pune'), 'pune');
+});
+
+test('English: "I want to book a hotel in Mumbai" extracts exactly the city', () => {
+  assert.equal(extractDestinationQuery('I want to book a hotel in Mumbai'), 'mumbai');
+});
+
+test('English: "Show me hotels near Pune station" preserves the full multi-word place name', () => {
+  assert.equal(extractDestinationQuery('Show me hotels near Pune station'), 'pune station');
+});
+
+test('English: "Find hotels in New Delhi" preserves a real multi-word city name, never truncated to one word', () => {
+  assert.equal(extractDestinationQuery('Find hotels in New Delhi'), 'new delhi');
+});
+
+test('Hinglish: "Mujhe Pune mein hotel chahiye" strips the leading "Mujhe" filler word', () => {
+  assert.equal(extractDestinationQuery('Mujhe Pune mein hotel chahiye'), 'pune');
+});
+
+test('Hinglish: "Mumbai mein 2 logon ke liye hotel dikhao" extracts the city even with guest-count words after "mein"', () => {
+  assert.equal(extractDestinationQuery('Mumbai mein 2 logon ke liye hotel dikhao'), 'mumbai');
+});
+
+test('the previously-buggy case this fix targets: a trailing temporal phrase is never swallowed into the destination', () => {
+  assert.equal(extractDestinationQuery('Book me a hotel at Lonavala next weekend'), 'lonavala');
+});
+
+test('a second previously-buggy case: a leading Hindi filler word before the place name is stripped', () => {
+  assert.equal(extractDestinationQuery('Humein Goa mein ghumna hai'), 'goa');
+});
+
+test('extra punctuation and whitespace around the anchor do not change the result', () => {
+  assert.equal(extractDestinationQuery('Find hotels in   Pune !!'), 'pune');
+  assert.equal(extractDestinationQuery('Find hotels, in Pune, please.'), 'pune');
+});
+
+test('a destination phrase cleanly followed by a comma or further clause still resolves to just the place', () => {
+  assert.equal(extractDestinationQuery('I need a hotel in Jaipur, for 2 adults'), 'jaipur');
 });
 
 // ---- Dates: valid, invalid, and never-guessed-year behavior -----------------------------------------
@@ -157,6 +200,47 @@ test('no recognizable date phrase at all returns null, never a guessed date', ()
   assert.equal(extractDates('a nice resort with a pool', TODAY), null);
   const { missingInformation } = parseUtterance('a nice resort with a pool', TODAY);
   assert.ok(missingInformation.includes('dates'));
+});
+
+// ---- Explicit night counts and month-free relative ranges (Phase 3) ---------------------------------
+
+test('"3 nights from Friday" resolves an explicit night count from a weekday reference', () => {
+  // TODAY (2026-06-01) is a Monday, so the next Friday is 2026-06-05.
+  assert.deepEqual(extractDates('3 nights from friday', TODAY), { checkIn: '2026-06-05', checkOut: '2026-06-08' });
+});
+
+test('a word-form night count ("three nights from friday") resolves the same way as the digit form', () => {
+  assert.deepEqual(extractDates('three nights from friday', TODAY), { checkIn: '2026-06-05', checkOut: '2026-06-08' });
+});
+
+test('"2 nights starting tomorrow" resolves from a relative-day reference, not just a weekday', () => {
+  assert.deepEqual(extractDates('2 nights starting tomorrow', TODAY), { checkIn: '2026-06-02', checkOut: '2026-06-04' });
+});
+
+test('Hinglish: "2 raat kal se" (reference before the "se" postposition) resolves like its English equivalent', () => {
+  assert.deepEqual(extractDates('2 raat kal se', TODAY), { checkIn: '2026-06-02', checkOut: '2026-06-04' });
+});
+
+test('an invalid night count (zero, or implausibly large) is rejected rather than producing a bogus range', () => {
+  assert.equal(extractDates('0 nights from friday', TODAY), null);
+  assert.equal(extractDates('99 nights from friday', TODAY), null);
+});
+
+test('"tomorrow to Thursday" resolves a relative range with no month name at all', () => {
+  assert.deepEqual(extractDates('tomorrow to thursday', TODAY), { checkIn: '2026-06-02', checkOut: '2026-06-04' });
+});
+
+test('"Friday to Sunday" resolves a weekday-to-weekday range, the end date relative to the actual start chosen', () => {
+  assert.deepEqual(extractDates('friday to sunday', TODAY), { checkIn: '2026-06-05', checkOut: '2026-06-07' });
+});
+
+test('"today to Friday" is also recognized', () => {
+  assert.deepEqual(extractDates('today to friday', TODAY), { checkIn: '2026-06-01', checkOut: '2026-06-05' });
+});
+
+test('a bare numeric day-range with no month name and no weekday/relative reference stays genuinely ambiguous -- never guessed', () => {
+  assert.equal(extractDates('15 to 18', TODAY), null);
+  assert.equal(extractDates('book a room for 15 to 18', TODAY), null);
 });
 
 test('an unrecognized destination phrase is reported as missing, not silently skipped', () => {

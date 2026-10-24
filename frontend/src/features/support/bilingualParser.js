@@ -61,6 +61,11 @@ const ROOM_CUES = /\b(rooms?|kamre?|kamra)\b/;
 
 const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
+// A sanity bound only -- the guided flow's own validateStay and the backend's search validator both
+// enforce the platform's real maximum stay length independently; this just stops an outlandish spoken
+// number ("999 nights") from producing a checkOut decades away before either of those ever sees it.
+const MAX_PLAUSIBLE_NIGHTS = 60;
+
 function normalize(text) {
   return String(text ?? '').toLowerCase().replace(/[,.!?]/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -131,18 +136,71 @@ export function extractRooms(text) {
   return extractCount(text, ROOM_CUES);
 }
 
+const DESTINATION_ANCHORS = new Set(['in', 'at', 'near']);
+
+// Words that are never part of a destination name: common English/Hindi connector and filler words,
+// temporal words, and the same guest/room/amenity/property-type/budget cue words this file already
+// recognizes elsewhere. Scanning stops the instant one of these is seen, in either direction -- this is
+// what keeps "at Lonavala next weekend" from swallowing "next weekend", and "Mujhe Lonavala mein" from
+// swallowing the leading "Mujhe" ("I want"), while still letting a real multi-word place name (e.g.
+// "New Delhi", "Pune station") through untouched, since none of ITS words are in this list.
+const DESTINATION_STOP_WORDS = new Set([
+  // English connectors / filler
+  'a', 'the', 'i', 'we', 'want', 'need', 'to', 'book', 'booking', 'please', 'find', 'show', 'me', 'for', 'with', 'and',
+  // Hindi (romanized) connectors / filler
+  'mujhe', 'humein', 'hamen', 'hame', 'mera', 'humara', 'hamara', 'chahiye', 'chaiye', 'hai', 'karna', 'karo', 'dikhao',
+  // Temporal signal words -- a real place name is never one of these
+  'next', 'this', 'tomorrow', 'tonight', 'weekend', 'agla', 'agle', 'is', 'night', 'nights', 'raat',
+  ...WEEKDAYS,
+  ...MONTHS,
+  // Guest/room/amenity/property-type/budget cue words (mirrors the other extractors in this file)
+  'adult', 'adults', 'guest', 'guests', 'log', 'logo', 'logon', 'vyakti',
+  'room', 'rooms', 'kamra', 'kamre',
+  'budget', 'rupees', 'rupaye', 'rs', 'per', 'total',
+  'hotel', 'hotels', 'resort', 'resorts', 'villa', 'villas',
+  'pool', 'wifi', 'parking', 'breakfast', 'pets', 'pet',
+]);
+
+/** True for a token that can never be part of a destination name: a stop word, a digit, or a number word. */
+function isDestinationStopToken(token) {
+  return DESTINATION_STOP_WORDS.has(token) || /^\d+$/.test(token) || NUMBER_WORDS[token] !== undefined;
+}
+
+const MAX_DESTINATION_WORDS = 4;
+
 /**
- * A destination QUERY string only -- never resolved here. Looks for a capitalized-looking run of words
- * right after a destination anchor ("in X", "X mein", "near X", "X ke paas"). The caller always resolves
- * this against the real destination-suggest API; if nothing anchors, this returns null and the caller
- * asks the user via the existing destination step.
+ * A destination QUERY string only -- never resolved here. Looks for a run of words right after a
+ * destination anchor ("in X", "near X") or right before the Hindi postposition "mein" ("X mein"). Each
+ * direction stops at the first stop word (see DESTINATION_STOP_WORDS) or after MAX_DESTINATION_WORDS,
+ * whichever comes first -- a real multi-word place name is kept whole, but a sentence that doesn't end
+ * right at the place name no longer bleeds unrelated trailing/leading words into the result. The caller
+ * always resolves this against the real destination-suggest API; if nothing anchors, this returns null
+ * and the caller asks the user via the existing destination step.
  */
 export function extractDestinationQuery(rawText) {
   const text = normalize(rawText);
-  const anchored = text.match(/\b(?:in|at|near)\s+([a-z][a-z\s]{1,30}?)(?=\s+(?:for|with|mein|ke|and)|$)/);
-  if (anchored) return anchored[1].trim();
-  const hindiAnchored = text.match(/\b([a-z][a-z\s]{1,30}?)\s+mein\b/);
-  if (hindiAnchored) return hindiAnchored[1].trim();
+  const tokens = text.split(' ');
+
+  const anchorIndex = tokens.findIndex((token) => DESTINATION_ANCHORS.has(token));
+  if (anchorIndex !== -1) {
+    const words = [];
+    for (let i = anchorIndex + 1; i < tokens.length && words.length < MAX_DESTINATION_WORDS; i += 1) {
+      if (!/^[a-z]+$/.test(tokens[i]) || isDestinationStopToken(tokens[i])) break;
+      words.push(tokens[i]);
+    }
+    if (words.length) return words.join(' ');
+  }
+
+  const meinIndex = tokens.indexOf('mein');
+  if (meinIndex > 0) {
+    const words = [];
+    for (let i = meinIndex - 1; i >= 0 && words.length < MAX_DESTINATION_WORDS; i -= 1) {
+      if (!/^[a-z]+$/.test(tokens[i]) || isDestinationStopToken(tokens[i])) break;
+      words.unshift(tokens[i]);
+    }
+    if (words.length) return words.join(' ');
+  }
+
   return null;
 }
 
@@ -175,10 +233,29 @@ function resolveYearless(day, monthIndex, todayIso) {
   return candidate;
 }
 
+// "kal" is genuinely ambiguous in Hindi (it can mean either "yesterday" or "tomorrow"), but this parser
+// only ever extracts a stay for a FUTURE booking, so -- the same determinate, context-driven rule
+// resolveYearless already applies to a bare day+month -- the only sensible reading here is "tomorrow".
+const RELATIVE_DAY_WORDS = { today: 0, aaj: 0, tomorrow: 1, kal: 1 };
+const DAY_REFERENCE_WORDS = [...Object.keys(RELATIVE_DAY_WORDS), ...WEEKDAYS];
+
+/** Resolves a single reference word ("today", "tomorrow", "aaj", "kal", or a weekday name) to an ISO
+ * date relative to `fromIso`. For a weekday, this is always the next occurrence STRICTLY after
+ * `fromIso` (never today itself), the same semantics the existing "next <weekday>" pattern already uses. */
+function resolveDateReference(word, fromIso) {
+  if (RELATIVE_DAY_WORDS[word] !== undefined) return addDaysIso(fromIso, RELATIVE_DAY_WORDS[word]);
+  const weekdayIndex = WEEKDAYS.indexOf(word);
+  if (weekdayIndex !== -1) return nextWeekday(fromIso, weekdayIndex, { inclusive: false });
+  return null;
+}
+
 /**
  * Extracts { checkIn, checkOut } (both or neither -- never just one) from a numeric day-range plus an
- * English month name (the same form the Hindi example sentences themselves already use), or a small set
- * of relative phrases. Returns null if nothing recognizable is found; the caller falls back to asking.
+ * English month name (the same form the Hindi example sentences themselves already use), an explicit
+ * night count from a relative reference ("3 nights from Friday"), a relative-to-relative range with no
+ * month name ("tomorrow to Thursday"), or a small set of fixed relative phrases. Returns null if nothing
+ * recognizable is found; the caller falls back to asking -- a reference this function does not
+ * recognize is never guessed at.
  */
 export function extractDates(text, todayIso) {
   const monthPattern = MONTHS.join('|');
@@ -214,6 +291,38 @@ export function extractDates(text, todayIso) {
       return { checkIn, checkOut: addDaysIso(checkIn, 1) };
     }
   }
+
+  // "3 nights from Friday" (English: reference AFTER "from") / "2 raat kal se" (Hindi: reference
+  // BEFORE the "se" postposition -- the opposite word order). The reference itself is resolved relative
+  // to today, exactly like every other relative phrase in this function; an unrecognized reference word
+  // falls through to the checks below instead of guessing a date.
+  const referencePattern = DAY_REFERENCE_WORDS.join('|');
+  const nightsFrom =
+    text.match(new RegExp(`\\b(\\d+|[a-z]+)\\s+nights?\\s+(?:from|starting(?:\\s+from)?)\\s+(${referencePattern})\\b`)) ??
+    text.match(new RegExp(`\\b(\\d+|[a-z]+)\\s+raat\\s+(${referencePattern})\\s+se\\b`));
+  if (nightsFrom) {
+    const [, countRaw, refWord] = nightsFrom;
+    const nights = /^\d+$/.test(countRaw) ? Number(countRaw) : NUMBER_WORDS[countRaw];
+    const checkIn = resolveDateReference(refWord, todayIso);
+    if (Number.isInteger(nights) && nights > 0 && nights <= MAX_PLAUSIBLE_NIGHTS && checkIn) {
+      return { checkIn, checkOut: addDaysIso(checkIn, nights) };
+    }
+  }
+
+  // "tomorrow to Thursday" / "Friday to Sunday" -- a relative-to-relative range with no month name at
+  // all. The end reference is resolved relative to the START date actually chosen (not "today"), so
+  // "Friday to Sunday" never wraps to the wrong week; an end reference that doesn't land strictly after
+  // the start (e.g. a nonsensical "Sunday to Friday" read literally) is correctly rejected, not guessed.
+  const relativeRange = text.match(new RegExp(`\\b(${referencePattern})\\s*(?:to|se|-)\\s*(${referencePattern})\\b`));
+  if (relativeRange) {
+    const [, fromWord, toWord] = relativeRange;
+    const checkIn = resolveDateReference(fromWord, todayIso);
+    if (checkIn) {
+      const checkOut = resolveDateReference(toWord, checkIn);
+      if (checkOut && checkOut > checkIn) return { checkIn, checkOut };
+    }
+  }
+
   return null;
 }
 
