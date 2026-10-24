@@ -49,6 +49,24 @@ export function NearbyHotelsSection() {
 
       {geoStatus === 'idle' && (
         <div className="nearby-idle-card">
+          <div className="nearby-idle-map">
+            <iframe
+              className="nearby-idle-map-frame"
+              title="Interactive map around Mumbai"
+              src="https://www.openstreetmap.org/export/embed.html?bbox=72.733%2C18.87%2C73.17%2C19.31&amp;layer=mapnik"
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+            <a
+              className="nearby-idle-map-attribution"
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noreferrer"
+            >
+              © OpenStreetMap contributors
+            </a>
+          </div>
+
           {/* Left: text content */}
           <div className="nearby-idle-content">
             <div className="nearby-idle-eyebrow">
@@ -89,42 +107,6 @@ export function NearbyHotelsSection() {
             </div>
           </div>
 
-          {/* Right: modern high-tech radar map */}
-          <div className="nearby-idle-map" aria-hidden="true">
-            {/* Crosshair coordinate lines */}
-            <div className="nearby-idle-crosshair nearby-idle-crosshair--h" />
-            <div className="nearby-idle-crosshair nearby-idle-crosshair--v" />
-
-            {/* Concentric radar rings */}
-            <div className="nearby-idle-map-circle nearby-idle-map-circle--outer" />
-            <div className="nearby-idle-map-circle nearby-idle-map-circle--mid" />
-            <div className="nearby-idle-map-circle nearby-idle-map-circle--inner" />
-
-            {/* Rotating radar scanner sweep */}
-            <div className="nearby-idle-radar-sweep" />
-
-            {/* Center Beacon */}
-            <div className="nearby-idle-center-beacon">
-              <div className="nearby-idle-beacon-ping" />
-              <div className="nearby-idle-beacon-core">
-                <Navigation className="h-3.5 w-3.5 text-sky-400 fill-sky-400/40" />
-              </div>
-            </div>
-
-            {/* Discovery node points with subtle distance indicators */}
-            <div className="nearby-idle-node" style={{ top: '22%', left: '16%' }}>
-              <span className="nearby-idle-node-dot" />
-            </div>
-            <div className="nearby-idle-node" style={{ top: '68%', left: '20%' }}>
-              <span className="nearby-idle-node-dot nearby-idle-node-dot--alt" />
-            </div>
-            <div className="nearby-idle-node" style={{ top: '26%', right: '14%' }}>
-              <span className="nearby-idle-node-dot" />
-            </div>
-            <div className="nearby-idle-node" style={{ top: '72%', right: '22%' }}>
-              <span className="nearby-idle-node-dot" />
-            </div>
-          </div>
         </div>
       )}
 

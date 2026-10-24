@@ -1554,6 +1554,13 @@ body {
   scrollbar-color: #94a3b8 transparent;
 }
 
+/* The stream is a constrained flex column. Keep each reveal wrapper at its
+   content height so multiple results scroll instead of being compressed. */
+.hotels-page-root .hotels-cards-stream > *,
+.home-hotel-listing-section .hotels-cards-stream > * {
+  flex-shrink: 0;
+}
+
 .hotels-page-root .hotels-cards-stream::-webkit-scrollbar,
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar {
   width: 7px;
@@ -1605,14 +1612,10 @@ body {
 
 /* ── Nearby Hotels — idle state card (professional compact) ─────── */
 .nearby-idle-card {
-  display: grid;
-  grid-template-columns: 1fr 190px;
-  gap: 20px;
+  display: flex;
   align-items: center;
-  background:
-    radial-gradient(circle at 88% 50%, rgba(37, 99, 235, 0.22) 0%, transparent 65%),
-    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.12) 0%, transparent 45%),
-    linear-gradient(135deg, #071326 0%, #0a1c38 45%, #0c234a 100%);
+  min-height: 240px;
+  background: #0a1c38;
   border-radius: 16px;
   padding: 22px 28px;
   position: relative;
@@ -1623,24 +1626,22 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-/* Subtle dot mesh pattern */
+/* Keep the copy legible while allowing the real map to remain visible on the right. */
 .nearby-idle-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255 255 255 / 0.07) 1px, transparent 1px);
-  background-size: 16px 16px;
+  z-index: 1;
+  background: linear-gradient(90deg, rgba(3, 15, 36, 0.98) 0%, rgba(5, 25, 55, 0.94) 43%, rgba(5, 25, 55, 0.54) 68%, rgba(5, 25, 55, 0.08) 100%);
   pointer-events: none;
-  opacity: 0.7;
 }
 
 @media (max-width: 767px) {
   .nearby-idle-card {
-    grid-template-columns: 1fr;
     padding: 18px 20px;
   }
-  .nearby-idle-map {
-    display: none;
+  .nearby-idle-card::before {
+    background: rgba(3, 15, 36, 0.88);
   }
 }
 
@@ -1649,7 +1650,14 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
-  z-index: 1;
+  z-index: 2;
+  width: min(720px, 72%);
+}
+
+@media (max-width: 767px) {
+  .nearby-idle-content {
+    width: 100%;
+  }
 }
 
 .nearby-idle-eyebrow {
@@ -1759,134 +1767,38 @@ body {
   color: #64748b;
 }
 
-/* ── Right: Modern Radar Scanner ── */
+/* Real OpenStreetMap preview fills the existing card without changing its footprint. */
 .nearby-idle-map {
-  position: relative;
-  height: 130px;
-  width: 130px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, rgba(3, 10, 26, 0.3) 100%);
-  box-shadow: inset 0 0 16px rgba(14, 165, 233, 0.08);
-}
-
-/* Fine crosshairs */
-.nearby-idle-crosshair {
   position: absolute;
-  background: rgba(255, 255, 255, 0.07);
-  pointer-events: none;
-}
-.nearby-idle-crosshair--h {
-  left: 0; right: 0; height: 1px; top: 50%;
-}
-.nearby-idle-crosshair--v {
-  top: 0; bottom: 0; width: 1px; left: 50%;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: #dbeafe;
 }
 
-/* Concentric rings */
-.nearby-idle-map-circle {
+.nearby-idle-map-frame {
+  display: block;
+  width: 100%;
+  height: calc(100% + 34px);
+  border: 0;
+  filter: saturate(0.85) contrast(1.04);
+}
+
+.nearby-idle-map-attribution {
   position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-}
-.nearby-idle-map-circle--outer {
-  width: 126px; height: 126px;
-  border: 1px dashed rgba(56, 189, 248, 0.28);
-  animation: nearby-spin-slow 35s linear infinite;
-}
-.nearby-idle-map-circle--mid {
-  width: 82px; height: 82px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-}
-.nearby-idle-map-circle--inner {
-  width: 44px; height: 44px;
-  border: 1px solid rgba(56, 189, 248, 0.2);
-  background: rgba(14, 165, 233, 0.05);
-}
-
-/* Scanner sweep beam */
-.nearby-idle-radar-sweep {
-  position: absolute;
-  width: 126px; height: 126px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0deg, transparent 280deg, rgba(56, 189, 248, 0.18) 360deg);
-  animation: nearby-sweep 4s linear infinite;
-  pointer-events: none;
-}
-
-@keyframes nearby-sweep {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes nearby-spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Center beacon */
-.nearby-idle-center-beacon {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.nearby-idle-beacon-ping {
-  position: absolute;
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: rgba(56, 189, 248, 0.25);
-  animation: nearby-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-.nearby-idle-beacon-core {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: #0f2756;
-  border: 1.5px solid #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Discovery node points */
-.nearby-idle-node {
-  position: absolute;
+  right: 8px;
+  bottom: 7px;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  pointer-events: none;
-}
-.nearby-idle-node-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: #38bdf8;
-  border: 1.5px solid #ffffff;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
-  animation: nearby-dot-pulse 2.5s ease-in-out infinite;
-}
-.nearby-idle-node-dot--alt {
-  background: #34d399;
-  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
-  animation-delay: 1.2s;
-}
-.nearby-idle-node-tag {
-  font-size: 0.6rem;
-  font-weight: 700;
-  color: #94a3b8;
-  background: rgba(7, 19, 43, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
-  padding: 1px 4px;
-  line-height: 1;
-  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 5px;
+  color: #334155;
+  font-size: 10px;
+  line-height: 1.2;
+  text-decoration: none;
 }
 
-@keyframes nearby-dot-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.35); opacity: 1; }
+.nearby-idle-map-attribution:hover {
+  text-decoration: underline;
 }
