@@ -8,6 +8,7 @@ import { formatMoney } from '@/components/shared/index.jsx';
 import { slugifyPlace } from '@/features/search/searchParams.js';
 import { normalizeAmenities } from '@/features/search/amenities.js';
 import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
+import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
 
 /**
  * A homepage teaser card for Hotels Near You / Handpicked Hotels -- no stay/occupancy context, so no
@@ -15,7 +16,7 @@ import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
  * representative "from" rate for one night, not an availability-checked total.
  */
 export function CuratedHotelCard({ hotel }) {
-  const place = [hotel.area, hotel.city].filter(Boolean).join(', ');
+  const place = formatHotelLocation(hotel, { compact: true });
   const { shown: amenities, moreCount } = normalizeAmenities(hotel.amenities, 2);
   const detailsPath = `/hotels/${slugifyPlace(hotel.city)}/${hotel.slug}`;
 
@@ -40,7 +41,7 @@ export function CuratedHotelCard({ hotel }) {
         </div>
         {isIllustrativeCover(hotel.image) && (
           <p className="absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
-            Images for illustration
+            Illustrative image
           </p>
         )}
       </div>
@@ -54,8 +55,13 @@ export function CuratedHotelCard({ hotel }) {
         <p className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
           <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{place}</span>
-          {hotel.distanceKm != null && <span className="shrink-0 font-medium text-[var(--text-body)]">· {hotel.distanceKm.toFixed(1)} km away</span>}
         </p>
+        {hotel.distanceKm != null && (
+          <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[11px] font-semibold text-brand-700">
+            <MapPin className="h-3 w-3" aria-hidden="true" />
+            {Number(hotel.distanceKm).toFixed(1)} km from your location
+          </span>
+        )}
 
         <div className="flex items-center gap-2">
           {hotel.guestRating != null || hotel.rating ? (
@@ -93,7 +99,11 @@ export function CuratedHotelCard({ hotel }) {
               </span>
               {hotel.offer && (
                 <span className="block text-xs font-medium text-accent-700">
-                  Extra {hotel.offer.discountPercent}% off with {hotel.offer.code}
+                  Extra {hotel.offer.discountPercent > 0
+                    ? `${hotel.offer.discountPercent}% off`
+                    : hotel.offer.discountMinor > 0
+                      ? `${formatMoney(hotel.offer.discountMinor)} off`
+                      : 'offer'} with {hotel.offer.code}
                 </span>
               )}
             </p>

@@ -1072,7 +1072,7 @@ function Footer() {
               {destinations?.map((place) => (
                 <li key={place.destination}>
                   <Link
-                    to={`/hotels/${place.destination}`}
+                    to={`/hotels?destination=${encodeURIComponent(place.destination)}`}
                     className={linkClass}
                   >
                     {place.label}

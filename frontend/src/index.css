@@ -645,24 +645,6 @@ body {
   box-shadow: 0 8px 20px rgb(15 23 42 / 9%);
 }
 
-/* Search result page and filter rail. */
-.customer-results-page {
-  max-width: 1240px;
-}
-
-.customer-results-search {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgb(15 23 42 / 6%);
-}
-
-.customer-filter-sidebar {
-  padding: 18px !important;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-  box-shadow: 0 2px 8px rgb(15 23 42 / 6%);
-}
-
 .customer-filter-panel > div + div {
   padding-top: 16px;
   border-top: 1px solid #e2e8f0;
@@ -875,14 +857,10 @@ body {
     width: 290px;
   }
 
-  .customer-filter-sidebar {
-    padding: 14px !important;
-  }
 }
 
 /* Keep customer hotel filters/results scrollable without showing nested scrollbar rails. */
 .no-scrollbar,
-.customer-filter-sidebar,
 .hotels-filter-sidebar,
 .home-hotel-listing-section .hotels-cards-stream {
   -ms-overflow-style: none;
@@ -890,7 +868,6 @@ body {
 }
 
 .no-scrollbar::-webkit-scrollbar,
-.customer-filter-sidebar::-webkit-scrollbar,
 .hotels-filter-sidebar::-webkit-scrollbar,
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar {
   display: none;
@@ -1422,12 +1399,6 @@ body {
   display: none !important;
 }
 
-/* Search results retain the original inline pricing layout. */
-.customer-results-page .hcard-pricing-panel {
-  display: none !important;
-}
-
-
 /* ==========================================================
    NAVBAR — My Trips & Wishlist (reference project style)
    ========================================================== */
@@ -1626,6 +1597,25 @@ body {
 .home-hotel-listing-section .customer-hotel-card {
   width: 100%;
   flex-shrink: 0;
+}
+
+/* The coupon is already shown with the room benefits in the middle column. Keeping the pricing
+   panel compact avoids stretching the card and leaving a large blank area beside the image. */
+.home-hotel-listing-section .customer-hotel-card > div:first-child {
+  min-height: 190px !important;
+}
+
+.home-hotel-listing-section .customer-hotel-card > div:nth-child(2) {
+  gap: 10px;
+  padding: 16px;
+}
+
+.home-hotel-listing-section .hcard-pricing-panel {
+  padding: 12px 14px;
+}
+
+.home-hotel-listing-section .hcard-cta-group {
+  margin-top: 8px;
 }
 
 @media (max-width: 1023px) {
@@ -1827,6 +1817,12 @@ body {
   color: #64748b;
 }
 
+.nearby-map-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
 .nearby-real-map .leaflet-popup-content a {
   margin-top: 3px;
   color: #0a42ba;
@@ -1866,6 +1862,31 @@ body {
   place-items: center;
   padding: 0;
   border-radius: 50%;
+}
+
+.nearby-open-google-maps {
+  position: absolute;
+  right: 12px;
+  bottom: 38px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgb(226 232 240 / 90%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 94%);
+  padding: 7px 10px;
+  color: #0a42ba;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 16%);
+  backdrop-filter: blur(6px);
+}
+
+.nearby-open-google-maps:hover {
+  background: #fff;
+  color: #082f8f;
 }
 
 /* =========================================================

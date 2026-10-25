@@ -17,7 +17,7 @@ const AUTO_SCROLL_INTERVAL_MS = 5000;
  * hover/focus/touch and while a manual scroll is in flight, resumes after, wraps back to the start at the
  * end, and never runs at all under prefers-reduced-motion.
  */
-export function Carousel({ children, className, 'aria-label': ariaLabel, autoScroll = false }) {
+export function Carousel({ children, className, 'aria-label': ariaLabel, autoScroll = false, controls = 'bottom' }) {
   const trackRef = useRef(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -90,18 +90,43 @@ export function Carousel({ children, className, 'aria-label': ariaLabel, autoScr
         onBlur={autoScroll ? resume : undefined}
         onTouchStart={autoScroll ? pause : undefined}
         onTouchEnd={autoScroll ? resume : undefined}
-        className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-1 [scrollbar-width:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-[var(--radius-card)] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          'flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-1 [scrollbar-width:none] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-[var(--radius-card)] [&::-webkit-scrollbar]:hidden',
+          controls === 'sides' && 'mx-10 sm:mx-12',
+        )}
       >
         {children}
       </div>
-      <div className="mt-3 flex items-center justify-end gap-2">
-        <Button type="button" variant="secondary" size="icon" aria-label="Previous" disabled={!canPrev} onClick={() => scrollByPage(-1)}>
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        <Button type="button" variant="secondary" size="icon" aria-label="Next" disabled={!canNext} onClick={() => scrollByPage(1)}>
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      </div>
+      {(canPrev || canNext) && (
+        <div className={cn(
+          controls === 'sides'
+            ? 'pointer-events-none absolute inset-x-0 top-1/2 z-10 flex -translate-y-1/2 items-center justify-between'
+            : 'mt-3 flex items-center justify-end gap-2',
+        )}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            className={cn(controls === 'sides' && 'pointer-events-auto rounded-full bg-white shadow-md')}
+            aria-label="Previous"
+            disabled={!canPrev}
+            onClick={() => scrollByPage(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            className={cn(controls === 'sides' && 'pointer-events-auto rounded-full bg-white shadow-md')}
+            aria-label="Next"
+            disabled={!canNext}
+            onClick={() => scrollByPage(1)}
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

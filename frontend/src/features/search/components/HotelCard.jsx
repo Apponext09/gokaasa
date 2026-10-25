@@ -15,6 +15,7 @@ import { nightsBetween, stayParams, slugifyPlace } from '@/features/search/searc
 import { normalizeAmenities } from '@/features/search/amenities.js';
 import { discountDisplay } from '@/features/search/discountDisplay.js';
 import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
+import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
 import { bookingApi, discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
@@ -35,8 +36,8 @@ export function HotelCard({ hotel, state }) {
   const { status: authStatus } = useAuth();
   const offer = hotel.bestOffer;
   const couponOffer = hotel.offer;
-  const place = [hotel.area, hotel.city, hotel.country].filter(Boolean).join(', ');
-  const { originalPerNightMinor, discountPercent } = discountDisplay(offer);
+  const place = formatHotelLocation(hotel, { compact: true });
+  const { pricePerNightMinor, originalPerNightMinor, discountPercent } = discountDisplay(offer);
   const { shown: amenities, moreCount: moreAmenityCount } = normalizeAmenities(hotel.amenities, 3);
   const fullPath = hotelPath(hotel, state);
 
@@ -234,7 +235,7 @@ export function HotelCard({ hotel, state }) {
         </div>
         {isIllustrativeCover(hotel.image) && (
           <p className="absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
-            Images for illustration
+            Illustrative image
           </p>
         )}
       </div>
@@ -259,12 +260,13 @@ export function HotelCard({ hotel, state }) {
             <p className="flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span className="truncate">{place}</span>
-              {hotel.distanceKm != null && (
-                <span className="shrink-0 font-medium text-[var(--text-strong)]">
-                  · {Number(hotel.distanceKm).toFixed(1)} km away
-                </span>
-              )}
             </p>
+            {hotel.distanceKm != null && (
+              <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold text-brand-700">
+                <MapPin className="h-3 w-3" aria-hidden="true" />
+                {Number(hotel.distanceKm).toFixed(1)} km from your location
+              </span>
+            )}
           </div>
           {/* The provider's guest rating, where there is one. Otherwise Gokaasa's own guest reviews fill the gap; with neither, "New" beats inventing a number. */}
           {hotel.guestRating != null || hotel.rating ? (
@@ -314,7 +316,11 @@ export function HotelCard({ hotel, state }) {
               {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <Badge tone="warning">Only {offer.roomsLeft} left</Badge>}
               {couponOffer && (
                 <Badge tone="premium">
-                  <Tag className="h-3 w-3" aria-hidden="true" /> {couponOffer.discountPercent}% OFF with code {couponOffer.code}
+                  <Tag className="h-3 w-3" aria-hidden="true" /> {couponOffer.discountPercent > 0
+                    ? `${couponOffer.discountPercent}% OFF`
+                    : couponOffer.discountMinor > 0
+                      ? `${formatMoney(couponOffer.discountMinor)} OFF`
+                      : 'Offer'} with code {couponOffer.code}
                 </Badge>
               )}
             </div>
@@ -330,8 +336,8 @@ export function HotelCard({ hotel, state }) {
                 {originalPerNightMinor > 0 && (
                   <span className="text-sm text-[var(--text-muted)] line-through">{formatMoney(originalPerNightMinor)}</span>
                 )}
-                <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(offer.pricePerNightMinor)}</span>
-                <span className="text-sm text-[var(--text-muted)]">/ night</span>
+                <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(pricePerNightMinor)}</span>
+                <span className="text-sm text-[var(--text-muted)]">/ night before taxes</span>
               </p>
               <p className="text-xs text-[var(--text-muted)]">
                 {offer.nights} night{offer.nights === 1 ? '' : 's'} · {formatMoney(offer.finalTotalMinor)} total
@@ -367,8 +373,8 @@ export function HotelCard({ hotel, state }) {
               </div>
             )}
             <div className="hcard-final-price-row">
-              <span className="hcard-final-amount">{formatMoney(offer.pricePerNightMinor)}</span>
-              <span className="hcard-per-night">/ night</span>
+              <span className="hcard-final-amount">{formatMoney(pricePerNightMinor)}</span>
+              <span className="hcard-per-night">/ night before taxes</span>
             </div>
             {offer.taxTotalMinor + offer.feeTotalMinor > 0 && (
               <p className="hcard-taxes-note">+{formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes &amp; fees for the stay</p>
@@ -376,16 +382,7 @@ export function HotelCard({ hotel, state }) {
             {offer.nights > 1 && (
               <p className="hcard-total-nights">{formatMoney(offer.finalTotalMinor)} for {offer.nights} nights</p>
             )}
-            {couponOffer ? (
-              <div className="hcard-coupon-badge">
-                <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
-                <span>
-                  Member Deal: Extra {couponOffer.discountMinor != null
-                    ? `${formatMoney(couponOffer.discountMinor)} off`
-                    : `${couponOffer.discountPercent}% off`} with code <strong>{couponOffer.code}</strong>
-                </span>
-              </div>
-            ) : offer.memberDealCode ? (
+            {!couponOffer && offer.memberDealCode ? (
               <div className="hcard-member-deal">
                 <Sparkles className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" aria-hidden="true" />
                 <span>Member Deal: Extra {offer.memberDealAmount ? formatMoney(offer.memberDealAmount) : 'savings'} with code <strong>{offer.memberDealCode}</strong></span>

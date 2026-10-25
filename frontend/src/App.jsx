@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { CustomerLayout } from '@/layouts/CustomerLayout.jsx';
 import { AdminLayout } from '@/layouts/AdminLayout.jsx';
 import { RequireAuth } from '@/components/shared/index.jsx';
@@ -13,7 +13,6 @@ import { AboutPage } from '@/pages/customer/AboutPage.jsx';
 import { ContactPage } from '@/pages/customer/ContactPage.jsx';
 import { ProfilePage } from '@/pages/customer/ProfilePage.jsx';
 import { NotificationsPage } from '@/pages/customer/NotificationsPage.jsx';
-import { SearchResultsPage } from '@/pages/customer/SearchResultsPage.jsx';
 import { HotelDetailsPage } from '@/pages/customer/HotelDetailsPage.jsx';
 import { GuestDetailsPage } from '@/pages/customer/booking/GuestDetailsPage.jsx';
 import { BookingReviewPage } from '@/pages/customer/booking/BookingReviewPage.jsx';
@@ -72,6 +71,15 @@ function NotFoundPage() {
   );
 }
 
+/** Keeps old destination URLs working while making /hotels the single listing-page implementation. */
+function LegacyHotelSearchRedirect() {
+  const { destination } = useParams();
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  if (destination) params.set('destination', destination);
+  return <Navigate replace to={`/hotels?${params.toString()}`} />;
+}
+
 export function App() {
   return (
     <>
@@ -92,7 +100,7 @@ export function App() {
         <Route path="contact" element={<ContactPage />} />
         {/* Static segments ("nearby") must be declared before the dynamic ":destination", otherwise it is read as one. */}
         <Route path="hotels/nearby" element={<NearbyHotelsPage />} />
-        <Route path="hotels/:destination" element={<SearchResultsPage />} />
+        <Route path="hotels/:destination" element={<LegacyHotelSearchRedirect />} />
         <Route path="hotels/:citySlug/:hotelSlug" element={<HotelDetailsPage />} />
 
         {/* Booking, My Trips, the wishlist and the profile belong to a signed-in guest. Signed-out visitors go to sign-in and come back here. */}

@@ -1,14 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, Info, MapPin, Navigation, RotateCcw } from 'lucide-react';
+import { Info, MapPin, Navigation } from 'lucide-react';
 import { divIcon, latLngBounds } from 'leaflet';
 import { MapContainer, Marker, Popup, TileLayer, useMap, ZoomControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button.jsx';
-import { Alert } from '@/components/ui/surfaces.jsx';
-import { Carousel, CarouselItem } from '@/components/ui/carousel.jsx';
-import { EmptyState } from '@/components/shared/index.jsx';
-import { CuratedHotelCard, CuratedHotelCardSkeleton } from './CuratedHotelCard.jsx';
 import { useGeolocation } from './useGeolocation.js';
 import { discoveryApi } from '@/services/endpoints.js';
 import { slugifyPlace } from '@/features/search/searchParams.js';
@@ -30,7 +26,6 @@ function MapViewport({ hotels }) {
 
   useEffect(() => {
     if (hotels.length === 0) return;
-
     const bounds = latLngBounds(hotels.map((hotel) => [hotel.latitude, hotel.longitude]));
     map.fitBounds(bounds, { padding: [32, 32], maxZoom: 11, animate: false });
   }, [hotels, map]);
@@ -45,12 +40,19 @@ export function NearbyHotelsSection() {
   const [error, setError] = useState(null);
   const [showMapAttribution, setShowMapAttribution] = useState(true);
 
+  const visibleMapHotels = geoStatus === 'granted' && !error && hotels?.length > 0
+    ? hotels.filter((hotel) => Number.isFinite(hotel.latitude) && Number.isFinite(hotel.longitude))
+    : mapHotels;
+  const previewMapBounds = visibleMapHotels?.length > 0
+    ? latLngBounds(visibleMapHotels.map((hotel) => [hotel.latitude, hotel.longitude]))
+    : null;
+  const previewMapCenter = previewMapBounds?.getCenter();
+
   useEffect(() => {
-    if (geoStatus !== 'idle') return undefined;
     setShowMapAttribution(true);
     const timer = window.setTimeout(() => setShowMapAttribution(false), 5000);
     return () => window.clearTimeout(timer);
-  }, [geoStatus]);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -84,6 +86,11 @@ export function NearbyHotelsSection() {
     };
   }, [geoStatus, coords]);
 
+  const isFinding = geoStatus === 'requesting' || (geoStatus === 'granted' && hotels === null && !error);
+  const hasNearbyHotels = geoStatus === 'granted' && !error && hotels?.length > 0;
+  const noNearbyHotels = geoStatus === 'granted' && !error && hotels?.length === 0;
+  const locationUnavailable = ['denied', 'unavailable', 'timeout'].includes(geoStatus);
+
   return (
     <section id="nearby" aria-labelledby="nearby-heading" className="mx-auto max-w-7xl space-y-5 px-4 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -93,151 +100,129 @@ export function NearbyHotelsSection() {
           </h2>
           <p className="mt-1 text-sm text-[var(--text-muted)]">Discover great stays close to your current location.</p>
         </div>
-        {hotels?.length > 0 && (
+        {hasNearbyHotels && (
           <Link to={`/hotels/nearby?lat=${coords.lat}&lng=${coords.lng}`} className="text-sm font-medium text-brand-700 hover:underline">
             View all nearby hotels
           </Link>
         )}
       </div>
 
-      {geoStatus === 'idle' && (
-        <div className="nearby-idle-card">
-          <div className="nearby-idle-map">
-            {mapHotels?.length > 0 ? (
-              <MapContainer
-                className="nearby-real-map"
-                bounds={latLngBounds(mapHotels.map((hotel) => [hotel.latitude, hotel.longitude]))}
-                boundsOptions={{ padding: [32, 32], maxZoom: 11 }}
-                scrollWheelZoom={false}
-                attributionControl={false}
-                zoomControl={false}
-              >
-                <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
-                <ZoomControl position="topright" />
-                <MapViewport hotels={mapHotels} />
-                {mapHotels.map((hotel) => (
-                  <Marker
-                    key={hotel.id}
-                    position={[hotel.latitude, hotel.longitude]}
-                    icon={hotelMarkerIcon}
-                  >
-                    <Popup>
-                      <strong>{hotel.name}</strong>
-                      <span className="nearby-map-popup-location">{hotel.area ? `${hotel.area}, ` : ''}{hotel.city}</span>
-                      <Link to={`/hotels/${slugifyPlace(hotel.city)}/${hotel.slug}`}>View hotel</Link>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
-            ) : (
-              <div className="nearby-map-empty">
-                {mapHotels === null ? 'Loading hotel locations…' : 'No hotel coordinates available'}
-              </div>
-            )}
-            <a
-              className={`nearby-idle-map-attribution${showMapAttribution ? '' : ' is-collapsed'}`}
-              href="https://www.openstreetmap.org/copyright"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="OpenStreetMap map data and licence"
-              title="OpenStreetMap map data and licence"
+      <div className="nearby-idle-card">
+        <div className="nearby-idle-map">
+          {visibleMapHotels?.length > 0 ? (
+            <MapContainer
+              className="nearby-real-map"
+              bounds={previewMapBounds}
+              boundsOptions={{ padding: [32, 32], maxZoom: 11 }}
+              scrollWheelZoom={false}
+              attributionControl={false}
+              zoomControl={false}
             >
-              {showMapAttribution
-                ? '© OpenStreetMap contributors'
-                : <Info className="h-3.5 w-3.5" aria-hidden="true" />}
-            </a>
-          </div>
+              <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <ZoomControl position="topright" />
+              <MapViewport hotels={visibleMapHotels} />
+              {visibleMapHotels.map((hotel) => (
+                <Marker
+                  key={hotel.id}
+                  position={[hotel.latitude, hotel.longitude]}
+                  icon={hotelMarkerIcon}
+                >
+                  <Popup>
+                    <strong>{hotel.name}</strong>
+                    <span className="nearby-map-popup-location">{hotel.area ? `${hotel.area}, ` : ''}{hotel.city}</span>
+                    {hotel.distanceKm != null && (
+                      <span className="nearby-map-popup-location">{Number(hotel.distanceKm).toFixed(1)} km from your location</span>
+                    )}
+                    <span className="nearby-map-popup-actions">
+                      <Link to={`/hotels/${slugifyPlace(hotel.city)}/${hotel.slug}`}>View hotel</Link>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${hotel.latitude},${hotel.longitude}`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open in Google Maps
+                      </a>
+                    </span>
+                  </Popup>
+                </Marker>
+              ))}
+            </MapContainer>
+          ) : (
+            <div className="nearby-map-empty">
+              {visibleMapHotels === null ? 'Loading hotel locations…' : 'No hotel coordinates available'}
+            </div>
+          )}
 
-          {/* Left: text content */}
-          <div className="nearby-idle-content">
-            <h3 className="nearby-idle-heading">Explore nearby stays</h3>
-            <p className="nearby-idle-desc">
-              Use your current location to find hotels near you. Your location is never stored.
-            </p>
-            <Button onClick={request} size="sm" className="nearby-idle-btn">
-              <Navigation className="h-3.5 w-3.5 fill-current" aria-hidden="true" />
-              Find Hotels Near Me
-            </Button>
-          </div>
-
+          <a
+            className={`nearby-idle-map-attribution${showMapAttribution ? '' : ' is-collapsed'}`}
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="OpenStreetMap map data and licence"
+            title="OpenStreetMap map data and licence"
+          >
+            {showMapAttribution
+              ? '© OpenStreetMap contributors'
+              : <Info className="h-3.5 w-3.5" aria-hidden="true" />}
+          </a>
         </div>
-      )}
 
-      {geoStatus === 'requesting' && (
-        <Carousel aria-label="Hotels near you loading">
-          {Array.from({ length: 4 }, (_, i) => (
-            <CarouselItem key={i} className="w-64 sm:w-72">
-              <CuratedHotelCardSkeleton />
-            </CarouselItem>
-          ))}
-        </Carousel>
-      )}
+        {previewMapCenter && (
+          <a
+            className="nearby-open-google-maps"
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`hotels near ${previewMapCenter.lat},${previewMapCenter.lng}`)}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+            Open in Google Maps
+          </a>
+        )}
 
-      {geoStatus === 'denied' && (
-        <Alert tone="warning" title="We couldn't access your location.">
-          <span className="flex flex-wrap items-center gap-3">
-            You can still browse hotels by destination instead.
-            <Link to="/destinations">
-              <Button size="sm" variant="secondary">Choose a destination</Button>
+        <div className="nearby-idle-content">
+          <h3 className="nearby-idle-heading">
+            {isFinding
+              ? 'Finding nearby stays…'
+              : hasNearbyHotels
+                ? `${hotels.length} nearby ${hotels.length === 1 ? 'stay' : 'stays'} on the map`
+                : noNearbyHotels
+                  ? 'No nearby stays found'
+                  : error
+                    ? 'Unable to load nearby stays'
+                    : locationUnavailable
+                      ? 'Location is unavailable'
+                      : 'Explore nearby stays'}
+          </h3>
+          <p className="nearby-idle-desc">
+            {hasNearbyHotels
+              ? 'Select a hotel marker to see its details and distance from your current location.'
+              : noNearbyHotels
+                ? `No published hotels were found within ${RADIUS_KM} km. The map remains available for exploring other stays.`
+                : error
+                  ? 'The map is still available. You can retry your current location.'
+                  : locationUnavailable
+                    ? 'Allow location access to show nearby hotel markers and distances.'
+                    : 'Use your current location to update this map with nearby hotels. Your location is never stored.'}
+          </p>
+
+          {hasNearbyHotels ? (
+            <Link to={`/hotels/nearby?lat=${coords.lat}&lng=${coords.lng}`} className="nearby-idle-btn">
+              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+              View Nearby Hotels
             </Link>
-          </span>
-        </Alert>
-      )}
-
-      {geoStatus === 'unavailable' && (
-        <Alert tone="info" title="Location isn't available on this device or browser.">
-          <Link to="/destinations" className="font-medium text-brand-700 hover:underline">Choose a destination instead</Link>
-        </Alert>
-      )}
-
-      {geoStatus === 'timeout' && (
-        <Alert tone="warning" title="That took too long.">
-          <span className="flex flex-wrap items-center gap-3">
-            Your location request timed out.
-            <Button size="sm" variant="secondary" onClick={request}>
-              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Retry
+          ) : (
+            <Button
+              onClick={request}
+              size="sm"
+              className="nearby-idle-btn"
+              loading={isFinding}
+            >
+              {!isFinding && <Navigation className="h-3.5 w-3.5 fill-current" aria-hidden="true" />}
+              {isFinding ? 'Finding Hotels…' : geoStatus === 'idle' ? 'Find Hotels Near Me' : 'Retry My Location'}
             </Button>
-          </span>
-        </Alert>
-      )}
-
-      {geoStatus === 'granted' && error && (
-        <Alert tone="error" title="Unable to find hotels near you.">
-          <span className="flex flex-wrap items-center gap-3">
-            Try another location.
-            <Button size="sm" variant="secondary" onClick={request}>Try again</Button>
-          </span>
-        </Alert>
-      )}
-
-      {geoStatus === 'granted' && !error && hotels === null && (
-        <Carousel aria-label="Hotels near you loading">
-          {Array.from({ length: 4 }, (_, i) => (
-            <CarouselItem key={i} className="w-64 sm:w-72">
-              <CuratedHotelCardSkeleton />
-            </CarouselItem>
-          ))}
-        </Carousel>
-      )}
-
-      {geoStatus === 'granted' && !error && hotels?.length === 0 && (
-        <EmptyState
-          icon={Compass}
-          title="No hotels found nearby"
-          description={`We couldn't find a published hotel within ${RADIUS_KM}km of your location.`}
-          action={<Link to="/destinations"><Button variant="secondary">Explore Hotels</Button></Link>}
-        />
-      )}
-
-      {geoStatus === 'granted' && !error && hotels?.length > 0 && (
-        <Carousel aria-label="Hotels near you">
-          {hotels.map((hotel) => (
-            <CarouselItem key={hotel.id} className="w-64 sm:w-72">
-              <CuratedHotelCard hotel={hotel} />
-            </CarouselItem>
-          ))}
-        </Carousel>
-      )}
+          )}
+        </div>
+      </div>
     </section>
   );
 }

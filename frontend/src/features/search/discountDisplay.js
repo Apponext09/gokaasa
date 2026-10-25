@@ -1,14 +1,27 @@
 /**
- * Derives the strikethrough-price/discount-badge values from a hotel card's own `bestOffer`, which
- * already carries everything needed (baseTotalMinor, discountTotalMinor, nights) -- this never invents a
- * discount the backend didn't compute, it only reshapes the same numbers for display.
+ * Derives comparable before-tax nightly prices from a hotel card's own `bestOffer`. The API's
+ * `pricePerNightMinor` is the final total (including taxes and fees) averaged across the stay, while
+ * `baseTotalMinor` is before tax. Comparing those two made a discounted price appear higher than its
+ * crossed-out price. Both values returned here use the same before-tax basis.
  */
 export function discountDisplay(offer) {
+  const nights = Number(offer?.nights);
+  const baseTotalMinor = Number(offer?.baseTotalMinor);
+  const discountTotalMinor = Number(offer?.discountTotalMinor);
+  if (!Number.isFinite(nights) || nights <= 0 || !Number.isFinite(baseTotalMinor)) {
+    return {
+      hasDiscount: false,
+      pricePerNightMinor: offer?.pricePerNightMinor ?? null,
+      originalPerNightMinor: null,
+      discountPercent: null,
+    };
+  }
+
   const hasDiscount = Boolean(offer?.discountTotalMinor > 0);
-  if (!hasDiscount) return { hasDiscount: false, originalPerNightMinor: null, discountPercent: null };
   return {
-    hasDiscount: true,
-    originalPerNightMinor: Math.round(offer.baseTotalMinor / offer.nights),
-    discountPercent: Math.round((offer.discountTotalMinor / offer.baseTotalMinor) * 100),
+    hasDiscount,
+    pricePerNightMinor: Math.round((baseTotalMinor - (hasDiscount ? discountTotalMinor : 0)) / nights),
+    originalPerNightMinor: hasDiscount ? Math.round(baseTotalMinor / nights) : null,
+    discountPercent: hasDiscount ? Math.round((discountTotalMinor / baseTotalMinor) * 100) : null,
   };
 }

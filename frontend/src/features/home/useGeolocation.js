@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * Wraps the browser Geolocation API as an explicit, user-triggered action (`request()`), never fired on
- * mount. `status` is one of: idle | requesting | granted | denied | unavailable | timeout.
+ * Wraps the browser Geolocation API. Consumers may explicitly call `request()` or opt into one automatic
+ * request; the browser still controls the permission prompt. `status` is one of:
+ * idle | requesting | granted | denied | unavailable | timeout.
  */
-export function useGeolocation() {
+export function useGeolocation({ autoRequest = false } = {}) {
   const [status, setStatus] = useState('idle');
   const [coords, setCoords] = useState(null);
+  const autoRequested = useRef(false);
 
   const request = useCallback(() => {
     if (!('geolocation' in navigator)) {
@@ -27,6 +29,12 @@ export function useGeolocation() {
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 5 * 60 * 1000 },
     );
   }, []);
+
+  useEffect(() => {
+    if (!autoRequest || autoRequested.current) return;
+    autoRequested.current = true;
+    request();
+  }, [autoRequest, request]);
 
   return { status, coords, request };
 }

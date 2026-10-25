@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Filter, Search, X } from "lucide-react";
+import { Filter, MapPin, Search, X } from "lucide-react";
 import { Alert } from "@/components/ui/surfaces.jsx";
 import { Button } from "@/components/ui/button.jsx";
 import { Pagination, formatDateTime } from "@/components/shared/index.jsx";
@@ -8,6 +8,8 @@ import { StaggeredReveal } from "@/components/shared/StaggeredReveal.jsx";
 import { SearchWidget } from "@/features/search/components/SearchWidget.jsx";
 import { HotelsFilterPanel } from "@/features/search/components/HotelsFilterPanel.jsx";
 import { HotelCard, HotelCardSkeleton } from "@/features/search/components/HotelCard.jsx";
+import { useGeolocation } from "@/features/home/useGeolocation.js";
+import { distanceFromCoordinatesKm } from "@/features/hotels/distance.js";
 import {
   parseSearchParams,
   addDays,
@@ -60,15 +62,28 @@ export function HotelsPage() {
   const [retryKey, setRetryKey] = useState(0);
   const [nameQuery, setNameQuery] = useState("");
   const { status: authStatus } = useAuth();
+  const geolocation = useGeolocation({ autoRequest: authStatus !== "loading" });
 
   // If no dates are specified in URL, use next default dates so all hotels show by default
-  const effectiveState = hasStay
-    ? state
-    : {
-        ...state,
-        checkIn: addDays(today, 1),
-        checkOut: addDays(today, 3),
-      };
+  const effectiveState = useMemo(() => (
+    hasStay
+      ? state
+      : {
+          ...state,
+          checkIn: addDays(today, 1),
+          checkOut: addDays(today, 3),
+        }
+  ), [hasStay, state, today]);
+
+  // Defaults are real search inputs, so write them to the URL as well. This keeps refresh/share and
+  // the quick-view/full-page links on the exact stay that produced the displayed availability.
+  useEffect(() => {
+    if (params.has("checkIn") || params.has("checkOut")) return;
+    const search = toSearchParams(effectiveState);
+    if (state.area) search.set("area", state.area);
+    if (destination) search.set("destination", destination);
+    setParams(search, { replace: true });
+  }, [destination, effectiveState, params, setParams, state.area]);
 
   const requestKey = buildRequest(effectiveState, destination).toString();
 
@@ -106,10 +121,16 @@ export function HotelsPage() {
 
   const filteredItems = useMemo(() => {
     if (!data?.items) return [];
-    if (!nameQuery.trim()) return data.items;
+    const items = geolocation.coords
+      ? data.items.map((hotel) => {
+          const distanceKm = distanceFromCoordinatesKm(geolocation.coords, hotel);
+          return distanceKm == null ? hotel : { ...hotel, distanceKm };
+        })
+      : data.items;
+    if (!nameQuery.trim()) return items;
     const q = nameQuery.toLowerCase();
-    return data.items.filter((h) => h.name.toLowerCase().includes(q));
-  }, [data?.items, nameQuery]);
+    return items.filter((h) => h.name.toLowerCase().includes(q));
+  }, [data?.items, geolocation.coords, nameQuery]);
 
   // Dynamically extract up to the first 5 unique hotel images for the searched location
   const locationImages = useMemo(() => {
@@ -273,9 +294,22 @@ export function HotelsPage() {
                 )}
                 {status === "loading" && !data && <span className="hotels-results-count"> (Searching...)</span>}
               </h2>
-              <Button variant="secondary" size="sm" className="hotels-mobile-filter-btn" onClick={() => setSheetOpen(true)}>
-                <Filter className="h-4 w-4" /> Filters
-              </Button>
+              <div className="flex items-center gap-2">
+                {!geolocation.coords && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={geolocation.request}
+                    disabled={geolocation.status === "requesting"}
+                  >
+                    <MapPin className="h-4 w-4" />
+                    {geolocation.status === "requesting" ? "Getting location…" : "Show distance"}
+                  </Button>
+                )}
+                <Button variant="secondary" size="sm" className="hotels-mobile-filter-btn" onClick={() => setSheetOpen(true)}>
+                  <Filter className="h-4 w-4" /> Filters
+                </Button>
+              </div>
             </div>
 
             {status === "loading" && !data && (
@@ -318,7 +352,7 @@ export function HotelsPage() {
               </div>
             )}
             {data && hasStay && (
-              <p className="hotels-price-note">Prices are per room per night including taxes and fees. Last checked {formatDateTime(new Date())}.</p>
+              <p className="hotels-price-note">Nightly prices are before taxes and fees; stay totals include them. Last checked {formatDateTime(new Date())}.</p>
             )}
             {data && browseMode && (
               <p className="hotels-price-note">Add check-in and check-out dates above to see live prices and availability.</p>

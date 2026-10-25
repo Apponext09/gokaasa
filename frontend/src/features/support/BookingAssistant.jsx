@@ -868,7 +868,9 @@ export function BookingAssistant({ onClose, open = true }) {
                       size="sm"
                       onClick={() => {
                         onClose();
-                        navigate(`/hotels/${slugifyPlace(state.destination?.destination ?? '')}?${stayParams(state).toString()}`);
+                        const params = stayParams(state);
+                        params.set('destination', slugifyPlace(state.destination?.destination ?? ''));
+                        navigate(`/hotels?${params.toString()}`);
                       }}
                     >
                       {t('viewAllAvailable', lang)}

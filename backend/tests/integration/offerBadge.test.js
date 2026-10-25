@@ -102,6 +102,7 @@ describe('hotel-card discount badge (GET /api/hotels/search)', () => {
     const card = res.body.items.find((item) => item.id === hotelId);
     assert.equal(card.offer.code, 'CARDOFF15');
     assert.equal(card.offer.discountPercent, 15);
+    assert.equal(card.offer.discountMinor, 300_000, 'the UI can show an exact money saving when the rounded percentage is zero');
   });
 
   it('does not badge a hotel excluded by a hotel-restricted offer for a different hotel', async () => {

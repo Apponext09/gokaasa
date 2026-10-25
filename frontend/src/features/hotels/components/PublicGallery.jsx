@@ -7,7 +7,7 @@ import { isIllustrativeImage } from '@/features/hotels/imageDisclaimer.js';
 function IllustrativeTag() {
   return (
     <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white/90">
-      Illustrative
+      Illustrative image
     </span>
   );
 }

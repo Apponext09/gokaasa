@@ -27,6 +27,7 @@ import { HotelCard } from '@/features/search/components/HotelCard.jsx';
 import { PublicGallery } from '@/features/hotels/components/PublicGallery.jsx';
 import { AmenityGroups } from '@/features/hotels/components/AmenityGroups.jsx';
 import { isAllIllustrative } from '@/features/hotels/imageDisclaimer.js';
+import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
 
 import {
   RoomCard,
@@ -568,7 +569,7 @@ export function HotelDetailsPage() {
           description="The link may be out of date, or the hotel is no longer listed on Gokaasa."
           action={
             <Link
-              to={`/hotels/${citySlug}`}
+              to={`/hotels?destination=${encodeURIComponent(citySlug ?? '')}`}
               className="text-sm font-medium text-brand-600 hover:underline"
             >
               Back to {cityLabel} hotels
@@ -615,15 +616,7 @@ export function HotelDetailsPage() {
   const policies =
     hotel.cancellationPolicies ?? [];
 
-  const location = [
-    hotel.addressLine,
-    hotel.area,
-    hotel.city,
-    hotel.state,
-    hotel.countryCode,
-  ]
-    .filter(Boolean)
-    .join(', ');
+  const location = formatHotelLocation(hotel);
 
   const mapsUrl =
     hotel.latitude != null &&
@@ -631,11 +624,9 @@ export function HotelDetailsPage() {
       ? `https://www.google.com/maps/search/?api=1&query=${hotel.latitude},${hotel.longitude}`
       : null;
 
-  const backToResults =
-    `/hotels/${slugifyPlace(hotel.city)}` +
-    (hasStay
-      ? `?${stayParams(state)}`
-      : '');
+  const backParams = hasStay ? stayParams(state) : new URLSearchParams();
+  backParams.set('destination', slugifyPlace(hotel.city));
+  const backToResults = `/hotels?${backParams.toString()}`;
 
   // ---------------------------------------------------------------------------
   // Rating normalization

@@ -5,11 +5,13 @@ import {
   ArrowRight,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   Globe2,
   Headphones,
   Mail,
   MapPin,
+  Quote,
   ShieldCheck,
   Star,
   Users,
@@ -28,6 +30,8 @@ import {
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
 import { NearbyHotelsSection } from '@/features/home/NearbyHotelsSection.jsx';
+import { useGeolocation } from '@/features/home/useGeolocation.js';
+import { distanceFromCoordinatesKm } from '@/features/hotels/distance.js';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
 import { HotelCard, HotelCardSkeleton } from '@/features/search/components/HotelCard.jsx';
 import { cn } from '@/lib/utils.js';
@@ -47,51 +51,77 @@ import { addDays, destinationSearchPath, todayIso, toSearchParams } from '@/feat
 const WHY_GOKAASA = [
   {
     icon: Award,
-    title: 'Thoughtfully Selected',
-    text: 'Discover stays chosen for comfort, character, and quality.',
+    title: 'Curated stays',
+    text: 'Quality options without endless scrolling.',
   },
   {
     icon: ShieldCheck,
-    title: 'Secure Booking',
-    text: 'A smoother booking experience with secure payment processing.',
+    title: 'Clear pricing',
+    text: 'See the full stay cost before you pay.',
   },
   {
     icon: Headphones,
-    title: 'Here When You Need Us',
-    text: 'Get support and guidance throughout your journey.',
+    title: 'Helpful support',
+    text: 'Get assistance before and after booking.',
   },
   {
     icon: Users,
-    title: 'Made for Travellers',
-    text: 'A simpler way to find a stay that fits your plans.',
+    title: 'Easy trip access',
+    text: 'Keep every booking detail in one place.',
   },
+];
+
+const WHY_ICON_TONES = [
+  'bg-blue-100 text-blue-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-amber-100 text-amber-700',
+  'bg-violet-100 text-violet-700',
 ];
 
 const TESTIMONIALS = [
   {
     name: 'Priya Verma',
-    quote: 'Loved the stay. Easy booking and great support from Gokaasa.',
+    quote: 'The total price was clear, and booking the room took only a few minutes.',
     rating: 5,
   },
   {
     name: 'Rahul Sharma',
-    quote: 'Amazing experience! Rooms were clean and service was top-notch.',
+    quote: 'Hotel details were easy to compare, and managing the reservation was straightforward.',
     rating: 5,
   },
   {
     name: 'Anshu Yadav',
-    quote: 'The booking process was smooth, simple and completely hassle-free.',
+    quote: 'I found the right room quickly and had every stay detail available in My Trips.',
     rating: 5,
   },
   {
     name: 'Amit Patel',
-    quote: 'Loved the stay. Easy booking and great support.',
+    quote: 'The cancellation terms were easy to understand before I confirmed the booking.',
     rating: 5,
   },
   {
     name: 'Amit Singh',
-    quote: 'Best hotel deals I found. Highly recommended!',
+    quote: 'Search, room selection and payment all felt simple from start to finish.',
     rating: 5,
+  },
+];
+
+const HOME_FAQS = [
+  {
+    question: 'Is the final price shown before payment?',
+    answer: 'Yes. The review step shows the room price, discounts, taxes and fees before you continue to payment.',
+  },
+  {
+    question: 'What happens if my plans change?',
+    answer: 'Your room cancellation policy is shown before booking. Open My Trips to review the policy and any applicable refund before cancelling.',
+  },
+  {
+    question: 'Where can I manage my reservation?',
+    answer: 'Open My Trips from the header to view stay dates, guest details, payment status and available booking actions.',
+  },
+  {
+    question: 'How will I know my booking is confirmed?',
+    answer: 'After successful payment, the confirmation screen and My Trips show the latest booking status and hotel details.',
   },
 ];
 
@@ -135,7 +165,7 @@ function buildStats(stats) {
   return items;
 }
 
-function SectionHeading({ eyebrow, title, subtitle, action }) {
+function SectionHeading({ id, eyebrow, title, subtitle, action }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-2xl">
@@ -146,7 +176,7 @@ function SectionHeading({ eyebrow, title, subtitle, action }) {
           </p>
         )}
 
-        <h2 className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
+        <h2 id={id} className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
           {title}
         </h2>
 
@@ -282,7 +312,7 @@ const HOME_SORT_OPTIONS = [
   { value: 'star_rating', label: 'Star Rating' },
 ];
 
-function HomeHotelListing() {
+function HomeHotelListing({ search = null, geolocation }) {
   const [hotels, setHotels] = useState([]);
   const [status, setStatus] = useState('loading');
   const [filters, setFilters] = useState({});
@@ -295,19 +325,31 @@ function HomeHotelListing() {
 
   const today = todayIso();
   const listingState = {
-    checkIn: addDays(today, 1),
-    checkOut: addDays(today, 2),
-    occupancy: [{ adults: 2, childAges: [] }],
+    checkIn: search?.checkIn ?? addDays(today, 1),
+    checkOut: search?.checkOut ?? addDays(today, 2),
+    occupancy: search?.occupancy ?? [{ adults: 2, childAges: [] }],
+    coupon: search?.coupon ?? null,
     filters,
     sort,
   };
+  const searchKey = JSON.stringify({
+    destination: search?.destination ?? null,
+    area: search?.area ?? null,
+    hotelSlug: search?.hotelSlug ?? null,
+    checkIn: listingState.checkIn,
+    checkOut: listingState.checkOut,
+    occupancy: listingState.occupancy,
+    coupon: listingState.coupon,
+  });
 
   useEffect(() => {
     const controller = new AbortController();
     setStatus('loading');
     setListingError(null);
     const params = Object.fromEntries(toSearchParams(listingState));
-    params.limit = 12;
+    if (search?.destination) params.destination = search.destination;
+    if (search?.area) params.area = search.area;
+    params.limit = search?.hotelSlug ? 50 : 12;
     discoveryApi
       .search(params, { signal: controller.signal })
       .then((result) => {
@@ -323,11 +365,22 @@ function HomeHotelListing() {
     return () => controller.abort();
     // listingState is intentionally represented by its URL-backed inputs here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort, filters, retryKey]);
+  }, [sort, filters, retryKey, searchKey]);
 
+  const hotelsWithDistance = useMemo(() => {
+    if (!geolocation.coords) return hotels;
+
+    return hotels.map((hotel) => {
+      const distanceKm = distanceFromCoordinatesKm(geolocation.coords, hotel);
+      return distanceKm == null ? hotel : { ...hotel, distanceKm };
+    });
+  }, [geolocation.coords, hotels]);
+  const destinationHotels = search?.hotelSlug
+    ? hotelsWithDistance.filter((hotel) => hotel.slug === search.hotelSlug)
+    : hotelsWithDistance;
   const filtered = nameQuery.trim()
-    ? hotels.filter((h) => h.name.toLowerCase().includes(nameQuery.toLowerCase()))
-    : hotels;
+    ? destinationHotels.filter((h) => h.name.toLowerCase().includes(nameQuery.toLowerCase()))
+    : destinationHotels;
 
   const filtersPanel = (
     <HotelsFilterPanel
@@ -341,13 +394,15 @@ function HomeHotelListing() {
   );
 
   return (
-    <section className="home-hotel-listing-section" aria-label="Browse Hotels">
+    <section id="home-hotel-results" className="home-hotel-listing-section scroll-mt-24" aria-label="Browse Hotels">
       <div className="home-hotel-listing-inner">
         {/* Section header */}
         <div className="home-hl-header">
           <div>
-            <p className="home-hl-eyebrow">Explore top stays</p>
-            <h2 className="home-hl-title">Browse All Hotels</h2>
+            <p className="home-hl-eyebrow">{search ? 'Search results' : 'Explore top stays'}</p>
+            <h2 className="home-hl-title">
+              {search ? (search.hotelSlug ? search.label : `Hotels in ${search.label}`) : 'Browse All Hotels'}
+            </h2>
           </div>
         </div>
 
@@ -384,13 +439,26 @@ function HomeHotelListing() {
                   <span className="hotels-results-count">({filtered.length} Properties Found)</span>
                 )}
               </h3>
-              <button
-                type="button"
-                className="hotels-mobile-filter-btn inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm lg:hidden"
-                onClick={() => setSheetOpen(true)}
-              >
-                Filters
-              </button>
+              <div className="flex items-center gap-2">
+                {!geolocation.coords && (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 disabled:cursor-wait disabled:opacity-70 sm:text-sm"
+                    onClick={geolocation.request}
+                    disabled={geolocation.status === 'requesting'}
+                  >
+                    <MapPin className="h-4 w-4" aria-hidden="true" />
+                    {geolocation.status === 'requesting' ? 'Getting location…' : 'Show distance'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="hotels-mobile-filter-btn inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium shadow-sm lg:hidden"
+                  onClick={() => setSheetOpen(true)}
+                >
+                  Filters
+                </button>
+              </div>
             </div>
 
             {status === 'loading' && (
@@ -452,6 +520,7 @@ function HomeHotelListing() {
 
 export function HomePage() {
   const { status, user, isStaff } = useAuth();
+  const geolocation = useGeolocation({ autoRequest: status !== 'loading' && !isStaff });
 
   const [popular, setPopular] = useState(null);
   const [stayTypes, setStayTypes] = useState(null);
@@ -459,6 +528,8 @@ export function HomePage() {
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [hotelSearch, setHotelSearch] = useState(null);
+  const [openHomeFaq, setOpenHomeFaq] = useState(0);
   const heroSlides = useMemo(
     () => (popular ?? []).filter((place) => place.imageUrl),
     [popular],
@@ -586,7 +657,15 @@ export function HomePage() {
         </div>
 
         <div className="customer-search-shell !-mt-9 max-md:!-mt-[35px]">
-          <SearchWidget variant="hero" />
+          <SearchWidget
+            variant="hero"
+            onSearch={(nextSearch) => {
+              setHotelSearch(nextSearch);
+              window.setTimeout(() => {
+                document.getElementById('home-hotel-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 0);
+            }}
+          />
         </div>
       </section>
 
@@ -665,7 +744,7 @@ export function HomePage() {
       )}
 
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
-      <HomeHotelListing />
+      <HomeHotelListing search={hotelSearch} geolocation={geolocation} />
 
       {/* FIND YOUR PERFECT STAY */}
       {stayTypes?.length > 0 && <section
@@ -696,45 +775,51 @@ export function HomePage() {
 
       <section
         aria-labelledby="testimonials-heading"
-        className="mx-auto max-w-7xl space-y-4 px-4 py-6 sm:px-6 lg:py-7"
+        className="mx-auto max-w-7xl space-y-3 px-4 py-5 sm:px-6 lg:py-6"
       >
         <Reveal>
-          <SectionHeading
-            title="What travellers say"
-          />
+          <div>
+            <h2 id="testimonials-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">
+              Guest stories
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">Simple bookings and smoother stays, in travellers' own words.</p>
+          </div>
         </Reveal>
 
         <Reveal direction="left">
-          <Carousel aria-label="Customer testimonials">
+          <Carousel aria-label="Customer testimonials" controls="sides">
             {TESTIMONIALS.map((testimonial) => (
               <CarouselItem
                 key={testimonial.name}
                 className="w-80 sm:w-96 lg:w-[calc((100%-2rem)/3)]"
               >
-                <figure className="flex h-full min-h-[160px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <figure className="flex h-full min-h-[124px] flex-col justify-between rounded-xl border border-rose-100/60 bg-rose-50/35 p-3.5 shadow-sm">
                   <div>
-                    <div
-                      className="mb-3 flex items-center gap-1"
-                      aria-label={`${testimonial.rating} out of 5 stars`}
-                    >
-                      {Array.from({ length: testimonial.rating }).map(
-                        (_, index) => (
-                          <Star
-                            key={index}
-                            className="h-4 w-4 fill-amber-400 text-amber-400"
-                            aria-hidden="true"
-                          />
-                        )
-                      )}
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <Quote className="h-6 w-6 fill-rose-100 text-rose-200" aria-hidden="true" />
+                      <div
+                        className="flex items-center gap-0.5"
+                        aria-label={`${testimonial.rating} out of 5 stars`}
+                      >
+                        {Array.from({ length: testimonial.rating }).map(
+                          (_, index) => (
+                            <Star
+                              key={index}
+                              className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                              aria-hidden="true"
+                            />
+                          )
+                        )}
+                      </div>
                     </div>
 
-                    <blockquote className="text-sm leading-6 text-[var(--text-body)]">
+                    <blockquote className="text-sm leading-5 text-[var(--text-body)]">
                       “{testimonial.quote}”
                     </blockquote>
                   </div>
 
-                  <figcaption className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-xs font-bold text-brand-700">
+                  <figcaption className="mt-3 flex items-center gap-2.5 border-t border-slate-100 pt-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-[11px] font-bold text-rose-700">
                       {testimonial.name
                         .split(' ')
                         .map((part) => part[0])
@@ -748,7 +833,7 @@ export function HomePage() {
 
                     <span className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
                       <CheckCircle2 className="h-3.5 w-3.5" />
-                      Traveller
+                      Verified stay
                     </span>
                   </figcaption>
                 </figure>
@@ -758,26 +843,100 @@ export function HomePage() {
         </Reveal>
       </section>
 
+      <section
+        id="home-faqs"
+        aria-labelledby="home-faqs-heading"
+        className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 sm:px-6 lg:py-6"
+      >
+        <div className="space-y-3">
+          <Reveal>
+            <div>
+              <h2 id="home-faqs-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">
+                Before you book
+              </h2>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Helpful answers for planning and managing your reservation.</p>
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <div className="grid items-start gap-2 md:grid-cols-2">
+              {HOME_FAQS.map(({ question, answer }, index) => {
+                const isOpen = openHomeFaq === index;
+                const answerId = `home-faq-answer-${index}`;
+
+                return (
+                  <div
+                    key={question}
+                    className={cn(
+                      'overflow-hidden rounded-xl border transition-colors',
+                      isOpen
+                        ? 'border-blue-200 bg-blue-50/70 shadow-sm'
+                        : 'border-blue-100 bg-blue-50/30 hover:border-blue-200 hover:bg-blue-50/50',
+                    )}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+                      aria-expanded={isOpen}
+                      aria-controls={answerId}
+                      onClick={() => setOpenHomeFaq(isOpen ? -1 : index)}
+                    >
+                      <span className="min-w-0 flex-1 text-sm font-semibold text-[var(--text-strong)] sm:text-base">
+                        {question}
+                      </span>
+                      <ChevronDown
+                        className={cn(
+                          'h-4 w-4 shrink-0 text-brand-700 transition-transform duration-200',
+                          isOpen && 'rotate-180',
+                        )}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <p
+                        id={answerId}
+                        className="border-t border-slate-100 px-4 py-3 text-sm leading-5 text-[var(--text-muted)]"
+                      >
+                        {answer}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* WHY CHOOSE GOKAASA */}
       <section
         aria-labelledby="why-heading"
-        className="border-y border-slate-200 bg-slate-50 py-8 lg:py-10"
+        className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 sm:px-6 lg:py-6"
       >
-        <div className="mx-auto max-w-7xl space-y-5 px-4 sm:px-6">
+        <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:grid-cols-[230px_1fr] lg:items-center lg:gap-5">
           <Reveal>
-            <SectionHeading title="Why book with Gokaasa" />
+            <div>
+              <h2 id="why-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">
+                Travel with confidence
+              </h2>
+              <p className="mt-1 text-sm leading-5 text-[var(--text-muted)]">A clearer, easier way to book your next stay.</p>
+            </div>
           </Reveal>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4 lg:gap-0">
             {WHY_GOKAASA.map(({ icon: Icon, title, text }, index) => (
-              <Reveal key={title} delay={index * 80}>
-                <div className="flex h-full gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
+              <Reveal key={title} delay={index * 70} className="h-full">
+                <div className="flex h-full gap-3 lg:border-l lg:border-slate-200 lg:px-4">
+                  <div className={cn(
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                    WHY_ICON_TONES[index % WHY_ICON_TONES.length],
+                  )}>
+                    <Icon className="h-4.5 w-4.5" aria-hidden="true" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <h3 className="text-sm font-semibold text-[var(--text-strong)]">{title}</h3>
-                    <p className="mt-1 text-sm leading-5 text-[var(--text-muted)]">{text}</p>
+                    <p className="mt-1 text-xs leading-4 text-[var(--text-muted)]">{text}</p>
                   </div>
                 </div>
               </Reveal>

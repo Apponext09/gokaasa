@@ -26,7 +26,7 @@ export function searchTargetFor(destination, stay, occupancy, coupon = null) {
  * The search form used on the homepage (hero) and in the results header (compact). The same component, so
  * the rules are the same everywhere: a valid stay, a destination, and a per-room occupancy.
  */
-export function SearchWidget({ variant = 'hero', initial, onSubmitted }) {
+export function SearchWidget({ variant = 'hero', initial, onSubmitted, onSearch }) {
   const navigate = useNavigate();
   const today = todayIso();
   const [destination, setDestination] = useState(
@@ -54,6 +54,20 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted }) {
       return;
     }
     setError(null);
+    if (onSearch) {
+      onSearch({
+        destination: target.destination,
+        area: target.type === 'AREA' ? target.area : null,
+        hotelSlug: target.type === 'HOTEL' ? target.hotelSlug : null,
+        label: target.label,
+        checkIn: stay.checkIn,
+        checkOut: stay.checkOut,
+        occupancy,
+        coupon: initial?.coupon ?? null,
+      });
+      onSubmitted?.();
+      return;
+    }
     navigate(searchTargetFor(target, stay, occupancy, initial?.coupon));
     onSubmitted?.();
   };

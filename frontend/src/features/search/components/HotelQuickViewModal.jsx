@@ -11,6 +11,7 @@ import { formatOccupancy, nightsBetween } from '@/features/search/searchParams.j
 import { discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
+import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
 
 const TABS = [
   { value: 'overview', label: 'Overview & Photos' },
@@ -128,9 +129,11 @@ export function HotelQuickViewModal({
   if (!open) return null;
 
   const currentHotel = details ?? hotel;
-  const location = [currentHotel.addressLine, currentHotel.area, currentHotel.city, currentHotel.state]
-    .filter(Boolean)
-    .join(', ');
+  const location = formatHotelLocation(currentHotel);
+  const guestRating = currentHotel.guestRating ?? currentHotel.rating?.average ?? null;
+  const reviewCount = currentHotel.guestRating != null
+    ? currentHotel.reviewCount
+    : currentHotel.rating?.count;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-5">
@@ -166,6 +169,18 @@ export function HotelQuickViewModal({
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
               <span>{location || currentHotel.city}</span>
             </p>
+            {guestRating != null && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-[var(--text-body)]">
+                <span className="grid h-7 min-w-7 place-items-center rounded-md bg-brand-600 px-1.5 font-semibold text-white">
+                  {Number(guestRating).toFixed(1)}
+                </span>
+                <span>
+                  {reviewCount > 0
+                    ? `${Number(reviewCount).toLocaleString('en-IN')} guest review${Number(reviewCount) === 1 ? '' : 's'}`
+                    : 'Guest rating'}
+                </span>
+              </p>
+            )}
           </div>
           <Button variant="secondary" size="icon" className="shrink-0 rounded-full" aria-label="Close" onClick={onClose}>
             <X className="h-5 w-5" aria-hidden="true" />

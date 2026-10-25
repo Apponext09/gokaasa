@@ -29,11 +29,11 @@ async function offersForBadges() {
   }));
 }
 
-/** The {code, discountPercent} badge for a card, or null. `row` must carry id/city and the price fields named. */
+/** The computed badge saving for a card, or null. `row` must carry id/city and the price fields named. */
 function offerBadgeFor(row, offers, { subtotalMinor, nights = null, checkIn = null, checkOut = null }) {
   if (!offers.length) return null;
   const best = bestDisplayOffer(offers, { subtotalMinor, hotelId: row.id, city: row.city, nights, checkIn, checkOut });
-  return best ? { code: best.code, discountPercent: best.discountPercent } : null;
+  return best ? { code: best.code, discountMinor: best.discountMinor, discountPercent: best.discountPercent } : null;
 }
 
 /** "Taj Lands End Mumbai" -> "taj-lands-end-mumbai". The same rule is used for URLs and for matching. */
