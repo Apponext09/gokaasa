@@ -42,6 +42,9 @@ function renderControl(name, { register, disabled, invalid, ariaDescribedBy }) {
   }
   if (name === 'description') return <Textarea {...common} {...register(name)} />;
   if (name === 'countryCode') return <Input {...common} maxLength={2} className="uppercase" {...register(name)} />;
+  if (name === 'checkInTime' || name === 'checkOutTime') {
+    return <Input {...common} type="time" {...register(name)} />;
+  }
   return <Input {...common} {...register(name)} />;
 }
 

@@ -34,8 +34,8 @@ export const hotelFormSchema = z.object({
   phone: optionalText(20).refine((value) => value === '' || /^\+?[0-9 ()-]{7,20}$/.test(value), 'Enter a valid phone number'),
   email: z.string().trim().refine((value) => value === '' || z.email().safeParse(value).success, 'Enter a valid email address'),
   website: z.string().trim().refine((value) => value === '' || z.url().safeParse(value).success, 'Enter a full URL, including https://'),
-  checkInTime: z.string(),
-  checkOutTime: z.string(),
+  checkInTime: z.string().refine((value) => value === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(value), 'Use a valid time'),
+  checkOutTime: z.string().refine((value) => value === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(value), 'Use a valid time'),
 });
 
 export const EMPTY_HOTEL_FORM = {
