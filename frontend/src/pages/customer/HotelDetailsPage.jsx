@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Building2,
   Calendar,
   ExternalLink,
   MapPin,
   RefreshCw,
+  Search,
   Share2,
+  ShieldCheck,
   Star,
   Users,
 } from 'lucide-react';
@@ -21,12 +23,12 @@ import {
 } from '@/components/shared/index.jsx';
 
 import { DateRangePicker } from '@/features/search/components/DateRangePicker.jsx';
+import { DestinationField } from '@/features/search/components/DestinationField.jsx';
 import { GuestsPopover } from '@/features/search/components/GuestsPopover.jsx';
 import { HotelCard } from '@/features/search/components/HotelCard.jsx';
 
 import { PublicGallery } from '@/features/hotels/components/PublicGallery.jsx';
 import { AmenityGroups } from '@/features/hotels/components/AmenityGroups.jsx';
-import { isAllIllustrative } from '@/features/hotels/imageDisclaimer.js';
 import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
 
 import {
@@ -201,6 +203,7 @@ function useHotelJsonLd(hotel) {
 export function HotelDetailsPage() {
   const { citySlug, hotelSlug } = useParams();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const state = useMemo(
     () => parseSearchParams(params),
@@ -227,6 +230,13 @@ export function HotelDetailsPage() {
 
   const [retry, setRetry] = useState(0);
   const [editing, setEditing] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [searchDestination, setSearchDestination] = useState(null);
+  const [searchDraft, setSearchDraft] = useState(() => ({
+    checkIn: state.checkIn,
+    checkOut: state.checkOut,
+    occupancy: state.occupancy,
+  }));
 
   const [selection, setSelection] = useState(() =>
     readSelection()
@@ -243,6 +253,14 @@ export function HotelDetailsPage() {
   useEffect(() => {
     setQuantity(state.occupancy.length);
   }, [state.occupancy.length]);
+
+  useEffect(() => {
+    setSearchDraft({
+      checkIn: state.checkIn,
+      checkOut: state.checkOut,
+      occupancy: state.occupancy,
+    });
+  }, [state.checkIn, state.checkOut, state.occupancy]);
 
   const effectiveOccupancy =
     quantity === state.occupancy.length
@@ -285,6 +303,17 @@ export function HotelDetailsPage() {
 
     return () => controller.abort();
   }, [hotelSlug, retry, authStatus]);
+
+  useEffect(() => {
+    if (!hotel) return;
+    setSearchDestination({
+      type: 'CITY',
+      label: hotel.city,
+      destination: slugifyPlace(hotel.city),
+      area: null,
+      hotelSlug: null,
+    });
+  }, [hotel]);
 
   // ---------------------------------------------------------------------------
   // Availability
@@ -446,6 +475,17 @@ export function HotelDetailsPage() {
     (room) => !room.available
   );
 
+  const featuredOption = bookable
+    .flatMap((room) =>
+      (room.ratePlans ?? []).map((plan) => ({
+        room,
+        plan,
+        price: toNumberOrNull(plan.pricePerNight),
+      }))
+    )
+    .filter((item) => item.price !== null)
+    .sort((a, b) => a.price - b.price)[0] ?? null;
+
   // ---------------------------------------------------------------------------
   // Select room
   // ---------------------------------------------------------------------------
@@ -547,7 +587,7 @@ export function HotelDetailsPage() {
 
         <Skeleton className="h-9 w-96" />
 
-        <Skeleton className="h-[26rem] w-full rounded-[var(--radius-card)]" />
+        <Skeleton className="h-[21rem] w-full rounded-[var(--radius-card)]" />
 
         <Skeleton className="h-40 w-full" />
 
@@ -628,6 +668,24 @@ export function HotelDetailsPage() {
   backParams.set('destination', slugifyPlace(hotel.city));
   const backToResults = `/hotels?${backParams.toString()}`;
 
+  const submitHotelSearch = (event) => {
+    event.preventDefault();
+    if (!searchDestination || validateStay(searchDraft, today)) return;
+
+    const nextParams = stayParams({
+      ...searchDraft,
+      coupon: state.coupon,
+    });
+    if (searchDestination.destination) nextParams.set('destination', searchDestination.destination);
+    if (searchDestination.area) nextParams.set('area', searchDestination.area);
+
+    if (searchDestination.type === 'HOTEL' && searchDestination.hotelSlug) {
+      navigate(`/hotels/${searchDestination.destination}/${searchDestination.hotelSlug}?${nextParams.toString()}`);
+      return;
+    }
+    navigate(`/hotels?${nextParams.toString()}`);
+  };
+
   // ---------------------------------------------------------------------------
   // Rating normalization
   // ---------------------------------------------------------------------------
@@ -686,13 +744,13 @@ export function HotelDetailsPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="customer-hotel-details pb-28">
-      <div className="mx-auto max-w-7xl space-y-10 px-4 py-6 sm:px-6 lg:py-8">
+    <div className="customer-hotel-details pb-16 md:pb-20">
+      <div className="hotel-details-container mx-auto max-w-7xl space-y-3 px-3 py-2 sm:space-y-4 sm:px-6 sm:py-3 lg:py-4">
 
         {/* 1. Breadcrumb */}
         <nav
           aria-label="Breadcrumb"
-          className="text-sm text-[var(--text-muted)]"
+          className="text-xs text-[var(--text-muted)] sm:text-sm"
         >
           <ol className="flex flex-wrap items-center gap-1.5">
             <li>
@@ -726,11 +784,39 @@ export function HotelDetailsPage() {
           </ol>
         </nav>
 
-        {/* 2-7. Name, location, rating, reviews, wishlist, share */}
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 space-y-2">
+        <form className="hotel-change-search" onSubmit={submitHotelSearch} aria-label="Change hotel search">
+          <DestinationField
+            id="hotel-change-destination"
+            value={searchDestination}
+            onChange={setSearchDestination}
+            bare
+          />
+          <DateRangePicker
+            idPrefix="hotel-change-dates"
+            min={today}
+            checkIn={searchDraft.checkIn}
+            checkOut={searchDraft.checkOut}
+            onChange={({ checkIn, checkOut }) => setSearchDraft((current) => ({ ...current, checkIn, checkOut }))}
+            bare
+          />
+          <GuestsPopover
+            idPrefix="hotel-change-guests"
+            rooms={searchDraft.occupancy}
+            onChange={(occupancy) => setSearchDraft((current) => ({ ...current, occupancy }))}
+            stayNights={nightsBetween(searchDraft.checkIn, searchDraft.checkOut)}
+            bare
+          />
+          <Button type="submit" disabled={!searchDestination || Boolean(validateStay(searchDraft, today))}>
+            <Search className="h-4 w-4" aria-hidden="true" /> Search
+          </Button>
+        </form>
 
-            <div className="flex items-center gap-2">
+        <div className="hotel-details-primary-card">
+        {/* 2-7. Name, location, rating, reviews, wishlist, share */}
+        <header className="hotel-details-header flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="hotel-details-identity min-w-0 space-y-2">
+
+            <div className="hotel-details-classification flex items-center gap-2">
               {starRating !== null && (
                 <span
                   className="flex items-center gap-0.5"
@@ -763,11 +849,11 @@ export function HotelDetailsPage() {
               )}
             </div>
 
-            <h1 className="text-3xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-4xl">
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
               {hotel.name}
             </h1>
 
-            <p className="flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
+            <p className="hotel-details-location flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
               <MapPin
                 className="h-4 w-4 shrink-0"
                 aria-hidden="true"
@@ -778,7 +864,7 @@ export function HotelDetailsPage() {
 
             {/* Safe rating section */}
             {hasRating && (
-              <p className="flex items-center gap-2 text-sm">
+              <p className="hotel-details-rating flex items-center gap-2 text-sm">
                 <span
                   className="grid h-7 min-w-7 place-items-center rounded-md bg-brand-600 px-1.5 font-semibold text-white"
                   aria-label={`Rating ${displayRatingText} out of 5`}
@@ -829,73 +915,119 @@ export function HotelDetailsPage() {
           </div>
         </header>
 
-        {/* 8. Gallery */}
-        <PublicGallery
-          images={hotel.images ?? []}
-          name={hotel.name}
-        />
+        {/* 8. Gallery and immediately bookable room summary */}
+        <div className="hotel-details-hero-grid">
+          <PublicGallery
+            images={hotel.images ?? []}
+            name={hotel.name}
+            compact
+          />
 
-        {isAllIllustrative(hotel.images) && (
-          <Alert tone="neutral">
-            Images shown are for illustration purposes.
-            Actual property photos will be added when
-            available.
-          </Alert>
-        )}
+          <aside className="hotel-booking-snapshot" aria-label="Best available room">
+            {featuredOption ? (
+              <>
+                <div>
+                  <p className="hotel-booking-eyebrow">Best available stay</p>
+                  <h2>{featuredOption.room.name}</h2>
+                  <p className="hotel-booking-capacity">
+                    Fits up to {featuredOption.room.maxAdults} adult{featuredOption.room.maxAdults === 1 ? '' : 's'}
+                    {featuredOption.room.maxChildren > 0 ? ` and ${featuredOption.room.maxChildren} children` : ''}
+                  </p>
+                </div>
 
-        {/* 8b. Available offers */}
-        {offers && offers.length > 0 && (
-          <section
-            id="offers"
-            aria-labelledby="offers-heading"
-            className="space-y-4"
-          >
-            <h2
-              id="offers-heading"
-              className="text-xl font-semibold text-[var(--text-strong)]"
-            >
-              Available Offers
-            </h2>
+                <div className="hotel-booking-benefits">
+                  <span>{featuredOption.plan.mealPlan?.replaceAll('_', ' ').toLowerCase() ?? 'Room rate'}</span>
+                  <span>{featuredOption.plan.refundable ? 'Refundable option' : 'Non-refundable'}</span>
+                  <span>{shortDate(state.checkIn)} → {shortDate(state.checkOut)} · {nights} night{nights === 1 ? '' : 's'}</span>
+                </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {offers.map((offer) => (
-                <OfferCard
-                  key={offer.id}
-                  offer={offer}
-                  compact
-                  showUse={false}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+                <div className="hotel-booking-price">
+                  <span>Per night</span>
+                  <p>{formatMoney(featuredOption.plan.pricePerNight)} <small>/ night</small></p>
+                  <span>{formatMoney(featuredOption.plan.finalAmount)} total for your stay</span>
+                </div>
 
+                <Button
+                  type="button"
+                  onClick={() => choose(featuredOption.room, featuredOption.plan)}
+                  variant={selection?.roomTypeId === featuredOption.room.id && selection?.ratePlanId === featuredOption.plan.ratePlanId ? 'secondary' : 'primary'}
+                  className="w-full"
+                >
+                  {selection?.roomTypeId === featuredOption.room.id && selection?.ratePlanId === featuredOption.plan.ratePlanId ? 'Room selected' : 'Select this room'}
+                </Button>
+
+                <a href="#rooms" className="hotel-booking-more">View all room options</a>
+              </>
+            ) : (
+              <>
+                <div>
+                  <p className="hotel-booking-eyebrow">Plan your stay</p>
+                  <h2>See rooms and live prices</h2>
+                  <p className="hotel-booking-capacity">Choose valid dates and guests to view availability.</p>
+                </div>
+                <a href="#rooms" className="hotel-booking-more hotel-booking-more-primary">Choose dates and guests</a>
+              </>
+            )}
+          </aside>
+        </div>
+
+        <div className="hotel-details-info-grid">
         {/* 9. Overview */}
         <section
           id="overview"
           aria-labelledby="overview-heading"
-          className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]"
+          className="hotel-detail-panel hotel-overview-panel grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
         >
           <div className="space-y-3">
             <h2
               id="overview-heading"
-              className="text-xl font-semibold text-[var(--text-strong)]"
+              className="text-lg font-semibold text-[var(--text-strong)]"
             >
               About this hotel
             </h2>
 
             {hotel.description ? (
-              <p className="whitespace-pre-line text-[15px] leading-7 text-[var(--text-body)]">
-                {hotel.description}
-              </p>
+              <div>
+                <p className={`whitespace-pre-line text-sm leading-5 text-[var(--text-body)] ${descriptionExpanded ? '' : 'line-clamp-2'}`}>
+                  {hotel.description}
+                </p>
+
+                {hotel.description.length > 260 && (
+                  <button
+                    type="button"
+                    className="mt-1.5 text-sm font-semibold text-brand-700 hover:underline"
+                    onClick={() => setDescriptionExpanded((value) => !value)}
+                    aria-expanded={descriptionExpanded}
+                  >
+                    {descriptionExpanded ? 'Show less' : 'Show more'}
+                  </button>
+                )}
+              </div>
             ) : (
               <p className="text-sm text-[var(--text-muted)]">
                 The hotel has not added a description yet.
               </p>
             )}
+
+            <div className="hotel-overview-extra">
+              <div>
+                <ShieldCheck className="h-4 w-4 shrink-0 text-success-600" aria-hidden="true" />
+                <span className="min-w-0">
+                  <strong className="font-semibold text-[var(--text-strong)]">Cancellation:</strong>{' '}
+                  {policies[0]?.summary ?? 'Terms are shown with each available room rate.'}
+                </span>
+                {mapsUrl && (
+                  <a href={mapsUrl} target="_blank" rel="noreferrer noopener" className="hotel-overview-map">
+                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                    View map
+                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
 
-          <dl className="grid grid-cols-2 gap-4 self-start rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5 text-sm lg:grid-cols-1">
+          <dl className="hotel-overview-facts grid grid-cols-3 gap-2 self-start rounded-[var(--radius-card)] bg-[var(--surface-muted)] p-2.5 text-xs">
             {hotel.checkInTime && (
               <div>
                 <dt className="text-[var(--text-muted)]">
@@ -940,11 +1072,11 @@ export function HotelDetailsPage() {
         <section
           id="amenities"
           aria-labelledby="amenities-heading"
-          className="space-y-4"
+          className="hotel-detail-panel space-y-3"
         >
           <h2
             id="amenities-heading"
-            className="text-xl font-semibold text-[var(--text-strong)]"
+            className="text-lg font-semibold text-[var(--text-strong)]"
           >
             Amenities
           </h2>
@@ -954,17 +1086,20 @@ export function HotelDetailsPage() {
           />
         </section>
 
+        </div>
+        </div>
+
         {/* 11. Available rooms */}
         <section
           id="rooms"
           aria-labelledby="rooms-heading"
-          className="space-y-5"
+          className="hotel-detail-section space-y-4"
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="rooms-section-toolbar flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2
                 id="rooms-heading"
-                className="text-xl font-semibold text-[var(--text-strong)]"
+                className="text-lg font-semibold text-[var(--text-strong)]"
               >
                 Available rooms
               </h2>
@@ -1001,22 +1136,45 @@ export function HotelDetailsPage() {
               )}
             </div>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() =>
-                setEditing((e) => !e)
-              }
-              aria-expanded={editing}
-            >
-              {hasStay
-                ? 'Change dates or guests'
-                : 'Choose dates'}
-            </Button>
+            <div className="rooms-section-actions">
+              {hasStay && (
+                <div className="rooms-quantity-control">
+                  <span>Rooms</span>
+                  <div className="rooms-stepper">
+                    <button
+                      type="button"
+                      aria-label="Fewer rooms"
+                      disabled={quantity <= 1}
+                      onClick={() => setQuantity((q) => q - 1)}
+                    >
+                      −
+                    </button>
+                    <span aria-live="polite">{quantity}</span>
+                    <button
+                      type="button"
+                      aria-label="More rooms"
+                      disabled={quantity >= 8}
+                      onClick={() => setQuantity((q) => q + 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setEditing((e) => !e)}
+                aria-expanded={editing}
+              >
+                {hasStay ? 'Change dates or guests' : 'Choose dates'}
+              </Button>
+            </div>
           </div>
 
           {(editing || !hasStay) && (
-            <div className="grid gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 md:grid-cols-[1.4fr_1fr] md:items-start">
+            <div className="rooms-search-editor grid gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 md:grid-cols-[1.4fr_1fr] md:items-start">
               <DateRangePicker
                 idPrefix="details"
                 min={today}
@@ -1053,47 +1211,6 @@ export function HotelDetailsPage() {
                   {stayProblem}
                 </p>
               )}
-            </div>
-          )}
-
-          {hasStay && (
-            <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="text-[var(--text-muted)]">
-                Rooms to book
-              </span>
-
-              <div className="inline-flex items-center rounded-full border border-[var(--border-subtle)]">
-                <button
-                  type="button"
-                  aria-label="Fewer rooms"
-                  disabled={quantity <= 1}
-                  onClick={() =>
-                    setQuantity((q) => q - 1)
-                  }
-                  className="h-8 w-8 disabled:opacity-35"
-                >
-                  −
-                </button>
-
-                <span
-                  className="w-8 text-center font-semibold tabular-nums"
-                  aria-live="polite"
-                >
-                  {quantity}
-                </span>
-
-                <button
-                  type="button"
-                  aria-label="More rooms"
-                  disabled={quantity >= 8}
-                  onClick={() =>
-                    setQuantity((q) => q + 1)
-                  }
-                  className="h-8 w-8 disabled:opacity-35"
-                >
-                  +
-                </button>
-              </div>
             </div>
           )}
 
@@ -1152,7 +1269,7 @@ export function HotelDetailsPage() {
             availabilityState === 'ready' &&
             bookable.length > 0 && (
               <ul
-                className="space-y-5"
+                className="space-y-4"
                 aria-label="Rooms available for your dates"
               >
                 {bookable.map((room) => (
@@ -1177,77 +1294,33 @@ export function HotelDetailsPage() {
             )}
         </section>
 
-        {/* 12. Policies */}
-        <section
-          id="policies"
-          aria-labelledby="policies-heading"
-          className="space-y-4"
-        >
-          <h2
-            id="policies-heading"
-            className="text-xl font-semibold text-[var(--text-strong)]"
+        {/* Offers are secondary to room selection, so they follow the available rooms. */}
+        {offers && offers.length > 0 && (
+          <section
+            id="offers"
+            aria-labelledby="offers-heading"
+            className="hotel-detail-section space-y-3"
           >
-            Cancellation policies
-          </h2>
-
-          {policies.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              Each rate states its cancellation terms
-              when you choose it.
-            </p>
-          ) : (
-            <ul className="grid gap-3 md:grid-cols-2">
-              {policies.map((policy) => (
-                <li
-                  key={policy.code}
-                  className="rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4"
-                >
-                  <p className="font-medium text-[var(--text-strong)]">
-                    {policy.name}
-                  </p>
-
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    {policy.summary}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* 13. Location */}
-        <section
-          id="location"
-          aria-labelledby="location-heading"
-          className="space-y-3"
-        >
-          <h2
-            id="location-heading"
-            className="text-xl font-semibold text-[var(--text-strong)]"
-          >
-            Location
-          </h2>
-
-          <p className="text-[15px] text-[var(--text-body)]">
-            {location}
-          </p>
-
-          {mapsUrl && (
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline"
+            <h2
+              id="offers-heading"
+              className="text-lg font-semibold text-[var(--text-strong)]"
             >
-              Open in Google Maps
+              Available offers
+            </h2>
 
-              <ExternalLink
-                className="h-3.5 w-3.5"
-                aria-hidden="true"
-              />
-            </a>
-          )}
-        </section>
+            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {offers.map((offer) => (
+                <OfferCard
+                  key={offer.id}
+                  offer={offer}
+                  compact
+                  dense
+                  showUse={false}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* 14. Reviews */}
         <HotelReviewsSection
@@ -1260,11 +1333,11 @@ export function HotelDetailsPage() {
           <section
             id="similar"
             aria-labelledby="similar-heading"
-            className="space-y-4"
+            className="hotel-detail-section space-y-3"
           >
             <h2
               id="similar-heading"
-              className="text-xl font-semibold text-[var(--text-strong)]"
+              className="text-lg font-semibold text-[var(--text-strong)]"
             >
               Other hotels in {hotel.city}
             </h2>
@@ -1301,7 +1374,7 @@ export function HotelDetailsPage() {
         hasStay &&
         availabilityState === 'ready' &&
         bookable.length > 0 && (
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:hidden">
+          <div className="mobile-booking-action-bar fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:hidden">
             <div className="flex items-center justify-between gap-3 px-4 py-3">
               <p className="text-sm">
                 {cheapestPerNight !== null ? (

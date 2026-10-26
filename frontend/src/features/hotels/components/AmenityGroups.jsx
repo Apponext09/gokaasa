@@ -40,15 +40,15 @@ export function AmenityGroups({ amenities }) {
   if (groups.length === 0) return <p className="text-sm text-[var(--text-muted)]">No amenities have been listed yet.</p>;
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="amenity-groups grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
       {groups.map((group) => (
-        <div key={group.title} className="space-y-3">
-          <h3 className="text-sm font-semibold text-[var(--text-strong)]">{group.title}</h3>
-          <ul className="space-y-2">
+        <div key={group.title} className="hotel-amenity-group space-y-1.5">
+          <h3 className="text-xs font-semibold text-[var(--text-strong)]">{group.title}</h3>
+          <ul className="flex flex-wrap gap-1.5">
             {group.items.map((item) => {
               const Icon = ICON[item.code] ?? Check;
               return (
-                <li key={item.code} className="flex items-center gap-2.5 text-sm text-[var(--text-body)]">
+                <li key={item.code} className="hotel-amenity-chip flex items-center gap-2 text-xs text-[var(--text-body)]">
                   <Icon className="h-4 w-4 shrink-0 text-brand-700" aria-hidden="true" />
                   {item.name}
                 </li>

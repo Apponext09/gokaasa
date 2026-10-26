@@ -68,8 +68,23 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
         )}
       >
         <span className="flex min-w-0 flex-col">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Rooms &amp; guests</span>
-          <span className="customer-guests-value truncate text-sm font-medium text-[var(--text-strong)]">{bare ? bareSummary : summarizeOccupancy(rooms)}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+            <span className="customer-guests-label-full">Rooms &amp; guests</span>
+            <span className="customer-guests-label-compact" aria-hidden="true">Guests</span>
+          </span>
+          <span className="customer-guests-value truncate text-sm font-medium text-[var(--text-strong)]">
+            {bare ? (
+              <>
+                <span className="customer-guests-value-full">{bareSummary}</span>
+                <span className="customer-guests-value-compact" aria-hidden="true">{guestCount}A · {rooms.length}R</span>
+              </>
+            ) : (
+              <>
+                <span className="customer-guests-value-full">{summarizeOccupancy(rooms)}</span>
+                <span className="customer-guests-value-compact" aria-hidden="true">{guestCount}A · {rooms.length}R</span>
+              </>
+            )}
+          </span>
           {bare && stayNights > 0 && (
             <span className="text-xs text-[var(--text-muted)]">
               {stayNights} Night{stayNights === 1 ? '' : 's'} Stay
@@ -80,7 +95,14 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
       </button>
 
       {open && (
-        <div className="fixed inset-x-3 bottom-3 z-40 max-h-[75vh] overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-2 sm:w-96" role="dialog" aria-label="Rooms and guests">
+        <>
+        <button
+          type="button"
+          aria-label="Close rooms and guests"
+          className="customer-mobile-sheet-backdrop fixed inset-0 z-[60] bg-slate-950/35 sm:hidden"
+          onClick={() => setOpen(false)}
+        />
+        <div className="customer-guests-dialog fixed inset-x-3 bottom-3 z-[70] max-h-[75vh] overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:z-40 sm:mt-2 sm:w-96" role="dialog" aria-label="Rooms and guests">
           <div className="space-y-4">
             {rooms.map((room, index) => (
               <section key={index} className="rounded-lg border border-[var(--border-subtle)] p-3" aria-label={`Room ${index + 1}`}>
@@ -144,6 +166,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
             </Button>
           </div>
         </div>
+        </>
       )}
     </div>
   );

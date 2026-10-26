@@ -46,7 +46,7 @@ function QuickReply({ selected, onClick, children }) {
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+      className={`assistant-quick-reply rounded-full border px-2.5 py-1 text-xs font-medium transition-colors focus-visible:outline-1 focus-visible:outline-brand-500 ${
         selected
           ? 'border-brand-600 bg-brand-600 text-white'
           : 'border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-body)] hover:border-brand-400 hover:text-brand-700'
@@ -61,13 +61,13 @@ function StepFooter({ onBack, onNext, backLabel, nextLabel, nextDisabled = false
   return (
     <div className="flex items-center justify-between gap-3 pt-1">
       {showBack ? (
-        <Button type="button" variant="ghost" size="sm" onClick={onBack}>
+        <Button type="button" variant="ghost" size="sm" onClick={onBack} className="h-7 px-2 text-xs">
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> {backLabel}
         </Button>
       ) : (
         <span />
       )}
-      <Button type="button" size="sm" onClick={onNext} disabled={nextDisabled}>
+      <Button type="button" size="sm" onClick={onNext} disabled={nextDisabled} className="h-7 px-2.5 text-xs">
         {nextLabel}
       </Button>
     </div>
@@ -582,9 +582,11 @@ export function BookingAssistant({ onClose, open = true }) {
   };
 
   const showEntry = [STEP.GREETING, STEP.DESTINATION, STEP.DATES, STEP.GUESTS, STEP.PREFERENCES, STEP.BUDGET, STEP.RESULTS].includes(state.step);
+  const progressSteps = [STEP.GREETING, STEP.DESTINATION, STEP.DATES, STEP.GUESTS, STEP.PREFERENCES, STEP.BUDGET, STEP.RESULTS, STEP.ROOM_SELECT, STEP.BOOKING_REVIEW];
+  const progressValue = Math.max(1, progressSteps.indexOf(state.step) + 1);
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col">
+    <div className="booking-assistant flex h-full min-h-0 min-w-0 flex-col">
       <AssistantHeader
         lang={lang}
         onChangeLanguage={changeLanguage}
@@ -598,7 +600,21 @@ export function BookingAssistant({ onClose, open = true }) {
         onClose={onClose}
       />
 
-      <div ref={scrollRef} onScroll={onTranscriptScroll} className="min-h-0 min-w-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain break-words px-4 py-4">
+      <div
+        className="assistant-progress h-1 shrink-0 bg-[var(--surface-muted)]"
+        role="progressbar"
+        aria-label="Booking progress"
+        aria-valuemin="1"
+        aria-valuemax={progressSteps.length}
+        aria-valuenow={progressValue}
+      >
+        <span
+          className="block h-full rounded-r-full bg-brand-600 transition-[width] duration-300"
+          style={{ width: `${(progressValue / progressSteps.length) * 100}%` }}
+        />
+      </div>
+
+      <div ref={scrollRef} onScroll={onTranscriptScroll} className="assistant-transcript min-h-0 min-w-0 flex-1 space-y-2.5 overflow-x-hidden overflow-y-auto overscroll-contain break-words px-3 py-2.5">
         {history.map((m) => (m.role === 'assistant' ? <AssistantBubble key={m.id} text={m.text} /> : <UserBubble key={m.id} text={m.text} />))}
         {aiState.status === 'loading' && <TypingIndicator />}
 
@@ -633,7 +649,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.DESTINATION && (
-          <div className="space-y-2 pl-9">
+          <div className="space-y-2">
             <DestinationField id="assistant-destination" value={state.destination} onChange={(item) => patch({ destination: item })} />
             {!state.destination && <DestinationHints onPick={(item) => patch({ destination: item })} />}
             <StepFooter
@@ -650,7 +666,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.DATES && (
-          <div className="space-y-2 pl-9">
+          <div className="space-y-2">
             <DateRangePicker
               idPrefix="assistant-dates"
               min={today}
@@ -673,7 +689,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.GUESTS && (
-          <div className="space-y-2 pl-9">
+          <div className="space-y-2">
             <GuestsPopover idPrefix="assistant-guests" rooms={state.occupancy} onChange={(occupancy) => patch({ occupancy })} />
             <p className="text-xs text-[var(--text-muted)]">{summarizeOccupancy(state.occupancy)}</p>
             <StepFooter
@@ -690,7 +706,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.PREFERENCES && (
-          <div className="space-y-4 pl-9">
+          <div className="space-y-2">
             <div>
               <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t('starRatingLabel', lang)}</p>
               <p className="mb-2 text-xs text-[var(--text-muted)]">{t('starRatingNote', lang)}</p>
@@ -753,7 +769,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.BUDGET && (
-          <div className="space-y-3 pl-9">
+          <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
               {BUDGET_PRESETS.map((opt) => (
                 <QuickReply
@@ -827,7 +843,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.RESULTS && (
-          <div className="space-y-3 pl-9">
+          <div className="space-y-2">
             {searchStatus === 'loading' && (
               <div className="space-y-3">
                 <HotelCardSkeleton />
@@ -914,7 +930,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.ROOM_SELECT && (
-          <div className="space-y-3 pl-9">
+          <div className="space-y-2">
             {availability.status === 'loading' && (
               <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> {t('checkingAvailability', lang)}
@@ -948,7 +964,7 @@ export function BookingAssistant({ onClose, open = true }) {
         )}
 
         {state.step === STEP.BOOKING_REVIEW && state.selectedRoom && (
-          <div className="space-y-3 pl-9">
+          <div className="space-y-2">
             <Card className="space-y-2 p-4 text-sm">
               <Row label={t('rowProperty', lang)} value={state.selectedHotel?.name} />
               <Row label={t('rowRoom', lang)} value={state.selectedRoom.room.name} />

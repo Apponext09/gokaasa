@@ -154,7 +154,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
             autoComplete="off"
             disabled={disabled}
             value={text}
-            placeholder={bare ? 'e.g. - Area, Landmark or Property Name' : 'Search city, locality or hotel name'}
+            placeholder={bare ? 'Area or hotel' : 'Search city, locality or hotel name'}
             onChange={(event) => {
               setText(event.target.value);
               setTab('ALL');
@@ -189,6 +189,17 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
       </label>
 
       {showList && (
+        <>
+        <button
+          type="button"
+          aria-label="Close destination suggestions"
+          className="customer-mobile-sheet-backdrop customer-destination-backdrop fixed inset-0 z-[60] bg-slate-950/35 sm:hidden"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            setFocused(false);
+            inputRef.current?.blur();
+          }}
+        />
         <div className="customer-destination-menu absolute left-0 top-full z-40 mt-2 w-full overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-lg">
           <div className="flex gap-2 overflow-x-auto border-b border-[var(--border-subtle)] bg-slate-50 px-3 py-2.5" role="tablist" aria-label="Suggestion types">
             {[
@@ -262,6 +273,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
             })}
           </ul>
         </div>
+        </>
       )}
 
       {status === 'error' && (

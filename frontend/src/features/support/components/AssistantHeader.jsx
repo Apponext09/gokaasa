@@ -1,24 +1,24 @@
-import { Bot, RotateCcw, RotateCw, Volume2, VolumeX, X } from 'lucide-react';
+import { RotateCcw, RotateCw, Sparkles, Volume2, VolumeX, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { LANGUAGES, t } from '@/features/support/bilingualContent.js';
 
 /**
- * Premium concierge header: branding, language selector, voice controls, and the single close action.
- * No separate "minimize" control -- this architecture has one real closed/open state (SupportLauncher's
- * `panel`), so a minimize button that behaved identically to close would just be a second label for the
- * same action.
+ * Ultra-compact concierge header designed for small chatbot popup cards.
  */
 export function AssistantHeader({ lang, onChangeLanguage, synthesisSupported, speechEnabled, onToggleSpeech, canReplay, onReplay, showRestart, onRestart, onClose }) {
   return (
-    <header className="flex shrink-0 flex-col gap-2 border-b border-[var(--border-subtle)] bg-[var(--surface-card)] px-4 pb-2.5 pt-[max(0.75rem,env(safe-area-inset-top))]">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-700 text-white shadow-sm">
-            <Bot className="h-5 w-5" aria-hidden="true" />
+    <header className="assistant-header flex shrink-0 flex-col gap-1.5 px-3 py-2 text-white">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="assistant-header-avatar grid h-7 w-7 shrink-0 place-items-center rounded-lg text-white shadow-sm">
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-[var(--text-strong)]">{t('conciergeTitle', lang)}</p>
-            <p className="truncate text-xs text-[var(--text-muted)]">{t('conciergeSubtitle', lang)}</p>
+            <p className="truncate text-xs font-bold text-white">{t('conciergeTitle', lang)}</p>
+            <p className="flex items-center gap-1 truncate text-[10px] text-white/70">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              {t('conciergeSubtitle', lang)}
+            </p>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -30,37 +30,37 @@ export function AssistantHeader({ lang, onChangeLanguage, synthesisSupported, sp
               onClick={onToggleSpeech}
               aria-label={speechEnabled ? t('speakToggleOn', lang) : t('speakToggleOff', lang)}
               aria-pressed={speechEnabled}
-              className="h-8 w-8 rounded-full p-0"
+              className="assistant-header-control h-6.5 w-6.5 rounded-md p-0 text-white"
             >
-              {speechEnabled ? <Volume2 className="h-4 w-4" aria-hidden="true" /> : <VolumeX className="h-4 w-4" aria-hidden="true" />}
+              {speechEnabled ? <Volume2 className="h-3 w-3" aria-hidden="true" /> : <VolumeX className="h-3 w-3" aria-hidden="true" />}
             </Button>
           )}
           {synthesisSupported && speechEnabled && canReplay && (
-            <Button type="button" variant="ghost" size="sm" onClick={onReplay} aria-label={t('replayResponse', lang)} className="h-8 w-8 rounded-full p-0">
-              <RotateCw className="h-4 w-4" aria-hidden="true" />
+            <Button type="button" variant="ghost" size="sm" onClick={onReplay} aria-label={t('replayResponse', lang)} className="assistant-header-control h-6.5 w-6.5 rounded-md p-0 text-white">
+              <RotateCw className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
           {showRestart && (
-            <Button type="button" variant="ghost" size="sm" onClick={onRestart} aria-label={t('restartLabel', lang)} className="h-8 w-8 rounded-full p-0">
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
+            <Button type="button" variant="ghost" size="sm" onClick={onRestart} aria-label={t('restartLabel', lang)} className="assistant-header-control h-6.5 w-6.5 rounded-md p-0 text-white">
+              <RotateCcw className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
-          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label={t('closeChat', lang)} className="h-8 w-8 rounded-full p-0">
-            <X className="h-4 w-4" aria-hidden="true" />
+          <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label={t('closeChat', lang)} className="assistant-header-control h-6.5 w-6.5 rounded-md p-0 text-white">
+            <X className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-1.5" role="group" aria-label="Choose language">
+      <div className="assistant-languages flex items-center gap-1" role="group" aria-label="Choose language">
         {LANGUAGES.map((l) => (
           <button
             key={l.code}
             type="button"
             onClick={() => onChangeLanguage(l.code)}
             aria-pressed={lang === l.code}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors focus-visible:outline-1 focus-visible:outline-brand-500 ${
               lang === l.code
-                ? 'border-brand-600 bg-brand-600 text-white'
-                : 'border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-body)] hover:border-brand-400'
+                ? 'border-white bg-white text-brand-800 shadow-sm'
+                : 'border-white/20 bg-white/10 text-white/80 hover:bg-white/20'
             }`}
           >
             {l.label}

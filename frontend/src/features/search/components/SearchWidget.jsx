@@ -93,7 +93,7 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted, onSearch 
 
   if (compact) {
     return (
-      <form onSubmit={submit} noValidate aria-label="Search hotels" className="grid w-full grid-cols-1 gap-2.5 md:grid-cols-[1.6fr_1.6fr_1.2fr_auto] md:items-center">
+      <form onSubmit={submit} noValidate aria-label="Search hotels" className="customer-compact-search grid w-full grid-cols-1 gap-2.5 md:grid-cols-[1.6fr_1.6fr_1.2fr_auto] md:items-center">
         <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} />
         {dateRange}
         <GuestsPopover idPrefix={variant} rooms={occupancy} onChange={setOccupancy} />

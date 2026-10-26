@@ -5,6 +5,7 @@ export const wishlistRepository = {
     const { rows } = await pool.query(
       `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type, h.star_rating, h.guest_rating,
               h.review_count, w.created_at AS saved_at,
+              cheapest.base_price_minor, cheapest.discount_minor, cheapest.final_price_minor,
               (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
@@ -12,6 +13,15 @@ export const wishlistRepository = {
                      WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities
          FROM wishlists w
          JOIN hotels h ON h.id = w.hotel_id
+         LEFT JOIN LATERAL (
+           SELECT rpr.base_price_minor, rpr.discount_minor, rpr.final_price_minor
+             FROM room_types rt
+             JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE' AND rp.deleted_at IS NULL
+             JOIN rate_prices rpr ON rpr.rate_plan_id = rp.id AND rpr.stay_date = CURRENT_DATE + 1
+            WHERE rt.hotel_id = h.id AND rt.status = 'ACTIVE' AND rt.deleted_at IS NULL
+            ORDER BY rpr.final_price_minor ASC
+            LIMIT 1
+         ) cheapest ON TRUE
         WHERE w.user_id = $1 AND h.status = 'PUBLISHED' AND h.deleted_at IS NULL
         ORDER BY w.created_at DESC`,
       [userId],

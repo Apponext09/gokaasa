@@ -258,14 +258,16 @@ export function BookingReviewPage() {
   const onCta = priceChange ? acceptNewPrice : startPayment;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-28 sm:px-6 lg:pb-10">
+    <div className="booking-review-page mx-auto w-full max-w-6xl px-4 py-4 pb-28 sm:px-6 lg:pb-8">
       <BookingProgress current={busy ? 4 : 3} />
       {ended ? (
         <HoldExpiredPanel message={expiredMessage ?? EXPIRED_MESSAGE} />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="min-w-0 space-y-4">
-            <HoldCountdown expiresAt={hold.expiresAt} onExpire={reload} />
+        <div className="booking-review-layout grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="booking-review-main min-w-0 space-y-3">
+            <div className="review-hold-countdown">
+              <HoldCountdown expiresAt={hold.expiresAt} onExpire={reload} />
+            </div>
 
             {priceChange && (
               <Alert tone="warning" title="The price for your stay has changed">
@@ -279,7 +281,7 @@ export function BookingReviewPage() {
               </Alert>
             )}
 
-            <Card className="space-y-4 p-5 sm:p-6">
+            <Card className="review-card review-guests-card space-y-4 p-4">
               <h2 className="text-base font-semibold text-[var(--text-strong)]">Guests</h2>
               {primary && (
                 <p className="flex items-start gap-2 text-sm text-[var(--text-body)]">
@@ -313,7 +315,7 @@ export function BookingReviewPage() {
               </Button>
             </Card>
 
-            <Card className="space-y-3 p-5 sm:p-6">
+            <Card className="review-card review-coupon-card space-y-3 p-4">
               <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-strong)]">
                 <Tag className="h-4 w-4 text-brand-600" aria-hidden="true" /> Coupon
               </h2>
@@ -345,14 +347,14 @@ export function BookingReviewPage() {
               {couponError && <p className="text-sm text-danger-600">{couponError}</p>}
 
               {!hold.quote.coupon && availableOffers && availableOffers.length > 0 && (
-                <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3">
+                <div className="review-offers space-y-2 border-t border-[var(--border-subtle)] pt-3">
                   <p className="text-sm font-medium text-[var(--text-strong)]">Available offers for this booking</p>
-                  <ul className="space-y-2">
+                  <ul className="review-offer-grid">
                     {availableOffers.map((offer) => (
-                      <li key={offer.code} className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] px-3 py-2">
+                      <li key={offer.code} className="review-offer-tile flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] px-3 py-2">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-brand-700">{offer.code}</p>
-                          <p className="truncate text-xs text-[var(--text-muted)]">{offer.title}</p>
+                          <p className="truncate text-sm font-semibold text-[var(--text-strong)]">{offer.title}</p>
+                          <p className="truncate text-xs text-[var(--text-muted)]">Eligible for this booking</p>
                         </div>
                         <Button type="button" variant="secondary" size="sm" loading={couponBusy} onClick={() => applyCoupon(offer.code)}>
                           Apply
@@ -367,7 +369,7 @@ export function BookingReviewPage() {
               )}
             </Card>
 
-            <Card className="space-y-3 p-5 sm:p-6">
+            <Card className="review-card review-policy-card space-y-3 p-4">
               <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-strong)]">
                 <ShieldCheck className="h-4 w-4 text-brand-600" aria-hidden="true" /> Cancellation policy
               </h2>
@@ -378,7 +380,7 @@ export function BookingReviewPage() {
               </p>
             </Card>
 
-            <div className="hidden flex-wrap items-center gap-3 lg:flex">
+            <div className="review-payment-actions hidden flex-wrap items-center gap-3 lg:flex">
               <Button size="lg" className="flex-1" onClick={onCta} loading={busy} disabled={busy}>
                 {busy ? (phase === 'verifying' ? 'Confirming your payment…' : 'Opening secure checkout…') : cta}
               </Button>
@@ -388,14 +390,14 @@ export function BookingReviewPage() {
             </div>
           </div>
 
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <StaySummary quote={hold.quote} />
+          <aside className="booking-review-summary lg:sticky lg:top-20 lg:self-start">
+            <StaySummary quote={hold.quote} className="guest-stay-summary review-stay-summary" />
           </aside>
         </div>
       )}
 
       {!ended && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)] p-3 shadow-lg lg:hidden">
+        <div className="mobile-booking-action-bar fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)] p-3 shadow-lg lg:hidden">
           <Button size="lg" className="w-full" onClick={onCta} loading={busy} disabled={busy}>
             {busy ? (phase === 'verifying' ? 'Confirming…' : 'Opening checkout…') : cta}
           </Button>

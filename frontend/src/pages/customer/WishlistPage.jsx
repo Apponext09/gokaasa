@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
-import { HotelCardSkeleton, HotelCard } from '@/features/search/components/HotelCard.jsx';
+import { HotelCard, HotelCardSkeleton } from '@/features/search/components/HotelCard.jsx';
 import { PageHeader, EmptyState } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
@@ -26,13 +26,13 @@ export function WishlistPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+    <div className="wishlist-page mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
       <PageHeader title="Saved hotels" description="Hotels you've saved for later." />
 
       {error && <p className="mt-6 text-sm text-danger-600">{error}</p>}
 
       {!hotels && !error && (
-        <div className="mt-6 space-y-4">
+        <div className="wishlist-hotels-grid mt-6 grid gap-4">
           {[0, 1, 2].map((i) => <HotelCardSkeleton key={i} />)}
         </div>
       )}
@@ -52,7 +52,7 @@ export function WishlistPage() {
       )}
 
       {hotels?.length > 0 && (
-        <div className="mt-6 space-y-4">
+        <div className="wishlist-hotels-grid mt-6 grid gap-4">
           {hotels.map((hotel) => (
             <HotelCard key={hotel.id} hotel={hotel} />
           ))}

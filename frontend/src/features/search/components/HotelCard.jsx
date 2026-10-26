@@ -10,8 +10,7 @@ import { formatMoney } from '@/components/shared/index.jsx';
 import { GuestContactModal } from '@/features/booking/GuestContactModal.jsx';
 import { saveSelection } from '@/features/booking/selection.js';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
-import { HotelQuickViewModal } from '@/features/search/components/HotelQuickViewModal.jsx';
-import { nightsBetween, stayParams, slugifyPlace } from '@/features/search/searchParams.js';
+import { stayParams, slugifyPlace } from '@/features/search/searchParams.js';
 import { normalizeAmenities } from '@/features/search/amenities.js';
 import { discountDisplay } from '@/features/search/discountDisplay.js';
 import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
@@ -37,7 +36,11 @@ export function HotelCard({ hotel, state }) {
   const offer = hotel.bestOffer;
   const couponOffer = hotel.offer;
   const place = formatHotelLocation(hotel, { compact: true });
-  const { pricePerNightMinor, originalPerNightMinor, discountPercent } = discountDisplay(offer);
+  const offerPricing = discountDisplay(offer);
+  const pricePerNightMinor = offer ? offerPricing.pricePerNightMinor : hotel.price?.amountMinor;
+  const originalPerNightMinor = offer ? offerPricing.originalPerNightMinor : hotel.price?.originalAmountMinor;
+  const discountPercent = offer ? offerPricing.discountPercent : (hotel.price?.discountPercent ?? 0);
+  const hasDisplayPrice = Number.isFinite(Number(pricePerNightMinor));
   const { shown: amenities, moreCount: moreAmenityCount } = normalizeAmenities(hotel.amenities, 3);
   const fullPath = hotelPath(hotel, state);
 
@@ -45,7 +48,6 @@ export function HotelCard({ hotel, state }) {
   const [detailsState, setDetailsState] = useState('idle');
   const [hovered, setHovered] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [guestModalOpen, setGuestModalOpen] = useState(false);
   const [pendingSelection, setPendingSelection] = useState(null);
   const [reserving, setReserving] = useState(false);
@@ -103,7 +105,6 @@ export function HotelCard({ hotel, state }) {
   const beginReserve = (selection) => {
     const saved = saveSelection(selection);
     setPendingSelection(saved);
-    setQuickViewOpen(false);
     if (authStatus !== 'authenticated') {
       setGuestModalOpen(true);
       return;
@@ -135,34 +136,6 @@ export function HotelCard({ hotel, state }) {
       feesMinor: offer.feeTotalMinor,
       finalAmountMinor: offer.finalTotalMinor,
       currency: 'INR',
-      coupon: state.coupon,
-      quotedAt: new Date().toISOString(),
-    });
-  };
-
-  const reserveRoom = (room, plan) => {
-    beginReserve({
-      hotelId: hotel.id,
-      hotelSlug: hotel.slug,
-      citySlug: slugifyPlace(hotel.city),
-      roomTypeId: room.id,
-      roomName: room.name,
-      ratePlanId: plan.ratePlanId,
-      ratePlanName: plan.name,
-      mealPlan: plan.mealPlan,
-      refundable: plan.refundable,
-      checkIn: state.checkIn,
-      checkOut: state.checkOut,
-      nights: nightsBetween(state.checkIn, state.checkOut),
-      rooms: state.occupancy.length,
-      occupancy: state.occupancy.map((item) => ({ adults: item.adults, childAges: item.childAges })),
-      pricePerNightMinor: plan.pricePerNight,
-      subtotalMinor: plan.subtotal,
-      discountMinor: plan.discount,
-      taxesMinor: plan.taxes,
-      feesMinor: plan.fees,
-      finalAmountMinor: plan.finalAmount,
-      currency: plan.currency ?? 'INR',
       coupon: state.coupon,
       quotedAt: new Date().toISOString(),
     });
@@ -234,7 +207,7 @@ export function HotelCard({ hotel, state }) {
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
         {isIllustrativeCover(hotel.image) && (
-          <p className="absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
+          <p className="hcard-image-disclaimer absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
             Illustrative image
           </p>
         )}
@@ -257,15 +230,23 @@ export function HotelCard({ hotel, state }) {
                 {hotel.name}
               </Link>
             </h3>
-            <p className="flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
+            <p className="hcard-location-row flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span className="truncate">{place}</span>
             </p>
             {hotel.distanceKm != null && (
               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold text-brand-700">
                 <MapPin className="h-3 w-3" aria-hidden="true" />
-                {Number(hotel.distanceKm).toFixed(1)} km from your location
+                {Number(hotel.distanceKm).toFixed(1)} km
+                <span className="hotel-distance-full"> from your location</span>
+                <span className="hotel-distance-compact hidden" aria-hidden="true"> away</span>
               </span>
+            )}
+            {hasDisplayPrice && (
+              <div className="hcard-mobile-price hidden">
+                <span>{formatMoney(pricePerNightMinor)}</span>
+                <small>/ night</small>
+              </div>
             )}
           </div>
           {/* The provider's guest rating, where there is one. Otherwise Gokaasa's own guest reviews fill the gap; with neither, "New" beats inventing a number. */}
@@ -346,7 +327,7 @@ export function HotelCard({ hotel, state }) {
             </div>
             <div className="grid min-w-44 gap-2">
               <Button
-                onClick={() => setQuickViewOpen(true)}
+                onClick={() => navigate(fullPath)}
                 className="bg-gradient-to-r from-brand-800 to-brand-600 font-semibold shadow-md hover:from-brand-900 hover:to-brand-700"
               >
                 View Rooms &amp; Deals
@@ -361,7 +342,7 @@ export function HotelCard({ hotel, state }) {
       </div>
 
       {/* RIGHT PRICING PANEL — visible only in hotels-page 3-column layout */}
-      {offer && (
+      {(offer || hotel.price) && (
         <div className="hcard-pricing-panel">
           <div className="hcard-price-top">
             {originalPerNightMinor > 0 && (
@@ -376,13 +357,13 @@ export function HotelCard({ hotel, state }) {
               <span className="hcard-final-amount">{formatMoney(pricePerNightMinor)}</span>
               <span className="hcard-per-night">/ night before taxes</span>
             </div>
-            {offer.taxTotalMinor + offer.feeTotalMinor > 0 && (
+            {offer && offer.taxTotalMinor + offer.feeTotalMinor > 0 && (
               <p className="hcard-taxes-note">+{formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes &amp; fees for the stay</p>
             )}
-            {offer.nights > 1 && (
+            {offer && offer.nights > 1 && (
               <p className="hcard-total-nights">{formatMoney(offer.finalTotalMinor)} for {offer.nights} nights</p>
             )}
-            {!couponOffer && offer.memberDealCode ? (
+            {offer && !couponOffer && offer.memberDealCode ? (
               <div className="hcard-member-deal">
                 <Sparkles className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" aria-hidden="true" />
                 <span>Member Deal: Extra {offer.memberDealAmount ? formatMoney(offer.memberDealAmount) : 'savings'} with code <strong>{offer.memberDealCode}</strong></span>
@@ -394,14 +375,14 @@ export function HotelCard({ hotel, state }) {
             <button
               type="button"
               className="hcard-btn-view"
-              onClick={() => setQuickViewOpen(true)}
+              onClick={() => navigate(fullPath)}
             >
               VIEW ROOMS &amp; DEALS
             </button>
             <button
               type="button"
               className="hcard-btn-reserve"
-              onClick={quickReserve}
+              onClick={offer ? quickReserve : () => navigate(fullPath)}
               disabled={reserving}
             >
               {reserving ? 'Reserving…' : 'Quick Reserve'}
@@ -411,17 +392,6 @@ export function HotelCard({ hotel, state }) {
       )}
 
       </article>
-
-      <HotelQuickViewModal
-        open={quickViewOpen}
-        hotel={hotel}
-        initialDetails={details}
-        state={state}
-        fullPath={fullPath}
-        reserving={reserving}
-        onClose={() => setQuickViewOpen(false)}
-        onReserve={reserveRoom}
-      />
 
       <GuestContactModal
         open={guestModalOpen}

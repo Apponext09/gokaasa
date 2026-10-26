@@ -1,10 +1,8 @@
-import { Building2, Compass, HelpCircle, Palmtree, Wallet } from 'lucide-react';
+import { ArrowUpRight, Building2, Compass, HelpCircle, Palmtree, Wallet } from 'lucide-react';
 import { t } from '@/features/support/bilingualContent.js';
 
 /**
- * The first-time welcome experience: a short lead line plus a grid of quick actions that each trigger
- * REAL application behaviour (set a real propertyType and advance the real step machine, or navigate to
- * the real My Trips page) -- never a canned response with nothing behind it.
+ * Compact welcome experience for small concierge card.
  */
 export function AssistantWelcome({ lang, onFindHotels, onExploreDestinations, onFindResorts, onSearchByBudget, onHelpWithBooking, onUseExample }) {
   const actions = [
@@ -18,35 +16,36 @@ export function AssistantWelcome({ lang, onFindHotels, onExploreDestinations, on
   const examples = [t('examplePrompt1', lang), t('examplePrompt2', lang), t('examplePrompt3', lang)];
 
   return (
-    <div className="space-y-3 pl-9">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className="assistant-welcome space-y-2">
+      <div className="assistant-welcome-grid grid grid-cols-1 gap-1.5 sm:grid-cols-2">
         {actions.map(({ icon: Icon, title, desc, onClick }) => (
           <button
             key={title}
             type="button"
             onClick={onClick}
-            className="flex items-start gap-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-3 text-left transition-colors hover:border-brand-400 hover:bg-brand-50/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+            className="assistant-welcome-action group flex items-start gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-2 text-left transition-all hover:border-brand-300 hover:shadow-xs"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-100 text-accent-700">
-              <Icon className="h-4.5 w-4.5" aria-hidden="true" />
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent-100 text-accent-700">
+              <Icon className="h-3 w-3" aria-hidden="true" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-semibold text-[var(--text-strong)]">{title}</span>
-              <span className="block text-xs text-[var(--text-muted)]">{desc}</span>
+              <span className="block text-xs font-semibold text-[var(--text-strong)] leading-tight">{title}</span>
+              <span className="block text-[10px] text-[var(--text-muted)] line-clamp-1">{desc}</span>
             </span>
+            <ArrowUpRight className="ml-auto h-3 w-3 shrink-0 text-[var(--text-muted)] transition-colors group-hover:text-brand-600" aria-hidden="true" />
           </button>
         ))}
       </div>
 
-      <div>
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{t('examplePromptsLabel', lang)}</p>
-        <div className="flex flex-wrap gap-2">
+      <div className="assistant-prompt-section pt-1">
+        <p className="assistant-prompt-label text-[10px] uppercase font-bold tracking-wider text-[var(--text-muted)] mb-1">{t('examplePromptsLabel', lang)}</p>
+        <div className="assistant-prompt-rail flex flex-wrap gap-1">
           {examples.map((example) => (
             <button
               key={example}
               type="button"
               onClick={() => onUseExample(example)}
-              className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card)] px-3 py-1.5 text-xs font-medium text-[var(--text-body)] transition-colors hover:border-brand-400 hover:text-brand-700"
+              className="assistant-prompt-chip rounded-full border border-[var(--border-subtle)] bg-[var(--surface-card)] px-2 py-0.5 text-[10px] text-[var(--text-body)] hover:border-brand-300"
             >
               {example}
             </button>

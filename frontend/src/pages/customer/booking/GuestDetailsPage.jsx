@@ -66,18 +66,20 @@ export function GuestDetailsPage() {
 
   const expired = hold.status === 'EXPIRED' || hold.status === 'RELEASED';
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 pb-28 sm:px-6 lg:pb-10">
+    <div className="guest-details-page mx-auto w-full max-w-6xl px-4 py-4 pb-28 sm:px-6 lg:pb-8">
       <BookingProgress current={2} />
       {expired ? (
         <HoldExpiredPanel />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-          <div className="min-w-0 space-y-4">
-            <HoldCountdown expiresAt={hold.expiresAt} onExpire={reload} />
+        <div className="guest-details-layout grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="guest-details-main min-w-0 space-y-3">
+            <div className="guest-hold-countdown">
+              <HoldCountdown expiresAt={hold.expiresAt} onExpire={reload} />
+            </div>
             <GuestForm hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
           </div>
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <StaySummary quote={hold.quote} />
+          <aside className="guest-details-summary lg:sticky lg:top-20 lg:self-start">
+            <StaySummary quote={hold.quote} className="guest-stay-summary" />
           </aside>
         </div>
       )}
@@ -113,10 +115,10 @@ function GuestForm({ hold, onSaved, onExpired }) {
   };
 
   return (
-    <form id="guest-details-form" onSubmit={handleSubmit(submit)} noValidate className="space-y-6" aria-label="Guest details">
+    <form id="guest-details-form" onSubmit={handleSubmit(submit)} noValidate className="guest-details-form space-y-3" aria-label="Guest details">
       {submitError && <p role="alert" className="rounded-[var(--radius-control)] bg-danger-50 px-4 py-3 text-sm text-danger-600">{submitError}</p>}
 
-      <Card className="space-y-4 p-5 sm:p-6">
+      <Card className="guest-form-card guest-contact-card space-y-4 p-4">
         <div>
           <h2 className="text-base font-semibold text-[var(--text-strong)]">Lead guest</h2>
           <p className="text-sm text-[var(--text-muted)]">Booking confirmations and important updates go to this person.</p>
@@ -140,7 +142,7 @@ function GuestForm({ hold, onSaved, onExpired }) {
       {occupancy.map((room, roomIndex) => {
         const children = room.childAges.length;
         return (
-          <Card key={roomIndex} className="space-y-4 p-5 sm:p-6" aria-labelledby={`room-${roomIndex}-title`}>
+          <Card key={roomIndex} className="guest-form-card guest-room-card space-y-4 p-4" aria-labelledby={`room-${roomIndex}-title`}>
             <div>
               <h2 id={`room-${roomIndex}-title`} className="text-base font-semibold text-[var(--text-strong)]">
                 Room {roomIndex + 1}
@@ -156,7 +158,7 @@ function GuestForm({ hold, onSaved, onExpired }) {
               const base = `rooms.${roomIndex}.guests.${guestIndex}`;
               const guestErrors = errors.rooms?.[roomIndex]?.guests?.[guestIndex];
               return (
-                <fieldset key={guestIndex} className="grid gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-4 sm:grid-cols-[1fr_1fr_7rem]">
+                <fieldset key={guestIndex} className="guest-entry-row grid gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3 sm:grid-cols-[1fr_1fr_6rem]">
                   <legend className="px-1 text-sm font-medium text-[var(--text-strong)]">
                     Guest {guestIndex + 1} · {isChild ? 'Child' : 'Adult'}
                     <span className="font-normal text-[var(--text-muted)]"> (optional)</span>
@@ -177,7 +179,7 @@ function GuestForm({ hold, onSaved, onExpired }) {
         );
       })}
 
-      <Card className="space-y-4 p-5 sm:p-6">
+      <Card className="guest-form-card guest-extras-card space-y-4 p-4">
         <div>
           <h2 className="text-base font-semibold text-[var(--text-strong)]">Company and requests <span className="font-normal text-[var(--text-muted)]">(optional)</span></h2>
         </div>
@@ -204,7 +206,7 @@ function GuestForm({ hold, onSaved, onExpired }) {
       </div>
 
       {/* Mobile: a sticky action bar that stays in reach while the form scrolls. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)] p-3 shadow-lg lg:hidden">
+      <div className="mobile-booking-action-bar fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)] p-3 shadow-lg lg:hidden">
         <Button type="submit" form="guest-details-form" size="lg" className="w-full" loading={isSubmitting}>
           Continue to review
         </Button>

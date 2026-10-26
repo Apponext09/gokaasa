@@ -92,17 +92,21 @@ export function NearbyHotelsSection() {
   const locationUnavailable = ['denied', 'unavailable', 'timeout'].includes(geoStatus);
 
   return (
-    <section id="nearby" aria-labelledby="nearby-heading" className="mx-auto max-w-7xl space-y-5 px-4 sm:px-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section id="nearby" aria-labelledby="nearby-heading" className="nearby-hotels-section">
+      <div className="nearby-section-heading">
         <div>
-          <h2 id="nearby-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
+          <p className="nearby-section-eyebrow">
+            <Navigation aria-hidden="true" />
+            Around your location
+          </p>
+          <h2 id="nearby-heading" className="customer-section-title">
             Hotels Near You
           </h2>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">Discover great stays close to your current location.</p>
+          <p className="nearby-section-copy">See nearby stays on the map without leaving the page.</p>
         </div>
         {hasNearbyHotels && (
-          <Link to={`/hotels/nearby?lat=${coords.lat}&lng=${coords.lng}`} className="text-sm font-medium text-brand-700 hover:underline">
-            View all nearby hotels
+          <Link to={`/hotels/nearby?lat=${coords.lat}&lng=${coords.lng}`} className="nearby-section-link">
+            View all nearby
           </Link>
         )}
       </div>

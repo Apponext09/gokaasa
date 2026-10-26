@@ -233,10 +233,18 @@ export function HotelsPage() {
                 : "Choose a destination and dates to see live prices and availability"}
           </p>
           <div className="hotels-page-search-box">
-            <SearchWidget
-              variant="compact"
-              initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
-            />
+            <div className="hotels-search-desktop">
+              <SearchWidget
+                variant="compact"
+                initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
+              />
+            </div>
+            <div className="hotels-search-mobile">
+              <SearchWidget
+                variant="hero"
+                initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
+              />
+            </div>
           </div>
 
           {locationImages.length > 1 && (

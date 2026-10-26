@@ -125,7 +125,14 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
       </div>
 
       {open && (
-        <div className="fixed inset-x-3 bottom-3 z-40 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:mt-2 sm:w-[22rem]" role="dialog" aria-label="Choose dates">
+        <>
+        <button
+          type="button"
+          className="customer-date-backdrop fixed inset-0 z-[60] bg-slate-950/45 sm:hidden"
+          aria-label="Close calendar"
+          onClick={() => setOpen(false)}
+        />
+        <div className="customer-date-dialog fixed inset-x-2 bottom-2 z-[70] rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-2xl sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:z-40 sm:mt-2 sm:w-[22rem]" role="dialog" aria-label="Choose dates">
           <div className="mb-3 flex items-center justify-between">
             <button type="button" aria-label="Previous month" disabled={shownMonth <= minMonth} onClick={() => shift(-1)} className="grid h-8 w-8 place-items-center rounded-full hover:bg-[var(--surface-muted)] disabled:opacity-30">
               <ChevronLeft className="h-4 w-4" />
@@ -182,6 +189,7 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );

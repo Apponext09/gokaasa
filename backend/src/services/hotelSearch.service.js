@@ -134,7 +134,7 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
  * A homepage hotel teaser: no stay/occupancy context, so no bestOffer/cancellation -- just enough to
  * decide whether to tap through. `distanceKm` is null for a handpicked (non-geo) card.
  */
-function toCuratedCard(row, { offers = [] } = {}) {
+export function toCuratedCard(row, { offers = [] } = {}) {
   return {
     id: row.id,
     slug: row.slug,
@@ -143,6 +143,7 @@ function toCuratedCard(row, { offers = [] } = {}) {
     area: row.area,
     countryCode: row.country_code,
     country: countryName(row.country_code),
+    propertyType: row.property_type,
     starRating: row.star_rating,
     guestRating: row.guest_rating == null ? null : Number(row.guest_rating),
     reviewCount: row.review_count,

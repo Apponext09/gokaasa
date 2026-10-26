@@ -4,6 +4,15 @@ import { cn } from '@/lib/utils.js';
 
 /** Search → Room → Guest details → Review → Payment → Confirmed. `current` is the index of the active step. */
 export function BookingProgress({ current }) {
+  const shortLabels = {
+    search: 'Search',
+    room: 'Room',
+    guests: 'Guest',
+    review: 'Review',
+    payment: 'Pay',
+    confirmed: 'Done',
+  };
+
   return (
     <nav aria-label="Booking progress" className="mb-6">
       <ol className="flex items-center gap-2 overflow-x-auto text-xs sm:text-sm">
@@ -22,8 +31,13 @@ export function BookingProgress({ current }) {
               >
                 {done ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : index + 1}
               </span>
-              <span className={cn(active ? 'font-semibold text-[var(--text-strong)]' : 'text-[var(--text-muted)]')}>{step.label}</span>
-              {index < STEPS.length - 1 && <span className="mx-1 h-px w-6 bg-[var(--border-subtle)] sm:w-10" aria-hidden="true" />}
+              <span
+                data-short-label={shortLabels[step.key]}
+                className={cn('booking-progress-label', active ? 'font-semibold text-[var(--text-strong)]' : 'text-[var(--text-muted)]')}
+              >
+                {step.label}
+              </span>
+              {index < STEPS.length - 1 && <span className="booking-progress-connector mx-1 h-px w-6 bg-[var(--border-subtle)] sm:w-10" aria-hidden="true" />}
             </li>
           );
         })}

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
-  Award,
-  ArrowRight,
+  BadgeCheck,
+  BadgeIndianRupee,
   CalendarCheck,
   CheckCircle2,
   ChevronDown,
@@ -14,7 +14,6 @@ import {
   Quote,
   ShieldCheck,
   Star,
-  Users,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.jsx';
@@ -50,24 +49,24 @@ import { addDays, destinationSearchPath, todayIso, toSearchParams } from '@/feat
 
 const WHY_GOKAASA = [
   {
-    icon: Award,
-    title: 'Curated stays',
-    text: 'Quality options without endless scrolling.',
+    icon: BadgeCheck,
+    title: 'Verified stays',
+    text: 'Hotel details checked before you book.',
   },
   {
-    icon: ShieldCheck,
-    title: 'Clear pricing',
-    text: 'See the full stay cost before you pay.',
+    icon: BadgeIndianRupee,
+    title: 'Upfront total',
+    text: 'Room price, taxes and fees shown clearly.',
+  },
+  {
+    icon: CalendarCheck,
+    title: 'Flexible choices',
+    text: 'Compare cancellation terms at a glance.',
   },
   {
     icon: Headphones,
-    title: 'Helpful support',
-    text: 'Get assistance before and after booking.',
-  },
-  {
-    icon: Users,
-    title: 'Easy trip access',
-    text: 'Keep every booking detail in one place.',
+    title: 'Support that stays',
+    text: 'Help from booking through check-in.',
   },
 ];
 
@@ -76,6 +75,11 @@ const WHY_ICON_TONES = [
   'bg-emerald-100 text-emerald-700',
   'bg-amber-100 text-amber-700',
   'bg-violet-100 text-violet-700',
+];
+
+const HOME_HERO_SLIDES = [
+  { src: '/destinations/navi-mumbai.jpg', label: 'Navi Mumbai skyline' },
+  { src: '/destinations/ahilyanagar.jpg', label: 'Ahilyanagar heritage landscape' },
 ];
 
 const TESTIMONIALS = [
@@ -167,7 +171,7 @@ function buildStats(stats) {
 
 function SectionHeading({ id, eyebrow, title, subtitle, action }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="customer-section-heading flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-2xl">
         {eyebrow && (
           <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-brand-700">
@@ -176,12 +180,12 @@ function SectionHeading({ id, eyebrow, title, subtitle, action }) {
           </p>
         )}
 
-        <h2 id={id} className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)] sm:text-3xl">
+        <h2 id={id} className="customer-section-title">
           {title}
         </h2>
 
         {subtitle && (
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--text-muted)] sm:text-base">
+          <p className="customer-section-copy">
             {subtitle}
           </p>
         )}
@@ -252,55 +256,6 @@ function Reveal({
     >
       {children}
     </div>
-  );
-}
-
-function PremiumImageCard({
-  title,
-  image,
-  href,
-  className = '',
-  aspect = 'aspect-[4/3]',
-  subtitle = 'Explore stays',
-}) {
-  return (
-    <Link
-      to={href}
-      className={`group relative block overflow-hidden rounded-3xl border border-white/70 bg-slate-900 shadow-[0_8px_30px_rgba(15,23,42,0.08)] transition-all duration-500 hover:-translate-y-1.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2 ${className}`}
-    >
-      <div className={`relative overflow-hidden ${aspect}`}>
-        <SafeImage
-          src={image}
-          alt={`${title} hotels`}
-          className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
-          fallbackLabel={`${title} image coming soon`}
-        />
-
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/15 to-transparent transition-opacity duration-500 group-hover:from-slate-950/90" />
-
-        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <h3 className="font-[var(--font-display)] text-lg font-semibold tracking-tight text-white sm:text-xl">
-                {title}
-              </h3>
-
-              <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-white/80 sm:text-sm">
-                {subtitle}
-                <ArrowRight
-                  className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1"
-                  aria-hidden="true"
-                />
-              </p>
-            </div>
-
-            <span className="premium-card-action flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/15 text-white backdrop-blur-md transition-all duration-300 group-hover:bg-white group-hover:text-slate-900">
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </span>
-          </div>
-        </div>
-      </div>
-    </Link>
   );
 }
 
@@ -393,8 +348,16 @@ function HomeHotelListing({ search = null, geolocation }) {
     />
   );
 
+  // Keep the landing page intentional when the catalogue service is offline.
+  // An explicit search still receives the normal retry state below.
+  if (status === 'error' && !search) return null;
+
   return (
-    <section id="home-hotel-results" className="home-hotel-listing-section scroll-mt-24" aria-label="Browse Hotels">
+    <section
+      id="home-hotel-results"
+      className={cn('home-hotel-listing-section scroll-mt-24', `is-${status}`)}
+      aria-label="Browse Hotels"
+    >
       <div className="home-hotel-listing-inner">
         {/* Section header */}
         <div className="home-hl-header">
@@ -498,17 +461,17 @@ function HomeHotelListing({ search = null, geolocation }) {
         </div>
       </div>
 
-      {/* Mobile filter sheet */}
+      {/* Mobile filter drawer: keeps the results visible on the right, like the desktop split layout. */}
       {sheetOpen && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
-          <button className="absolute inset-0 bg-black/40" aria-label="Close filters" onClick={() => setSheetOpen(false)} />
-          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-base font-semibold">Filters</p>
+          <button className="absolute inset-0 bg-slate-950/35" aria-label="Close filters" onClick={() => setSheetOpen(false)} />
+          <div className="mobile-filter-drawer absolute inset-y-0 left-0 w-[82vw] max-w-80 overflow-y-auto rounded-r-2xl bg-white p-4 shadow-2xl">
+            <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-3 flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3">
+              <p className="text-sm font-semibold">Filters</p>
               <button type="button" className="rounded-full p-1 hover:bg-slate-100" onClick={() => setSheetOpen(false)}>✕</button>
             </div>
             {filtersPanel}
-            <div className="sticky bottom-0 -mx-5 mt-5 border-t border-slate-100 bg-white px-5 py-3">
+            <div className="sticky bottom-0 -mx-4 mt-4 border-t border-slate-100 bg-white px-4 py-3">
               <Button className="w-full" onClick={() => setSheetOpen(false)}>Show {filtered.length} hotels</Button>
             </div>
           </div>
@@ -530,10 +493,6 @@ export function HomePage() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [hotelSearch, setHotelSearch] = useState(null);
   const [openHomeFaq, setOpenHomeFaq] = useState(0);
-  const heroSlides = useMemo(
-    () => (popular ?? []).filter((place) => place.imageUrl),
-    [popular],
-  );
 
   useDocumentMeta({
     title: 'Gokaasa | Discover Your Next Beautiful Stay',
@@ -543,17 +502,13 @@ export function HomePage() {
   });
 
   useEffect(() => {
-    if (heroSlides.length <= 1) return undefined;
+    if (HOME_HERO_SLIDES.length <= 1) return undefined;
     const interval = window.setInterval(() => {
-      setHeroIndex((current) => (current + 1) % heroSlides.length);
+      setHeroIndex((current) => (current + 1) % HOME_HERO_SLIDES.length);
     }, 6000);
 
     return () => window.clearInterval(interval);
-  }, [heroSlides.length]);
-
-  useEffect(() => {
-    setHeroIndex(0);
-  }, [heroSlides.length]);
+  }, []);
 
   useEffect(() => {
     if (isStaff) return undefined;
@@ -616,13 +571,13 @@ export function HomePage() {
   return (
     <div className="customer-home min-h-screen overflow-hidden text-[var(--text-body)]">
       {/* Hotel-booking hero adapted from the reference project. */}
-      <section className="customer-booking-hero !pb-[31px] max-md:!pb-5">
-        <div className="customer-hero-arch !min-h-[271px] !px-5 !pb-[94px] !pt-[41px] max-md:!min-h-[242px] max-md:!px-4 max-md:!pb-[83px] max-md:!pt-[33px]">
+      <section className="customer-booking-hero">
+        <div className="customer-hero-arch">
           <div className="customer-hero-slides" aria-hidden="true">
-            {heroSlides.map((place, index) => (
+            {HOME_HERO_SLIDES.map((slide, index) => (
               <img
-                key={place.destination}
-                src={place.imageUrl}
+                key={slide.src}
+                src={slide.src}
                 alt=""
                 fetchPriority={index === 0 ? 'high' : 'auto'}
                 decoding="async"
@@ -635,28 +590,27 @@ export function HomePage() {
 
           <div className="customer-hero-content">
             <h1>Book Hotels and Homestays</h1>
-            <p>
-              {heroSlides[heroIndex]
-                ? `Explore ${heroSlides[heroIndex].hotelCount} stay${heroSlides[heroIndex].hotelCount === 1 ? '' : 's'} in ${heroSlides[heroIndex].label}.`
-                : 'Search published stays with live availability.'}
-            </p>
+            <p>Great stays, clear prices, and an easier way to book.</p>
           </div>
 
-          {heroSlides.length > 1 && <div className="customer-hero-dots !bottom-[42px] max-md:!bottom-[39px]" role="group" aria-label="Choose hero image">
-            {heroSlides.map((place, index) => (
-              <button
-                key={place.destination}
-                type="button"
-                aria-label={`Show background image ${index + 1}`}
-                aria-current={index === heroIndex ? 'true' : undefined}
-                onClick={() => setHeroIndex(index)}
-                className={index === heroIndex ? 'is-active' : ''}
-              />
-            ))}
-          </div>}
+          {HOME_HERO_SLIDES.length > 1 && (
+            <div className="customer-hero-dots" role="group" aria-label="Choose hero image">
+              {HOME_HERO_SLIDES.map((slide, index) => (
+                <button
+                  key={slide.src}
+                  type="button"
+                  aria-label={`Show ${slide.label}`}
+                  aria-current={index === heroIndex ? 'true' : undefined}
+                  onClick={() => setHeroIndex(index)}
+                  className={index === heroIndex ? 'is-active' : ''}
+                />
+              ))}
+            </div>
+          )}
+
         </div>
 
-        <div className="customer-search-shell !-mt-9 max-md:!-mt-[35px]">
+        <div className="customer-search-shell">
           <SearchWidget
             variant="hero"
             onSearch={(nextSearch) => {
@@ -673,11 +627,11 @@ export function HomePage() {
       {offers && offers.length > 0 && (
         <section
           aria-labelledby="offers-heading"
-          className="mx-auto max-w-7xl space-y-5 px-4 py-8 sm:px-6 lg:py-10"
+          className="customer-section customer-section--offers"
         >
           <Reveal>
             <div className="flex items-center justify-between gap-4">
-              <h2 id="offers-heading" className="font-[var(--font-display)] text-2xl font-bold tracking-tight text-[var(--text-strong)]">
+              <h2 id="offers-heading" className="customer-section-title">
                 Offers for you
               </h2>
               <Link
@@ -706,50 +660,10 @@ export function HomePage() {
         </section>
       )}
 
-      {/* NEARBY HOTELS */}
-      <Reveal>
-        <div className="py-5">
-          <NearbyHotelsSection />
-        </div>
-      </Reveal>
-
-
-
-      {popular?.length > 0 && (
-        <section
-          aria-labelledby="destinations-heading"
-          className="mx-auto max-w-7xl space-y-7 px-4 py-10 sm:px-6 lg:py-12"
-        >
-          <Reveal>
-            <SectionHeading
-              title="Popular destinations"
-            />
-          </Reveal>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4">
-            {popular.map((place, index) => (
-              <Reveal key={place.destination} delay={index * 65} direction="zoom">
-                <PremiumImageCard
-                  title={place.label}
-                  image={place.imageUrl}
-                  href={destinationSearchPath(place.destination)}
-                  subtitle={`${place.hotelCount} hotel${place.hotelCount === 1 ? '' : 's'}`}
-                  aspect="aspect-[4/3]"
-                  className="h-full"
-                />
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
-      <HomeHotelListing search={hotelSearch} geolocation={geolocation} />
-
-      {/* FIND YOUR PERFECT STAY */}
+      {/* BROWSE BY PROPERTY TYPE */}
       {stayTypes?.length > 0 && <section
         aria-labelledby="stay-type-heading"
-        className="mx-auto max-w-7xl space-y-5 px-4 py-7 sm:px-6 lg:py-8"
+        className="customer-section"
       >
         <Reveal>
           <SectionHeading
@@ -757,29 +671,104 @@ export function HomePage() {
           />
         </Reveal>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="collections-tabs-bar" aria-label="Property types">
+          {stayTypes.map((category) => (
+            <Link
+              key={category.value}
+              to={destinationSearchPath(null, new Date(), { propertyTypes: [category.value] })}
+              className="collection-tab-btn"
+            >
+              {category.label}
+            </Link>
+          ))}
+        </div>
+
+        <div className="collection-cards-grid">
           {stayTypes.map((category, index) => (
-            <Reveal key={category.value} delay={index * 65} direction="zoom">
-              <PremiumImageCard
-                title={category.label}
-                image={category.imageUrl}
-                href={destinationSearchPath(null, new Date(), { propertyTypes: [category.value] })}
-                subtitle={`${category.hotelCount} hotel${category.hotelCount === 1 ? '' : 's'}`}
-                aspect="aspect-[16/9]"
-                className="h-full"
-              />
+            <Reveal key={category.value} delay={index * 65} direction="zoom" className="h-full">
+              <Link
+                to={destinationSearchPath(null, new Date(), { propertyTypes: [category.value] })}
+                className="collection-card-item group"
+              >
+                <div className="collection-img-wrap">
+                  <SafeImage
+                    src={category.imageUrl}
+                    alt={`${category.label} stays`}
+                    className="h-full w-full object-cover"
+                    fallbackLabel={`${category.label} image`}
+                    showFallbackContent={false}
+                  />
+                  <span className="collection-overlay-gradient" aria-hidden="true" />
+                  <span className="collection-card-badge">{category.hotelCount}+ Stays</span>
+                  <div className="collection-card-caption">
+                    <h3>{category.label}</h3>
+                    <p>Find the perfect {category.label.toLowerCase()} stay</p>
+                  </div>
+                </div>
+              </Link>
             </Reveal>
           ))}
         </div>
       </section>}
 
+      {popular?.length > 0 && (
+        <section
+          aria-labelledby="destinations-heading"
+          className="customer-section"
+        >
+          <Reveal>
+            <SectionHeading
+              title="Popular destinations"
+            />
+          </Reveal>
+
+          <div className="popular-dest-cards-grid">
+            {popular.map((place, index) => (
+              <Reveal key={place.destination} delay={index * 65} direction="zoom" className="h-full">
+                <Link
+                  to={destinationSearchPath(place.destination)}
+                  className="pop-dest-card-item group"
+                >
+                  <div className="pop-card-img-wrap">
+                    <SafeImage
+                      src={place.imageUrl}
+                      alt={`${place.label} hotels`}
+                      className="h-full w-full object-cover"
+                      fallbackLabel={`${place.label} destination image`}
+                      showFallbackContent={false}
+                    />
+                    <span className="pop-card-overlay" aria-hidden="true" />
+                    <div className="pop-card-content">
+                      <h3 className="pop-card-city">{place.label}</h3>
+                      <p className="pop-card-desc">
+                        {place.hotelCount} hotel{place.hotelCount === 1 ? '' : 's'} to explore
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* NEARBY HOTELS */}
+      {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
+      <HomeHotelListing search={hotelSearch} geolocation={geolocation} />
+
+      <Reveal>
+        <div className="customer-section customer-section--compact customer-section--divided home-nearby-wrap">
+          <NearbyHotelsSection />
+        </div>
+      </Reveal>
+
       <section
         aria-labelledby="testimonials-heading"
-        className="mx-auto max-w-7xl space-y-3 px-4 py-5 sm:px-6 lg:py-6"
+        className="customer-section customer-section--compact"
       >
-        <Reveal>
+        <Reveal className="customer-section-heading home-stories-heading">
           <div>
-            <h2 id="testimonials-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">
+            <h2 id="testimonials-heading" className="customer-section-title">
               Guest stories
             </h2>
             <p className="mt-1 text-sm text-[var(--text-muted)]">Simple bookings and smoother stays, in travellers' own words.</p>
@@ -787,16 +776,16 @@ export function HomePage() {
         </Reveal>
 
         <Reveal direction="left">
-          <Carousel aria-label="Customer testimonials" controls="sides">
+          <Carousel aria-label="Customer testimonials" className="home-stories-carousel" controls="sides">
             {TESTIMONIALS.map((testimonial) => (
               <CarouselItem
                 key={testimonial.name}
-                className="w-80 sm:w-96 lg:w-[calc((100%-2rem)/3)]"
+                className="home-story-slide"
               >
-                <figure className="flex h-full min-h-[124px] flex-col justify-between rounded-xl border border-rose-100/60 bg-rose-50/35 p-3.5 shadow-sm">
+                <figure className="home-story-card">
                   <div>
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <Quote className="h-6 w-6 fill-rose-100 text-rose-200" aria-hidden="true" />
+                    <div className="home-story-card-topline">
+                      <Quote className="home-story-quote-icon" aria-hidden="true" />
                       <div
                         className="flex items-center gap-0.5"
                         aria-label={`${testimonial.rating} out of 5 stars`}
@@ -813,13 +802,13 @@ export function HomePage() {
                       </div>
                     </div>
 
-                    <blockquote className="text-sm leading-5 text-[var(--text-body)]">
+                    <blockquote className="home-story-quote">
                       “{testimonial.quote}”
                     </blockquote>
                   </div>
 
-                  <figcaption className="mt-3 flex items-center gap-2.5 border-t border-slate-100 pt-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100 text-[11px] font-bold text-rose-700">
+                  <figcaption className="home-story-author">
+                    <span className="home-story-avatar">
                       {testimonial.name
                         .split(' ')
                         .map((part) => part[0])
@@ -827,11 +816,11 @@ export function HomePage() {
                         .slice(0, 2)}
                     </span>
 
-                    <span className="text-sm font-semibold text-[var(--text-strong)]">
+                    <span className="home-story-name">
                       {testimonial.name}
                     </span>
 
-                    <span className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                    <span className="home-story-verified">
                       <CheckCircle2 className="h-3.5 w-3.5" />
                       Verified stay
                     </span>
@@ -843,107 +832,72 @@ export function HomePage() {
         </Reveal>
       </section>
 
-      <section
-        id="home-faqs"
-        aria-labelledby="home-faqs-heading"
-        className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 sm:px-6 lg:py-6"
-      >
-        <div className="space-y-3">
+      <div className="customer-section customer-section--compact customer-section--divided home-assurance-layout">
+        <section id="home-faqs" aria-labelledby="home-faqs-heading" className="home-faq-panel">
           <Reveal>
-            <div>
-              <h2 id="home-faqs-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">
-                Before you book
-              </h2>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Helpful answers for planning and managing your reservation.</p>
+            <div className="home-assurance-heading">
+              <p className="home-assurance-eyebrow">Booking help</p>
+              <h2 id="home-faqs-heading" className="customer-section-title">Before you book</h2>
+              <p>Quick answers to the questions travellers ask most.</p>
             </div>
           </Reveal>
 
-          <Reveal>
-            <div className="grid items-start gap-2 md:grid-cols-2">
+          <Reveal className="home-faq-list-wrap">
+            <div className="home-faq-list">
               {HOME_FAQS.map(({ question, answer }, index) => {
                 const isOpen = openHomeFaq === index;
                 const answerId = `home-faq-answer-${index}`;
 
                 return (
-                  <div
-                    key={question}
-                    className={cn(
-                      'overflow-hidden rounded-xl border transition-colors',
-                      isOpen
-                        ? 'border-blue-200 bg-blue-50/70 shadow-sm'
-                        : 'border-blue-100 bg-blue-50/30 hover:border-blue-200 hover:bg-blue-50/50',
-                    )}
-                  >
+                  <div key={question} className={cn('home-faq-item', isOpen && 'is-open')}>
                     <button
                       type="button"
-                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+                      className="home-faq-trigger"
                       aria-expanded={isOpen}
                       aria-controls={answerId}
                       onClick={() => setOpenHomeFaq(isOpen ? -1 : index)}
                     >
-                      <span className="min-w-0 flex-1 text-sm font-semibold text-[var(--text-strong)] sm:text-base">
-                        {question}
-                      </span>
-                      <ChevronDown
-                        className={cn(
-                          'h-4 w-4 shrink-0 text-brand-700 transition-transform duration-200',
-                          isOpen && 'rotate-180',
-                        )}
-                        aria-hidden="true"
-                      />
+                      <span>{question}</span>
+                      <ChevronDown className="home-faq-chevron" aria-hidden="true" />
                     </button>
 
-                    {isOpen && (
-                      <p
-                        id={answerId}
-                        className="border-t border-slate-100 px-4 py-3 text-sm leading-5 text-[var(--text-muted)]"
-                      >
-                        {answer}
-                      </p>
-                    )}
+                    {isOpen && <p id={answerId} className="home-faq-answer">{answer}</p>}
                   </div>
                 );
               })}
             </div>
           </Reveal>
-        </div>
-      </section>
+        </section>
 
-      {/* WHY CHOOSE GOKAASA */}
-      <section
-        aria-labelledby="why-heading"
-        className="mx-auto max-w-7xl border-t border-slate-200 px-4 py-5 sm:px-6 lg:py-6"
-      >
-        <div className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:grid-cols-[230px_1fr] lg:items-center lg:gap-5">
+        <section aria-labelledby="why-heading" className="home-confidence-panel">
           <Reveal>
-            <div>
-              <h2 id="why-heading" className="font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--text-strong)]">
-                Travel with confidence
-              </h2>
-              <p className="mt-1 text-sm leading-5 text-[var(--text-muted)]">A clearer, easier way to book your next stay.</p>
+            <div className="home-assurance-heading home-assurance-heading--inverse">
+              <p className="home-assurance-eyebrow">
+                <ShieldCheck aria-hidden="true" />
+                The Gokaasa promise
+              </p>
+              <h2 id="why-heading" className="customer-section-title">Book with peace of mind</h2>
+              <p>Clear choices and dependable help at every step.</p>
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5 lg:grid-cols-4 lg:gap-0">
+          <div className="home-confidence-list">
             {WHY_GOKAASA.map(({ icon: Icon, title, text }, index) => (
-              <Reveal key={title} delay={index * 70} className="h-full">
-                <div className="flex h-full gap-3 lg:border-l lg:border-slate-200 lg:px-4">
-                  <div className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                    WHY_ICON_TONES[index % WHY_ICON_TONES.length],
-                  )}>
-                    <Icon className="h-4.5 w-4.5" aria-hidden="true" />
+              <Reveal key={title} delay={index * 70}>
+                <div className="home-confidence-item">
+                  <div className={cn('home-confidence-icon', WHY_ICON_TONES[index % WHY_ICON_TONES.length])}>
+                    <Icon aria-hidden="true" />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-semibold text-[var(--text-strong)]">{title}</h3>
-                    <p className="mt-1 text-xs leading-4 text-[var(--text-muted)]">{text}</p>
+                  <div>
+                    <h3>{title}</h3>
+                    <p>{text}</p>
                   </div>
                 </div>
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
     </div>
   );

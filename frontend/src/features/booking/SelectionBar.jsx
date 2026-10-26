@@ -67,9 +67,9 @@ export function SelectionBar({ selection, onClear }) {
           startHold();
         }}
       />
-      <div role="region" aria-label="Your selection" className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:left-0 md:right-[var(--assistant-dock-offset,0px)]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="min-w-0 text-sm">
+      <div role="region" aria-label="Your selection" className="selection-bar fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/97 shadow-lg backdrop-blur md:left-0 md:right-[var(--assistant-dock-offset,0px)]">
+        <div className="selection-bar-inner mx-auto flex max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="selection-bar-copy min-w-0 text-sm">
             <p className="truncate font-semibold text-[var(--text-strong)]">
               {selection.roomName} · {selection.ratePlanName}
             </p>
@@ -78,9 +78,9 @@ export function SelectionBar({ selection, onClear }) {
               <span className="font-semibold text-[var(--text-body)]">{formatMoney(selection.finalAmountMinor)}</span>
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="selection-bar-actions flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear selected room" disabled={starting}>
-              <X className="h-4 w-4" aria-hidden="true" /> Clear
+              <X className="h-4 w-4" aria-hidden="true" /> <span>Clear</span>
             </Button>
             <Button onClick={onContinue} disabled={starting}>
               {starting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}

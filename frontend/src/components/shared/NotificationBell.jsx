@@ -66,7 +66,7 @@ export function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={rootRef}>
+    <div className="notification-bell relative" ref={rootRef}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -87,18 +87,18 @@ export function NotificationBell() {
         <div
           role="menu"
           aria-label="Notifications"
-          className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-xl shadow-black/10"
+          className="notification-popover absolute right-0 top-full z-40 mt-2 w-80 max-w-[90vw] overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-xl shadow-black/10"
         >
-          <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2.5">
+          <div className="notification-popover-header flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-2.5">
             <span className="text-sm font-semibold text-[var(--text-strong)]">Notifications</span>
             {unreadCount > 0 && (
-              <button type="button" onClick={markAllRead} className="flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+              <button type="button" onClick={markAllRead} className="notification-mark-all flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
                 <Check className="h-3 w-3" aria-hidden="true" /> Mark all read
               </button>
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto">
+          <div className="notification-popover-list max-h-80 overflow-y-auto">
             {items === null && <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Loading…</p>}
             {items?.length === 0 && <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">No notifications yet.</p>}
             {items?.map((notification) => {
@@ -114,7 +114,7 @@ export function NotificationBell() {
                     markOneRead(notification);
                     if (path) setOpen(false);
                   }}
-                  className="flex w-full items-start gap-2.5 border-b border-[var(--border-subtle)] px-4 py-3 text-left last:border-0 hover:bg-[var(--surface-muted)]"
+                  className="notification-popover-item flex w-full items-start gap-2.5 border-b border-[var(--border-subtle)] px-4 py-3 text-left last:border-0 hover:bg-[var(--surface-muted)]"
                 >
                   <span
                     aria-hidden="true"
@@ -133,7 +133,7 @@ export function NotificationBell() {
           <Link
             to="/notifications"
             onClick={() => setOpen(false)}
-            className="block border-t border-[var(--border-subtle)] px-4 py-2.5 text-center text-sm font-medium text-brand-700 hover:bg-[var(--surface-muted)]"
+            className="notification-popover-footer block border-t border-[var(--border-subtle)] px-4 py-2.5 text-center text-sm font-medium text-brand-700 hover:bg-[var(--surface-muted)]"
           >
             View all notifications
           </Link>

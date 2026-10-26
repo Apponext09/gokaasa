@@ -1,0 +1,326 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/pages/partner/PartnerDocumentsPage.jsx");const useCallback = __vite__cjsImport0_react["useCallback"]; const useEffect = __vite__cjsImport0_react["useEffect"]; const useState = __vite__cjsImport0_react["useState"];const _jsxDEV = __vite__cjsImport9_react_jsxDevRuntime["jsxDEV"];import __vite__cjsImport0_react from "/node_modules/.vite/deps/react.js?v=d0eff561";
+import { Navigate, useNavigate } from "/node_modules/.vite/deps/react-router-dom.js?v=b6831acf";
+import { CheckCircle2, FileText, Loader2, Upload } from "/node_modules/.vite/deps/lucide-react.js?v=45bdecb7";
+import { Alert, Card, CardContent, CardHeader, CardTitle, CardDescription, Badge } from "/src/components/ui/surfaces.jsx";
+import { Button } from "/src/components/ui/button.jsx";
+import { PageHeader, FullPageSpinner } from "/src/components/shared/index.jsx";
+import { DOCUMENT_TYPE_OPTIONS } from "/src/features/partner/schemas.js";
+import { partnerApi } from "/src/services/endpoints.js";
+import { normalizeError } from "/src/services/api.js";
+var _jsxFileName = "C:/Users/Samarth/OneDrive/Documents/Desktop/gokaasa/frontend/src/pages/partner/PartnerDocumentsPage.jsx";
+import __vite__cjsImport9_react_jsxDevRuntime from "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=d0eff561";
+var _s = $RefreshSig$(), _s2 = $RefreshSig$();
+const REQUIRED_DOC_TYPES = ["BUSINESS_REGISTRATION", "GOVERNMENT_ID"];
+function DocumentRow({ docType, label, uploaded, onUpload }) {
+	_s();
+	const [uploading, setUploading] = useState(false);
+	const [error, setError] = useState(null);
+	const inputId = `doc-${docType}`;
+	const handleChange = async (event) => {
+		const file = event.target.files?.[0];
+		event.target.value = "";
+		if (!file) return;
+		setError(null);
+		setUploading(true);
+		try {
+			await onUpload(file, docType);
+		} catch (err) {
+			setError(normalizeError(err).message);
+		} finally {
+			setUploading(false);
+		}
+	};
+	return /* @__PURE__ */ _jsxDEV("div", {
+		className: "flex flex-col gap-2 border-b border-[var(--border-subtle)] p-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between",
+		children: [/* @__PURE__ */ _jsxDEV("div", {
+			className: "flex items-center gap-3",
+			children: [/* @__PURE__ */ _jsxDEV("span", {
+				className: "grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--surface-muted)] text-[var(--text-muted)]",
+				children: /* @__PURE__ */ _jsxDEV(FileText, {
+					className: "h-4 w-4",
+					"aria-hidden": "true"
+				}, void 0, false, {
+					fileName: _jsxFileName,
+					lineNumber: 37,
+					columnNumber: 11
+				}, this)
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 36,
+				columnNumber: 9
+			}, this), /* @__PURE__ */ _jsxDEV("div", { children: [/* @__PURE__ */ _jsxDEV("p", {
+				className: "text-sm font-medium text-[var(--text-strong)]",
+				children: [
+					label,
+					" ",
+					REQUIRED_DOC_TYPES.includes(docType) && /* @__PURE__ */ _jsxDEV("span", {
+						className: "text-danger-600",
+						children: "*"
+					}, void 0, false, {
+						fileName: _jsxFileName,
+						lineNumber: 41,
+						columnNumber: 62
+					}, this)
+				]
+			}, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 40,
+				columnNumber: 11
+			}, this), error && /* @__PURE__ */ _jsxDEV("p", {
+				className: "text-xs text-danger-600",
+				children: error
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 43,
+				columnNumber: 21
+			}, this)] }, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 39,
+				columnNumber: 9
+			}, this)]
+		}, void 0, true, {
+			fileName: _jsxFileName,
+			lineNumber: 35,
+			columnNumber: 7
+		}, this), /* @__PURE__ */ _jsxDEV("div", {
+			className: "flex items-center gap-2",
+			children: [uploaded ? /* @__PURE__ */ _jsxDEV(Badge, {
+				tone: "success",
+				children: [/* @__PURE__ */ _jsxDEV(CheckCircle2, { className: "h-3 w-3" }, void 0, false, {
+					fileName: _jsxFileName,
+					lineNumber: 47,
+					columnNumber: 43
+				}, this), " Uploaded"]
+			}, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 47,
+				columnNumber: 21
+			}, this) : /* @__PURE__ */ _jsxDEV(Badge, {
+				tone: "neutral",
+				children: "Not uploaded"
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 47,
+				columnNumber: 99
+			}, this), /* @__PURE__ */ _jsxDEV("label", {
+				htmlFor: inputId,
+				children: [/* @__PURE__ */ _jsxDEV("input", {
+					id: inputId,
+					type: "file",
+					accept: ".jpg,.jpeg,.png,.pdf",
+					className: "sr-only",
+					onChange: handleChange,
+					disabled: uploading
+				}, void 0, false, {
+					fileName: _jsxFileName,
+					lineNumber: 49,
+					columnNumber: 11
+				}, this), /* @__PURE__ */ _jsxDEV(Button, {
+					type: "button",
+					variant: "secondary",
+					size: "sm",
+					disabled: uploading,
+					onClick: () => document.getElementById(inputId)?.click(),
+					children: [uploading ? /* @__PURE__ */ _jsxDEV(Loader2, { className: "h-4 w-4 animate-spin" }, void 0, false, {
+						fileName: _jsxFileName,
+						lineNumber: 51,
+						columnNumber: 26
+					}, this) : /* @__PURE__ */ _jsxDEV(Upload, { className: "h-4 w-4" }, void 0, false, {
+						fileName: _jsxFileName,
+						lineNumber: 51,
+						columnNumber: 73
+					}, this), uploaded ? "Replace" : "Upload"]
+				}, void 0, true, {
+					fileName: _jsxFileName,
+					lineNumber: 50,
+					columnNumber: 11
+				}, this)]
+			}, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 48,
+				columnNumber: 9
+			}, this)]
+		}, void 0, true, {
+			fileName: _jsxFileName,
+			lineNumber: 46,
+			columnNumber: 7
+		}, this)]
+	}, void 0, true, {
+		fileName: _jsxFileName,
+		lineNumber: 34,
+		columnNumber: 5
+	}, this);
+}
+_s(DocumentRow, "P/XvuLTck9DuA2IXptUoIMbk1qE=");
+_c = DocumentRow;
+export function PartnerDocumentsPage() {
+	_s2();
+	const navigate = useNavigate();
+	const [application, setApplication] = useState(null);
+	const [error, setError] = useState(null);
+	const [submitError, setSubmitError] = useState(null);
+	const [submitting, setSubmitting] = useState(false);
+	const load = useCallback(() => {
+		partnerApi.getApplication().then(setApplication).catch((err) => setError(normalizeError(err).message));
+	}, []);
+	useEffect(() => load(), [load]);
+	if (error) return /* @__PURE__ */ _jsxDEV(Alert, {
+		tone: "error",
+		children: error
+	}, void 0, false, {
+		fileName: _jsxFileName,
+		lineNumber: 76,
+		columnNumber: 21
+	}, this);
+	if (!application) return /* @__PURE__ */ _jsxDEV(FullPageSpinner, { label: "Loading your application" }, void 0, false, {
+		fileName: _jsxFileName,
+		lineNumber: 77,
+		columnNumber: 28
+	}, this);
+	if (application.status !== "DRAFT" && application.status !== "REJECTED") return /* @__PURE__ */ _jsxDEV(Navigate, {
+		to: "/partner/status",
+		replace: true
+	}, void 0, false, {
+		fileName: _jsxFileName,
+		lineNumber: 78,
+		columnNumber: 83
+	}, this);
+	const uploadedTypes = new Set(application.documents.map((doc) => doc.docType));
+	const missingRequired = REQUIRED_DOC_TYPES.filter((type) => !uploadedTypes.has(type));
+	const handleUpload = async (file, docType) => {
+		await partnerApi.uploadDocument(file, docType);
+		load();
+	};
+	const handleSubmit = async () => {
+		setSubmitError(null);
+		setSubmitting(true);
+		try {
+			await partnerApi.submit();
+			navigate("/partner/status", { replace: true });
+		} catch (err) {
+			setSubmitError(normalizeError(err).message);
+		} finally {
+			setSubmitting(false);
+		}
+	};
+	return /* @__PURE__ */ _jsxDEV("div", {
+		className: "mx-auto max-w-3xl space-y-6 px-4 py-10 sm:px-6",
+		children: [
+			/* @__PURE__ */ _jsxDEV(PageHeader, {
+				title: "Verification documents",
+				description: "Upload the documents below, then submit your application for review."
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 103,
+				columnNumber: 7
+			}, this),
+			application.status === "REJECTED" && application.rejectionReason && /* @__PURE__ */ _jsxDEV(Alert, {
+				tone: "warning",
+				title: "Your previous submission was not approved",
+				children: [application.rejectionReason, " Update your documents and submit again."]
+			}, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 109,
+				columnNumber: 9
+			}, this),
+			/* @__PURE__ */ _jsxDEV(Card, {
+				className: "overflow-hidden",
+				children: DOCUMENT_TYPE_OPTIONS.map((option) => /* @__PURE__ */ _jsxDEV(DocumentRow, {
+					docType: option.value,
+					label: option.label,
+					uploaded: uploadedTypes.has(option.value),
+					onUpload: handleUpload
+				}, option.value, false, {
+					fileName: _jsxFileName,
+					lineNumber: 116,
+					columnNumber: 11
+				}, this))
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 114,
+				columnNumber: 7
+			}, this),
+			/* @__PURE__ */ _jsxDEV(Card, { children: [/* @__PURE__ */ _jsxDEV(CardHeader, { children: [/* @__PURE__ */ _jsxDEV(CardTitle, { children: "Ready to submit?" }, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 122,
+				columnNumber: 11
+			}, this), /* @__PURE__ */ _jsxDEV(CardDescription, { children: missingRequired.length > 0 ? `Upload the remaining required documents to submit: ${missingRequired.join(", ")}.` : "All required documents are uploaded." }, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 123,
+				columnNumber: 11
+			}, this)] }, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 121,
+				columnNumber: 9
+			}, this), /* @__PURE__ */ _jsxDEV(CardContent, { children: [submitError && /* @__PURE__ */ _jsxDEV("div", {
+				className: "mb-4",
+				children: /* @__PURE__ */ _jsxDEV(Alert, {
+					tone: "error",
+					children: submitError
+				}, void 0, false, {
+					fileName: _jsxFileName,
+					lineNumber: 130,
+					columnNumber: 49
+				}, this)
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 130,
+				columnNumber: 27
+			}, this), /* @__PURE__ */ _jsxDEV(Button, {
+				size: "lg",
+				className: "w-full",
+				disabled: missingRequired.length > 0,
+				loading: submitting,
+				onClick: handleSubmit,
+				children: "Submit application for review"
+			}, void 0, false, {
+				fileName: _jsxFileName,
+				lineNumber: 131,
+				columnNumber: 11
+			}, this)] }, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 129,
+				columnNumber: 9
+			}, this)] }, void 0, true, {
+				fileName: _jsxFileName,
+				lineNumber: 120,
+				columnNumber: 7
+			}, this)
+		]
+	}, void 0, true, {
+		fileName: _jsxFileName,
+		lineNumber: 102,
+		columnNumber: 5
+	}, this);
+}
+_s2(PartnerDocumentsPage, "FG3ygvi6tOM5zdDm8RWUdj4sAUM=", false, function() {
+	return [useNavigate];
+});
+_c2 = PartnerDocumentsPage;
+var _c, _c2;
+$RefreshReg$(_c, "DocumentRow");
+$RefreshReg$(_c2, "PartnerDocumentsPage");
+import * as RefreshRuntime from "/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope;
+import * as __vite_react_currentExports from "/src/pages/partner/PartnerDocumentsPage.jsx";
+if (import.meta.hot && !inWebWorker) {
+  if (!window.$RefreshReg$) {
+    throw new Error(
+      "@vitejs/plugin-react can't detect preamble. Something is wrong."
+    );
+  }
+
+  const currentExports = __vite_react_currentExports;
+  queueMicrotask(() => {
+    RefreshRuntime.registerExportsForReactRefresh("C:/Users/Samarth/OneDrive/Documents/Desktop/gokaasa/frontend/src/pages/partner/PartnerDocumentsPage.jsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("C:/Users/Samarth/OneDrive/Documents/Desktop/gokaasa/frontend/src/pages/partner/PartnerDocumentsPage.jsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+function $RefreshReg$(type, id) { return RefreshRuntime.register(type, "C:/Users/Samarth/OneDrive/Documents/Desktop/gokaasa/frontend/src/pages/partner/PartnerDocumentsPage.jsx" + ' ' + id); }
+function $RefreshSig$() { return RefreshRuntime.createSignatureFunctionForTransform(); }
+
+//# sourceMappingURL=data:application/json;base64,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Y0FDYixzQkFBc0IsS0FBSyxXQUMxQix3QkFBQyxhQUFEO0tBQWdDLFNBQVMsT0FBTztLQUFPLE9BQU8sT0FBTztLQUFPLFVBQVUsY0FBYyxJQUFJLE9BQU8sS0FBSztLQUFHLFVBQVU7SUFBZSxHQUE5SCxPQUFPOzs7O1dBQXVILENBQ2pKO0dBQ0c7Ozs7O0dBRU4sd0JBQUMsTUFBRCxhQUNFLHdCQUFDLFlBQUQsYUFDRSx3QkFBQyxXQUFELFlBQVcsbUJBQTJCOzs7O2FBQ3RDLHdCQUFDLGlCQUFELFlBQ0csZ0JBQWdCLFNBQVMsSUFDdEIsc0RBQXNELGdCQUFnQixLQUFLLElBQUksRUFBRSxLQUNqRix1Q0FDVzs7OztXQUNQOzs7O2FBQ1osd0JBQUMsYUFBRCxhQUNHLGVBQWUsd0JBQUMsT0FBRDtJQUFLLFdBQVU7Y0FBTyx3QkFBQyxPQUFEO0tBQU8sTUFBSztlQUFTO0lBQW1COzs7OztHQUFNOzs7O2FBQ3BGLHdCQUFDLFFBQUQ7SUFBUSxNQUFLO0lBQUssV0FBVTtJQUFTLFVBQVUsZ0JBQWdCLFNBQVM7SUFBRyxTQUFTO0lBQVksU0FBUztjQUFjO0dBRS9HOzs7O1dBQ0c7Ozs7V0FDVDs7Ozs7RUFDSDs7Ozs7O0FBRVQiLCJuYW1lcyI6W10sInNvdXJjZXMiOlsiUGFydG5lckRvY3VtZW50c1BhZ2UuanN4Il0sInZlcnNpb24iOjMsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCB7IHVzZUNhbGxiYWNrLCB1c2VFZmZlY3QsIHVzZVN0YXRlIH0gZnJvbSAncmVhY3QnO1xyXG5pbXBvcnQgeyBOYXZpZ2F0ZSwgdXNlTmF2aWdhdGUgfSBmcm9tICdyZWFjdC1yb3V0ZXItZG9tJztcclxuaW1wb3J0IHsgQ2hlY2tDaXJjbGUyLCBGaWxlVGV4dCwgTG9hZGVyMiwgVXBsb2FkIH0gZnJvbSAnbHVjaWRlLXJlYWN0JztcclxuaW1wb3J0IHsgQWxlcnQsIENhcmQsIENhcmRDb250ZW50LCBDYXJkSGVhZGVyLCBDYXJkVGl0bGUsIENhcmREZXNjcmlwdGlvbiwgQmFkZ2UgfSBmcm9tICdAL2NvbXBvbmVudHMvdWkvc3VyZmFjZXMuanN4JztcclxuaW1wb3J0IHsgQnV0dG9uIH0gZnJvbSAnQC9jb21wb25lbnRzL3VpL2J1dHRvbi5qc3gnO1xyXG5pbXBvcnQgeyBQYWdlSGVhZGVyLCBGdWxsUGFnZVNwaW5uZXIgfSBmcm9tICdAL2NvbXBvbmVudHMvc2hhcmVkL2luZGV4LmpzeCc7XHJcbmltcG9ydCB7IERPQ1VNRU5UX1RZUEVfT1BUSU9OUyB9IGZyb20gJ0AvZmVhdHVyZXMvcGFydG5lci9zY2hlbWFzLmpzJztcclxuaW1wb3J0IHsgcGFydG5lckFwaSB9IGZyb20gJ0Avc2VydmljZXMvZW5kcG9pbnRzLmpzJztcclxuaW1wb3J0IHsgbm9ybWFsaXplRXJyb3IgfSBmcm9tICdAL3NlcnZpY2VzL2FwaS5qcyc7XHJcblxyXG5jb25zdCBSRVFVSVJFRF9ET0NfVFlQRVMgPSBbJ0JVU0lORVNTX1JFR0lTVFJBVElPTicsICdHT1ZFUk5NRU5UX0lEJ107XHJcblxyXG5mdW5jdGlvbiBEb2N1bWVudFJvdyh7IGRvY1R5cGUsIGxhYmVsLCB1cGxvYWRlZCwgb25VcGxvYWQgfSkge1xyXG4gIGNvbnN0IFt1cGxvYWRpbmcsIHNldFVwbG9hZGluZ10gPSB1c2VTdGF0ZShmYWxzZSk7XHJcbiAgY29uc3QgW2Vycm9yLCBzZXRFcnJvcl0gPSB1c2VTdGF0ZShudWxsKTtcclxuICBjb25zdCBpbnB1dElkID0gYGRvYy0ke2RvY1R5cGV9YDtcclxuXHJcbiAgY29uc3QgaGFuZGxlQ2hhbmdlID0gYXN5bmMgKGV2ZW50KSA9PiB7XHJcbiAgICBjb25zdCBmaWxlID0gZXZlbnQudGFyZ2V0LmZpbGVzPy5bMF07XHJcbiAgICBldmVudC50YXJnZXQudmFsdWUgPSAnJztcclxuICAgIGlmICghZmlsZSkgcmV0dXJuO1xyXG4gICAgc2V0RXJyb3IobnVsbCk7XHJcbiAgICBzZXRVcGxvYWRpbmcodHJ1ZSk7XHJcbiAgICB0cnkge1xyXG4gICAgICBhd2FpdCBvblVwbG9hZChmaWxlLCBkb2NUeXBlKTtcclxuICAgIH0gY2F0Y2ggKGVycikge1xyXG4gICAgICBzZXRFcnJvcihub3JtYWxpemVFcnJvcihlcnIpLm1lc3NhZ2UpO1xyXG4gICAgfSBmaW5hbGx5IHtcclxuICAgICAgc2V0VXBsb2FkaW5nKGZhbHNlKTtcclxuICAgIH1cclxuICB9O1xyXG5cclxuICByZXR1cm4gKFxyXG4gICAgPGRpdiBjbGFzc05hbWU9XCJmbGV4IGZsZXgtY29sIGdhcC0yIGJvcmRlci1iIGJvcmRlci1bdmFyKC0tYm9yZGVyLXN1YnRsZSldIHAtNCBsYXN0OmJvcmRlci1iLTAgc206ZmxleC1yb3cgc206aXRlbXMtY2VudGVyIHNtOmp1c3RpZnktYmV0d2VlblwiPlxyXG4gICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXggaXRlbXMtY2VudGVyIGdhcC0zXCI+XHJcbiAgICAgICAgPHNwYW4gY2xhc3NOYW1lPVwiZ3JpZCBoLTkgdy05IHNocmluay0wIHBsYWNlLWl0ZW1zLWNlbnRlciByb3VuZGVkLWZ1bGwgYmctW3ZhcigtLXN1cmZhY2UtbXV0ZWQpXSB0ZXh0LVt2YXIoLS10ZXh0LW11dGVkKV1cIj5cclxuICAgICAgICAgIDxGaWxlVGV4dCBjbGFzc05hbWU9XCJoLTQgdy00XCIgYXJpYS1oaWRkZW49XCJ0cnVlXCIgLz5cclxuICAgICAgICA8L3NwYW4+XHJcbiAgICAgICAgPGRpdj5cclxuICAgICAgICAgIDxwIGNsYXNzTmFtZT1cInRleHQtc20gZm9udC1tZWRpdW0gdGV4dC1bdmFyKC0tdGV4dC1zdHJvbmcpXVwiPlxyXG4gICAgICAgICAgICB7bGFiZWx9IHtSRVFVSVJFRF9ET0NfVFlQRVMuaW5jbHVkZXMoZG9jVHlwZSkgJiYgPHNwYW4gY2xhc3NOYW1lPVwidGV4dC1kYW5nZXItNjAwXCI+Kjwvc3Bhbj59XHJcbiAgICAgICAgICA8L3A+XHJcbiAgICAgICAgICB7ZXJyb3IgJiYgPHAgY2xhc3NOYW1lPVwidGV4dC14cyB0ZXh0LWRhbmdlci02MDBcIj57ZXJyb3J9PC9wPn1cclxuICAgICAgICA8L2Rpdj5cclxuICAgICAgPC9kaXY+XHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTJcIj5cclxuICAgICAgICB7dXBsb2FkZWQgPyA8QmFkZ2UgdG9uZT1cInN1Y2Nlc3NcIj48Q2hlY2tDaXJjbGUyIGNsYXNzTmFtZT1cImgtMyB3LTNcIiAvPiBVcGxvYWRlZDwvQmFkZ2U+IDogPEJhZGdlIHRvbmU9XCJuZXV0cmFsXCI+Tm90IHVwbG9hZGVkPC9CYWRnZT59XHJcbiAgICAgICAgPGxhYmVsIGh0bWxGb3I9e2lucHV0SWR9PlxyXG4gICAgICAgICAgPGlucHV0IGlkPXtpbnB1dElkfSB0eXBlPVwiZmlsZVwiIGFjY2VwdD1cIi5qcGcsLmpwZWcsLnBuZywucGRmXCIgY2xhc3NOYW1lPVwic3Itb25seVwiIG9uQ2hhbmdlPXtoYW5kbGVDaGFuZ2V9IGRpc2FibGVkPXt1cGxvYWRpbmd9IC8+XHJcbiAgICAgICAgICA8QnV0dG9uIHR5cGU9XCJidXR0b25cIiB2YXJpYW50PVwic2Vjb25kYXJ5XCIgc2l6ZT1cInNtXCIgZGlzYWJsZWQ9e3VwbG9hZGluZ30gb25DbGljaz17KCkgPT4gZG9jdW1lbnQuZ2V0RWxlbWVudEJ5SWQoaW5wdXRJZCk/LmNsaWNrKCl9PlxyXG4gICAgICAgICAgICB7dXBsb2FkaW5nID8gPExvYWRlcjIgY2xhc3NOYW1lPVwiaC00IHctNCBhbmltYXRlLXNwaW5cIiAvPiA6IDxVcGxvYWQgY2xhc3NOYW1lPVwiaC00IHctNFwiIC8+fVxyXG4gICAgICAgICAgICB7dXBsb2FkZWQgPyAnUmVwbGFjZScgOiAnVXBsb2FkJ31cclxuICAgICAgICAgIDwvQnV0dG9uPlxyXG4gICAgICAgIDwvbGFiZWw+XHJcbiAgICAgIDwvZGl2PlxyXG4gICAgPC9kaXY+XHJcbiAgKTtcclxufVxyXG5cclxuZXhwb3J0IGZ1bmN0aW9uIFBhcnRuZXJEb2N1bWVudHNQYWdlKCkge1xyXG4gIGNvbnN0IG5hdmlnYXRlID0gdXNlTmF2aWdhdGUoKTtcclxuICBjb25zdCBbYXBwbGljYXRpb24sIHNldEFwcGxpY2F0aW9uXSA9IHVzZVN0YXRlKG51bGwpO1xyXG4gIGNvbnN0IFtlcnJvciwgc2V0RXJyb3JdID0gdXNlU3RhdGUobnVsbCk7XHJcbiAgY29uc3QgW3N1Ym1pdEVycm9yLCBzZXRTdWJtaXRFcnJvcl0gPSB1c2VTdGF0ZShudWxsKTtcclxuICBjb25zdCBbc3VibWl0dGluZywgc2V0U3VibWl0dGluZ10gPSB1c2VTdGF0ZShmYWxzZSk7XHJcblxyXG4gIGNvbnN0IGxvYWQgPSB1c2VDYWxsYmFjaygoKSA9PiB7XHJcbiAgICBwYXJ0bmVyQXBpXHJcbiAgICAgIC5nZXRBcHBsaWNhdGlvbigpXHJcbiAgICAgIC50aGVuKHNldEFwcGxpY2F0aW9uKVxyXG4gICAgICAuY2F0Y2goKGVycikgPT4gc2V0RXJyb3Iobm9ybWFsaXplRXJyb3IoZXJyKS5tZXNzYWdlKSk7XHJcbiAgfSwgW10pO1xyXG5cclxuICB1c2VFZmZlY3QoKCkgPT4gbG9hZCgpLCBbbG9hZF0pO1xyXG5cclxuICBpZiAoZXJyb3IpIHJldHVybiA8QWxlcnQgdG9uZT1cImVycm9yXCI+e2Vycm9yfTwvQWxlcnQ+O1xyXG4gIGlmICghYXBwbGljYXRpb24pIHJldHVybiA8RnVsbFBhZ2VTcGlubmVyIGxhYmVsPVwiTG9hZGluZyB5b3VyIGFwcGxpY2F0aW9uXCIgLz47XHJcbiAgaWYgKGFwcGxpY2F0aW9uLnN0YXR1cyAhPT0gJ0RSQUZUJyAmJiBhcHBsaWNhdGlvbi5zdGF0dXMgIT09ICdSRUpFQ1RFRCcpIHJldHVybiA8TmF2aWdhdGUgdG89XCIvcGFydG5lci9zdGF0dXNcIiByZXBsYWNlIC8+O1xyXG5cclxuICBjb25zdCB1cGxvYWRlZFR5cGVzID0gbmV3IFNldChhcHBsaWNhdGlvbi5kb2N1bWVudHMubWFwKChkb2MpID0+IGRvYy5kb2NUeXBlKSk7XHJcbiAgY29uc3QgbWlzc2luZ1JlcXVpcmVkID0gUkVRVUlSRURfRE9DX1RZUEVTLmZpbHRlcigodHlwZSkgPT4gIXVwbG9hZGVkVHlwZXMuaGFzKHR5cGUpKTtcclxuXHJcbiAgY29uc3QgaGFuZGxlVXBsb2FkID0gYXN5bmMgKGZpbGUsIGRvY1R5cGUpID0+IHtcclxuICAgIGF3YWl0IHBhcnRuZXJBcGkudXBsb2FkRG9jdW1lbnQoZmlsZSwgZG9jVHlwZSk7XHJcbiAgICBsb2FkKCk7XHJcbiAgfTtcclxuXHJcbiAgY29uc3QgaGFuZGxlU3VibWl0ID0gYXN5bmMgKCkgPT4ge1xyXG4gICAgc2V0U3VibWl0RXJyb3IobnVsbCk7XHJcbiAgICBzZXRTdWJtaXR0aW5nKHRydWUpO1xyXG4gICAgdHJ5IHtcclxuICAgICAgYXdhaXQgcGFydG5lckFwaS5zdWJtaXQoKTtcclxuICAgICAgbmF2aWdhdGUoJy9wYXJ0bmVyL3N0YXR1cycsIHsgcmVwbGFjZTogdHJ1ZSB9KTtcclxuICAgIH0gY2F0Y2ggKGVycikge1xyXG4gICAgICBzZXRTdWJtaXRFcnJvcihub3JtYWxpemVFcnJvcihlcnIpLm1lc3NhZ2UpO1xyXG4gICAgfSBmaW5hbGx5IHtcclxuICAgICAgc2V0U3VibWl0dGluZyhmYWxzZSk7XHJcbiAgICB9XHJcbiAgfTtcclxuXHJcbiAgcmV0dXJuIChcclxuICAgIDxkaXYgY2xhc3NOYW1lPVwibXgtYXV0byBtYXgtdy0zeGwgc3BhY2UteS02IHB4LTQgcHktMTAgc206cHgtNlwiPlxyXG4gICAgICA8UGFnZUhlYWRlclxyXG4gICAgICAgIHRpdGxlPVwiVmVyaWZpY2F0aW9uIGRvY3VtZW50c1wiXHJcbiAgICAgICAgZGVzY3JpcHRpb249XCJVcGxvYWQgdGhlIGRvY3VtZW50cyBiZWxvdywgdGhlbiBzdWJtaXQgeW91ciBhcHBsaWNhdGlvbiBmb3IgcmV2aWV3LlwiXHJcbiAgICAgIC8+XHJcblxyXG4gICAgICB7YXBwbGljYXRpb24uc3RhdHVzID09PSAnUkVKRUNURUQnICYmIGFwcGxpY2F0aW9uLnJlamVjdGlvblJlYXNvbiAmJiAoXHJcbiAgICAgICAgPEFsZXJ0IHRvbmU9XCJ3YXJuaW5nXCIgdGl0bGU9XCJZb3VyIHByZXZpb3VzIHN1Ym1pc3Npb24gd2FzIG5vdCBhcHByb3ZlZFwiPlxyXG4gICAgICAgICAge2FwcGxpY2F0aW9uLnJlamVjdGlvblJlYXNvbn0gVXBkYXRlIHlvdXIgZG9jdW1lbnRzIGFuZCBzdWJtaXQgYWdhaW4uXHJcbiAgICAgICAgPC9BbGVydD5cclxuICAgICAgKX1cclxuXHJcbiAgICAgIDxDYXJkIGNsYXNzTmFtZT1cIm92ZXJmbG93LWhpZGRlblwiPlxyXG4gICAgICAgIHtET0NVTUVOVF9UWVBFX09QVElPTlMubWFwKChvcHRpb24pID0+IChcclxuICAgICAgICAgIDxEb2N1bWVudFJvdyBrZXk9e29wdGlvbi52YWx1ZX0gZG9jVHlwZT17b3B0aW9uLnZhbHVlfSBsYWJlbD17b3B0aW9uLmxhYmVsfSB1cGxvYWRlZD17dXBsb2FkZWRUeXBlcy5oYXMob3B0aW9uLnZhbHVlKX0gb25VcGxvYWQ9e2hhbmRsZVVwbG9hZH0gLz5cclxuICAgICAgICApKX1cclxuICAgICAgPC9DYXJkPlxyXG5cclxuICAgICAgPENhcmQ+XHJcbiAgICAgICAgPENhcmRIZWFkZXI+XHJcbiAgICAgICAgICA8Q2FyZFRpdGxlPlJlYWR5IHRvIHN1Ym1pdD88L0NhcmRUaXRsZT5cclxuICAgICAgICAgIDxDYXJkRGVzY3JpcHRpb24+XHJcbiAgICAgICAgICAgIHttaXNzaW5nUmVxdWlyZWQubGVuZ3RoID4gMFxyXG4gICAgICAgICAgICAgID8gYFVwbG9hZCB0aGUgcmVtYWluaW5nIHJlcXVpcmVkIGRvY3VtZW50cyB0byBzdWJtaXQ6ICR7bWlzc2luZ1JlcXVpcmVkLmpvaW4oJywgJyl9LmBcclxuICAgICAgICAgICAgICA6ICdBbGwgcmVxdWlyZWQgZG9jdW1lbnRzIGFyZSB1cGxvYWRlZC4nfVxyXG4gICAgICAgICAgPC9DYXJkRGVzY3JpcHRpb24+XHJcbiAgICAgICAgPC9DYXJkSGVhZGVyPlxyXG4gICAgICAgIDxDYXJkQ29udGVudD5cclxuICAgICAgICAgIHtzdWJtaXRFcnJvciAmJiA8ZGl2IGNsYXNzTmFtZT1cIm1iLTRcIj48QWxlcnQgdG9uZT1cImVycm9yXCI+e3N1Ym1pdEVycm9yfTwvQWxlcnQ+PC9kaXY+fVxyXG4gICAgICAgICAgPEJ1dHRvbiBzaXplPVwibGdcIiBjbGFzc05hbWU9XCJ3LWZ1bGxcIiBkaXNhYmxlZD17bWlzc2luZ1JlcXVpcmVkLmxlbmd0aCA+IDB9IGxvYWRpbmc9e3N1Ym1pdHRpbmd9IG9uQ2xpY2s9e2hhbmRsZVN1Ym1pdH0+XHJcbiAgICAgICAgICAgIFN1Ym1pdCBhcHBsaWNhdGlvbiBmb3IgcmV2aWV3XHJcbiAgICAgICAgICA8L0J1dHRvbj5cclxuICAgICAgICA8L0NhcmRDb250ZW50PlxyXG4gICAgICA8L0NhcmQ+XHJcbiAgICA8L2Rpdj5cclxuICApO1xyXG59XHJcbiJdfQ==

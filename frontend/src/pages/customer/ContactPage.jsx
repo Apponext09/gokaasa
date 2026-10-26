@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   Mail,
   MapPin,
@@ -17,21 +16,6 @@ import { Input } from '@/components/ui/form-controls.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
-
-const FAQS = [
-  {
-    q: 'How do I cancel a booking?',
-    a: "Open My Trips, select the booking, and use Cancel Booking. The refund you'll receive is shown before you confirm, based on the policy you booked under.",
-  },
-  {
-    q: 'When is my card charged?',
-    a: 'Payment is collected at the time of booking, through our payment partner. You never need to pay anything extra at the hotel beyond what was shown at booking, unless you add paid extras on site.',
-  },
-  {
-    q: 'Can I change my dates after booking?',
-    a: "Date changes aren't available directly yet -- cancel (subject to the policy you booked) and make a new booking for your new dates.",
-  },
-];
 
 const POLICIES = [
   {
@@ -53,55 +37,6 @@ const POLICIES = [
     text: 'Refunds follow the cancellation policy shown at the time of booking. Approved refunds are returned to your original payment method; timing depends on your bank or card issuer.',
   },
 ];
-
-function FAQItem({ question, answer, isOpen, onClick }) {
-  return (
-    <div
-      className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
-        isOpen
-          ? 'border-brand-200 bg-brand-50/40 shadow-sm'
-          : 'border-[var(--border-subtle)] bg-white hover:border-brand-100 hover:shadow-sm'
-      }`}
-    >
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left sm:px-6"
-        aria-expanded={isOpen}
-      >
-        <span className="text-sm font-semibold leading-6 text-[var(--text-strong)] sm:text-base">
-          {question}
-        </span>
-
-        <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
-            isOpen
-              ? 'bg-brand-700 text-white'
-              : 'bg-[var(--surface-muted)] text-[var(--text-muted)]'
-          }`}
-        >
-          <ChevronDown
-            className={`h-4 w-4 transition-transform duration-300 ${
-              isOpen ? 'rotate-180' : ''
-            }`}
-          />
-        </span>
-      </button>
-
-      <div
-        className={`grid transition-all duration-300 ${
-          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="px-5 pb-5 text-sm leading-7 text-[var(--text-muted)] sm:px-6 sm:pb-6">
-            {answer}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function NewsletterSection() {
   const [email, setEmail] = useState('');
@@ -188,17 +123,15 @@ function NewsletterSection() {
 }
 
 export function ContactPage() {
-  const [openFaq, setOpenFaq] = useState(0);
-
   useDocumentMeta({
     title: 'Contact Us | Gokaasa',
     description:
-      'Get in touch with Gokaasa support, or find answers to common questions.',
+      'Get in touch with Gokaasa support. Whether you have a question about a booking or need assistance, our support team is here for you.',
     canonicalPath: '/contact',
   });
 
   return (
-    <div className="min-h-screen bg-[var(--surface-page)]">
+    <div className="contact-page min-h-screen bg-[var(--surface-page)]">
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-brand-50/80 via-white to-amber-50/50" />
@@ -207,7 +140,7 @@ export function ContactPage() {
 
         <div className="absolute -left-32 top-40 h-72 w-72 rounded-full bg-amber-200/20 blur-3xl" />
 
-        <div className="relative mx-auto w-full max-w-7xl px-4 pb-16 pt-12 sm:px-6 lg:px-8 lg:pb-20 lg:pt-16">
+        <div className="relative mx-auto w-full max-w-7xl px-4 pb-12 pt-10 sm:px-6 lg:px-8 lg:pb-14 lg:pt-12">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 shadow-sm backdrop-blur">
               <Sparkles className="h-4 w-4" />
@@ -227,7 +160,7 @@ export function ContactPage() {
         <div className="grid gap-5 md:grid-cols-2">
           <a
             href="tel:+919876543210"
-            className="group relative overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:p-7"
+            className="group relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_20px_48px_rgba(15,23,42,0.11)]"
           >
             <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-brand-50 blur-2xl transition-all duration-300 group-hover:bg-brand-100" />
 
@@ -259,7 +192,7 @@ export function ContactPage() {
 
           <a
             href="mailto:support@gokaasa.com"
-            className="group relative overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:p-7"
+            className="group relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_14px_38px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-[0_20px_48px_rgba(15,23,42,0.11)]"
           >
             <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-50 blur-2xl transition-all duration-300 group-hover:bg-amber-100" />
 
@@ -291,64 +224,9 @@ export function ContactPage() {
         </div>
       </section>
 
-      {/* FAQ */}
-      <section
-        id="faqs"
-        className="mx-auto w-full max-w-5xl px-4 py-20 sm:px-6 lg:py-24"
-      >
-        <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
-              Need answers?
-            </span>
-
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-[var(--text-strong)] sm:text-4xl">
-              Frequently asked questions
-            </h2>
-
-            <p className="mt-4 text-sm leading-7 text-[var(--text-muted)]">
-              Find quick answers to some of the most common questions about
-              bookings, payments and cancellations.
-            </p>
-
-            <div className="mt-8 hidden rounded-2xl border border-brand-100 bg-brand-50/60 p-5 lg:block">
-              <div className="flex gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm">
-                  <ShieldCheck className="h-4 w-4" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-semibold text-[var(--text-strong)]">
-                    Need more help?
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                    Our support team can help you with booking-specific
-                    questions.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {FAQS.map(({ q, a }, index) => (
-              <FAQItem
-                key={q}
-                question={q}
-                answer={a}
-                isOpen={openFaq === index}
-                onClick={() =>
-                  setOpenFaq(openFaq === index ? -1 : index)
-                }
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* Policies */}
-      <section className="border-y border-[var(--border-subtle)] bg-white/60">
-        <div className="mx-auto w-full max-w-5xl px-4 py-20 sm:px-6 lg:py-24">
+      <section className="mt-12 border-y border-[var(--border-subtle)] bg-white/60">
+        <div className="mx-auto w-full max-w-5xl px-4 py-12 sm:px-6 lg:py-14">
           <div className="mx-auto max-w-2xl text-center">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
               Important information
@@ -364,12 +242,12 @@ export function ContactPage() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid gap-5 md:grid-cols-3">
             {POLICIES.map(({ id, icon: Icon, title, text }) => (
               <section
                 key={id}
                 id={id}
-                className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg"
+                className="group rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg"
               >
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100">
                   <Icon className="h-5 w-5" />
@@ -389,8 +267,8 @@ export function ContactPage() {
       </section>
 
       {/* Support CTA */}
-      <section className="px-4 py-20 sm:px-6 lg:py-24">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 px-6 py-12 shadow-[0_25px_70px_rgba(15,23,42,0.18)] sm:px-10 sm:py-16">
+      <section className="px-4 py-12 sm:px-6 lg:py-14">
+        <div className="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-brand-950 px-6 py-10 shadow-[0_22px_55px_rgba(15,23,42,0.16)] sm:px-10 sm:py-12">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10">
               <Sparkles className="h-6 w-6 text-amber-300" />

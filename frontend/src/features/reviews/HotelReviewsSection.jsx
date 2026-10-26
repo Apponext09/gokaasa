@@ -44,9 +44,9 @@ export function HotelReviewsSection({ hotelRef, rating }) {
   }, [hotelRef, page, sort, total]);
 
   return (
-    <section id="reviews" aria-labelledby="reviews-heading" className="space-y-5">
+    <section id="reviews" aria-labelledby="reviews-heading" className="hotel-detail-panel space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="reviews-heading" className="text-xl font-semibold text-[var(--text-strong)]">Guest reviews</h2>
+        <h2 id="reviews-heading" className="text-lg font-semibold text-[var(--text-strong)]">Guest reviews</h2>
         {total > 0 && (
           <Select
             aria-label="Sort reviews"
@@ -67,8 +67,8 @@ export function HotelReviewsSection({ hotelRef, rating }) {
       {total === 0 ? (
         <p className="text-sm text-[var(--text-muted)]">No reviews yet. Be the first to share your stay.</p>
       ) : (
-        <div className="grid gap-6 md:grid-cols-[14rem_minmax(0,1fr)]">
-          <div className="h-fit space-y-3 rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-5">
+        <div className="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)]">
+          <div className="h-fit space-y-2.5 rounded-[var(--radius-card)] bg-[var(--surface-muted)] p-4">
             <div className="flex items-baseline gap-1.5">
               <span className="text-3xl font-semibold text-[var(--text-strong)]">{rating.average.toFixed(1)}</span>
               <span className="text-sm text-[var(--text-muted)]">/ 5</span>

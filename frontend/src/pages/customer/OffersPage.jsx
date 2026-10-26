@@ -17,6 +17,9 @@ const CATEGORIES = [
   { key: 'destination', label: 'Destination Offers', test: (o) => o.destinations?.length > 0 },
 ];
 
+const OFFERS_HERO_IMAGE =
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=2000&q=88';
+
 export function OffersPage() {
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
@@ -46,14 +49,21 @@ export function OffersPage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-950 via-brand-900 to-brand-950">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_60%)]" />
-        <div className="relative mx-auto max-w-5xl px-4 py-16 text-center sm:px-6">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/10">
-            <Sparkles className="h-6 w-6 text-accent-200" aria-hidden="true" />
+      <section className="offers-hero relative isolate overflow-hidden bg-slate-900">
+        <img
+          src={OFFERS_HERO_IMAGE}
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          className="offers-hero-image absolute inset-0 -z-20 h-full w-full object-cover"
+        />
+        <div className="offers-hero-overlay absolute inset-0 -z-10" />
+        <div className="offers-hero-content relative mx-auto max-w-5xl px-4 py-16 text-center sm:px-6">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/20 backdrop-blur-sm">
+            <Sparkles className="h-6 w-6 text-white" aria-hidden="true" />
           </div>
-          <h1 className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-white sm:text-4xl">Exclusive Offers</h1>
-          <p className="mt-3 text-sm leading-6 text-white/70 sm:text-base">Unlock more value on your next stay with Gokaasa.</p>
+          <h1 className="font-[var(--font-display)] text-3xl font-semibold tracking-tight text-white drop-shadow-md sm:text-4xl">Exclusive Offers</h1>
+          <p className="mt-3 text-sm leading-6 text-white drop-shadow-sm sm:text-base">Unlock more value on your next stay with Gokaasa.</p>
         </div>
       </section>
 

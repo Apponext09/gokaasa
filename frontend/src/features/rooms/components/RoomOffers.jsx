@@ -23,9 +23,9 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
   const freeCancel = plan.refundable && plan.cancellationPolicy && !plan.cancellationPolicy.isNonRefundable && plan.cancellationPolicy.refundPercent === 100;
 
   return (
-    <li className={cn('rounded-[var(--radius-control)] border p-4 transition-colors', selected ? 'border-brand-500 bg-brand-50/60' : 'border-[var(--border-subtle)]')}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-2">
+    <li className={cn('customer-rate-plan rounded-[var(--radius-control)] border p-3 transition-colors', selected ? 'is-selected border-brand-500 bg-brand-50/60' : 'border-[var(--border-subtle)]')}>
+      <div className="rate-plan-layout flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="rate-plan-copy min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-[var(--text-strong)]">{plan.name}</p>
             <Badge tone="brand"><UtensilsCrossed className="h-3 w-3" aria-hidden="true" /> {MEAL_LABEL[plan.mealPlan]}</Badge>
@@ -41,12 +41,12 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
               <Badge tone="danger"><Undo2 className="h-3 w-3" aria-hidden="true" /> Non-refundable</Badge>
             )}
           </div>
-          <p className="text-sm text-[var(--text-muted)]">{cancelText}</p>
+          <p className="line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">{cancelText}</p>
         </div>
 
-        <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
+        <div className="rate-plan-price flex shrink-0 flex-col items-start gap-2 sm:items-end">
           <p className="text-right">
-            <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(plan.pricePerNight)}</span>
+            <span className="text-lg font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(plan.pricePerNight)}</span>
             <span className="text-sm text-[var(--text-muted)]"> / night</span>
           </p>
           <p className="text-xs text-[var(--text-muted)]">
@@ -58,7 +58,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
         </div>
       </div>
 
-      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="rate-plan-breakdown-toggle mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-700 hover:underline">
         <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} aria-hidden="true" /> Price breakdown
       </button>
       {open && (
@@ -91,10 +91,10 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
   const scarce = room.available && room.availableRooms > 0 && room.availableRooms <= 3;
 
   return (
-    <article className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
-      <div className="grid gap-0 md:grid-cols-[18rem_minmax(0,1fr)]">
-        <div className="relative">
-          <SafeImage src={current?.url} alt={current?.altText ?? room.name} className="aspect-[4/3] w-full md:h-full md:aspect-auto md:min-h-56" sizes="(min-width: 768px) 288px, 100vw" fallbackLabel={`${room.name}: photos coming soon`} />
+    <article className="customer-room-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+      <div className="grid gap-0 md:grid-cols-[13rem_minmax(0,1fr)]">
+        <div className="room-card-media relative">
+          <SafeImage src={current?.url} alt={current?.altText ?? room.name} className="aspect-[16/7] w-full md:h-full md:aspect-auto md:min-h-40" sizes="(min-width: 768px) 208px, 100vw" fallbackLabel={`${room.name}: photos coming soon`} />
           {images.length > 1 && (
             <div className="absolute bottom-2 left-2 right-2 flex gap-1 overflow-x-auto">
               {images.map((image, i) => (
@@ -106,9 +106,9 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
           )}
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4 p-5">
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold tracking-tight text-[var(--text-strong)]">{room.name}</h3>
+        <div className="room-card-content flex min-w-0 flex-col gap-3 p-4">
+          <div className="room-card-summary space-y-1.5">
+            <h3 className="text-base font-semibold tracking-tight text-[var(--text-strong)]">{room.name}</h3>
             <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
               {room.roomSizeSqm != null && (
                 <li className="flex items-center gap-1.5"><Maximize2 className="h-3.5 w-3.5 text-brand-700" aria-hidden="true" /> {room.roomSizeSqm} m²</li>
@@ -131,7 +131,7 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
             {scarce && <Badge tone="warning">Only {room.availableRooms} room{room.availableRooms === 1 ? '' : 's'} left</Badge>}
           </div>
 
-          <ul className="space-y-3" aria-label={`Rate plans for ${room.name}`}>
+          <ul className="space-y-2.5" aria-label={`Rate plans for ${room.name}`}>
             {room.ratePlans.map((plan) => (
               <RatePlanRow
                 key={plan.ratePlanId}

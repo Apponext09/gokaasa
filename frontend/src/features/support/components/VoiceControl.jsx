@@ -11,7 +11,7 @@ export function VoiceControl({ lang, listening, processing, onToggle }) {
   const label = listening ? t('listening', lang) : processing ? t('searching', lang) : t('micIdleLabel', lang);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="assistant-voice-control flex items-center gap-2">
       <Button
         type="button"
         size="sm"

@@ -7,12 +7,12 @@ export function StaySummary({ quote, className = '' }) {
   const { hotel, room, ratePlan, cancellationPolicy, stay, totals, coupon } = quote;
   const money = (minor) => formatMoneyMinor(minor, totals.currency);
   return (
-    <article className={`overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm ${className}`} aria-label="Booking summary">
-      <div className="aspect-[16/9] bg-[var(--surface-muted)]">
+    <article className={`stay-summary overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm ${className}`} aria-label="Booking summary">
+      <div className="stay-summary-media aspect-[16/9] bg-[var(--surface-muted)]">
         <SafeImage src={hotel.imageUrl} alt={hotel.name} className="h-full w-full object-cover" sizes="(min-width: 1024px) 22rem, 100vw" />
       </div>
-      <div className="space-y-4 p-5">
-        <div>
+      <div className="stay-summary-body space-y-4 p-5">
+        <div className="stay-summary-identity">
           <h2 className="text-lg font-semibold text-[var(--text-strong)]">{hotel.name}</h2>
           <p className="flex items-start gap-1.5 text-sm text-[var(--text-muted)]">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -20,7 +20,7 @@ export function StaySummary({ quote, className = '' }) {
           </p>
         </div>
 
-        <dl className="grid gap-3 text-sm">
+        <dl className="stay-summary-facts grid gap-3 text-sm">
           <div className="flex gap-2">
             <Bed className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
             <div>
@@ -56,7 +56,7 @@ export function StaySummary({ quote, className = '' }) {
           </div>
         </dl>
 
-        <div className="space-y-1.5 border-t border-[var(--border-subtle)] pt-4 text-sm" aria-label="Price breakdown">
+        <div className="stay-summary-price space-y-1.5 border-t border-[var(--border-subtle)] pt-4 text-sm" aria-label="Price breakdown">
           <Row label={`${stay.rooms} room${stay.rooms === 1 ? '' : 's'} × ${stay.nights} night${stay.nights === 1 ? '' : 's'}`} value={money(totals.subtotal)} />
           {totals.discount > 0 && <Row label="Discount" value={`−${money(totals.discount)}`} tone="success" />}
           <Row label="Taxes" value={money(totals.taxes)} />

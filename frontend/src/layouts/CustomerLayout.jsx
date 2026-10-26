@@ -364,6 +364,7 @@ function MobileDrawer({ open, onClose }) {
         aria-label="Main"
         className={cn(
           `
+            customer-mobile-drawer
             absolute
             inset-y-0
             right-0
@@ -385,6 +386,7 @@ function MobileDrawer({ open, onClose }) {
 
         <div
           className="
+            customer-mobile-drawer-header
             flex
             items-center
             justify-between
@@ -412,9 +414,10 @@ function MobileDrawer({ open, onClose }) {
 
         {/* Premium Drawer Intro */}
 
-        <div className="px-5 pt-5">
+        <div className="customer-mobile-drawer-intro px-5 pt-5">
           <div
             className="
+              customer-mobile-drawer-promo
               overflow-hidden
               rounded-2xl
               bg-gradient-to-br
@@ -482,7 +485,7 @@ function MobileDrawer({ open, onClose }) {
 
         {/* Navigation */}
 
-        <div className="px-5 py-5">
+        <div className="customer-mobile-drawer-links px-5 py-5">
           <p
             className="
               mb-2
@@ -850,7 +853,7 @@ function Footer() {
       ===================================================== */}
 
       <div
-        className="
+        className="customer-footer-main
           mx-auto
           max-w-[1340px]
           px-4
@@ -860,7 +863,7 @@ function Footer() {
         "
       >
         <div
-          className="
+          className="customer-footer-grid
             grid
             gap-8
             sm:grid-cols-2
@@ -871,11 +874,11 @@ function Footer() {
               BRAND
           ================================================= */}
 
-          <div className="space-y-3">
+          <div className="customer-footer-brand space-y-3">
             {/* Logo container */}
 
             <div
-              className="
+              className="customer-footer-logo
                 inline-flex
                 w-fit
                 items-center
@@ -889,7 +892,7 @@ function Footer() {
             </div>
 
             <p
-              className="
+              className="customer-footer-copy
                 max-w-sm
                 text-[13px]
                 leading-6
@@ -901,7 +904,7 @@ function Footer() {
 
             {/* Trust Badges */}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="customer-footer-badges flex flex-wrap gap-2">
               <span
                 className="
                   inline-flex
@@ -951,7 +954,7 @@ function Footer() {
 
             {/* Social */}
 
-            <div className="pt-2">
+            <div className="customer-footer-social pt-2">
               <h3
                 className="
                   mb-3
@@ -983,15 +986,6 @@ function Footer() {
                 </SocialButton>
               </div>
 
-              <p
-                className="
-                  mt-2
-                  text-[11px]
-                  text-[#94A3B8]
-                "
-              >
-                Social channels coming soon
-              </p>
             </div>
           </div>
 
@@ -999,7 +993,7 @@ function Footer() {
               ABOUT
           ================================================= */}
 
-          <div className="space-y-3">
+          <div className="customer-footer-column space-y-3">
             <h3
               className="
                 text-[13px]
@@ -1055,7 +1049,7 @@ function Footer() {
               EXPLORE
           ================================================= */}
 
-          <div className="space-y-3">
+          <div className="customer-footer-column space-y-3">
             <h3
               className="
                 text-[13px]
@@ -1107,7 +1101,7 @@ function Footer() {
               OTHER LINKS
           ================================================= */}
 
-          <div className="space-y-3">
+          <div className="customer-footer-column space-y-3">
             <h3
               className="
                 text-[13px]
@@ -1184,14 +1178,14 @@ function Footer() {
       ===================================================== */}
 
       <div
-        className="
+        className="customer-footer-bottom
           border-t
           border-white/15
           bg-[#080F1A]
         "
       >
         <div
-          className="
+          className="customer-footer-bottom-inner
             mx-auto
             flex
             max-w-[1340px]
@@ -1379,9 +1373,28 @@ export function CustomerLayout() {
 
             {isAuthenticated && (
               <Link
+                to="/my-trips"
+                aria-label="My bookings"
+                title="My bookings"
+                className="customer-mobile-trips inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-body)] transition-all hover:bg-[var(--surface-muted)] hover:text-brand-600 xl:hidden"
+              >
+                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="2" y="7" width="20" height="14" rx="2" />
+                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                  <path d="M10 14h4" />
+                </svg>
+                <span className="customer-mobile-trips-label">
+                  <small>Manage</small>
+                  <strong>Bookings</strong>
+                </span>
+              </Link>
+            )}
+
+            {isAuthenticated && (
+              <Link
                 to="/wishlist"
                 aria-label="Wishlist"
-                className="
+                className="customer-mobile-wishlist
                   inline-flex
                   h-10
                   w-10
@@ -1405,7 +1418,7 @@ export function CustomerLayout() {
             {/* Mobile Notification */}
 
             {isAuthenticated && (
-              <div className="md:hidden">
+              <div className="customer-mobile-notification md:hidden">
                 <NotificationBell />
               </div>
             )}
@@ -1423,7 +1436,7 @@ export function CustomerLayout() {
               onClick={() =>
                 setDrawerOpen((open) => !open)
               }
-              className="
+              className="customer-mobile-menu
                 inline-flex
                 h-10
                 w-10

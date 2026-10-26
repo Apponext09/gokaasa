@@ -54,7 +54,7 @@ export function MyTripsPage() {
   const refresh = () => setReloadKey((key) => key + 1);
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-6">
+    <div className="my-trips-page mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-6">
       <PageHeader title="My trips" description="Bookings you have made on Gokaasa." />
       <Tabs label="Trips" value={tab} items={TABS} onChange={(value) => setParams({ tab: value })} />
 
@@ -65,31 +65,31 @@ export function MyTripsPage() {
         <EmptyState icon={Luggage} title="Nothing here yet" description={EMPTY[tab]} action={<Link to="/"><Button>Find a stay</Button></Link>} />
       )}
 
-      <ul className="space-y-4">
+      <ul className="my-trips-list space-y-4">
         {state.items.map((trip) => {
           const status = BOOKING_STATUS_LABEL[trip.status] ?? BOOKING_STATUS_LABEL.PAYMENT_PENDING;
           return (
             <li key={trip.id}>
-              <Card className="flex flex-col gap-4 p-4 sm:flex-row">
-                <div className="aspect-[16/10] w-full shrink-0 overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-muted)] sm:w-44">
+              <Card className="trip-card flex flex-col gap-4 p-4 sm:flex-row">
+                <div className="trip-card-media aspect-[16/10] w-full shrink-0 overflow-hidden rounded-[var(--radius-control)] bg-[var(--surface-muted)] sm:w-44">
                   <SafeImage src={trip.hotel.imageUrl} alt={trip.hotel.name} className="h-full w-full object-cover" />
                 </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
+                <div className="trip-card-body flex min-w-0 flex-1 flex-col gap-2">
+                  <div className="trip-card-status flex flex-wrap items-center gap-2">
                     <Badge tone={status.tone}>{status.label}</Badge>
                     <span className="font-mono text-xs text-[var(--text-muted)]">{trip.bookingRef}</span>
                   </div>
-                  <h2 className="truncate text-base font-semibold text-[var(--text-strong)]">{trip.hotel.name}</h2>
-                  <p className="text-sm text-[var(--text-muted)]">
+                  <h2 className="trip-card-title truncate text-base font-semibold text-[var(--text-strong)]">{trip.hotel.name}</h2>
+                  <p className="trip-card-room text-sm text-[var(--text-muted)]">
                     {trip.hotel.city} · {trip.roomName}
                   </p>
-                  <p className="flex items-center gap-1.5 text-sm text-[var(--text-body)]">
+                  <p className="trip-card-dates flex items-center gap-1.5 text-sm text-[var(--text-body)]">
                     <CalendarDays className="h-4 w-4" aria-hidden="true" />
                     {formatStayDate(trip.checkIn, { day: 'numeric', month: 'short', year: 'numeric' })} → {formatStayDate(trip.checkOut, { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
-                  <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <span className="text-sm font-semibold text-[var(--text-strong)]">{formatMoneyMinor(trip.totalMinor, trip.currency)}</span>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="trip-card-footer mt-auto flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <span className="trip-card-price text-sm font-semibold text-[var(--text-strong)]">{formatMoneyMinor(trip.totalMinor, trip.currency)}</span>
+                    <div className="trip-card-actions flex flex-wrap gap-2">
                       <Link to={`/my-trips/${trip.id}`}>
                         <Button variant="secondary" size="sm">View Details</Button>
                       </Link>

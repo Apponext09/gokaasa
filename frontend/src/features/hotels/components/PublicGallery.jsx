@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Expand, Images, X } from 'lucide-react';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
+import { Button } from '@/components/ui/button.jsx';
 import { cn } from '@/lib/utils.js';
 import { isIllustrativeImage } from '@/features/hotels/imageDisclaimer.js';
 
@@ -17,10 +18,11 @@ function IllustrativeTag() {
  * The lightbox supports keyboard arrows and Escape, and a fullscreen toggle where the browser allows it.
  * This reads photos only; the admin ImageGallery is the editing tool and is not reused here.
  */
-export function PublicGallery({ images, name }) {
+export function PublicGallery({ images, name, compact = false }) {
   const [index, setIndex] = useState(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [strip, setStrip] = useState(0);
+  const [desktopStart, setDesktopStart] = useState(0);
   const stripRef = useRef(null);
   const lightboxRef = useRef(null);
   const count = images.length;
@@ -60,27 +62,34 @@ export function PublicGallery({ images, name }) {
   };
 
   if (count === 0) {
-    return <SafeImage className="aspect-[16/9] w-full rounded-2xl md:aspect-[21/9]" fallbackLabel={`${name}: photos coming soon`} eager />;
+    return <SafeImage className="aspect-[16/9] w-full rounded-xl md:aspect-[3/1]" fallbackLabel={`${name}: photos coming soon`} eager />;
   }
 
-  const hero = images[0];
-  const gridImages = images.slice(1, 5);
+  const desktopImages = Array.from(
+    { length: Math.min(count, 5) },
+    (_, offset) => {
+      const imageIndex = (desktopStart + offset) % count;
+      return { image: images[imageIndex], imageIndex };
+    },
+  );
+  const hero = desktopImages[0];
+  const gridImages = desktopImages.slice(1);
   const remaining = count - 5;
 
   return (
-    <div className="space-y-3">
+    <div className={cn('public-gallery relative', compact ? 'space-y-0' : 'space-y-2 sm:space-y-3')}>
       {/* Mobile: swipeable strip with a counter */}
       <div className="relative md:hidden">
         <div
           ref={stripRef}
-          className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="public-gallery-mobile-strip flex snap-x snap-mandatory overflow-x-auto scroll-smooth rounded-2xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           onScroll={(event) => {
             const { scrollLeft, clientWidth } = event.currentTarget;
             setStrip(clientWidth ? Math.round(scrollLeft / clientWidth) : 0);
           }}
         >
           {images.map((image, i) => (
-            <button key={image.url + i} type="button" onClick={() => setIndex(i)} className="relative aspect-[4/3] w-full shrink-0 snap-center" aria-label={`Open photo ${i + 1} of ${count}`}>
+            <button key={image.url + i} type="button" onClick={() => setIndex(i)} className="relative aspect-[16/10] w-full shrink-0 snap-center sm:aspect-[4/3]" aria-label={`Open photo ${i + 1} of ${count}`}>
               <SafeImage src={image.url} alt={image.altText ?? name} eager={i === 0} className="h-full w-full" sizes="100vw" fallbackLabel={`${name}: photo ${i + 1}`} />
               {isIllustrativeImage(image) && <IllustrativeTag />}
             </button>
@@ -92,15 +101,34 @@ export function PublicGallery({ images, name }) {
       </div>
 
       {/* Desktop: hero plus grid */}
-      <div className="hidden h-[26rem] grid-cols-4 grid-rows-2 gap-2 overflow-hidden rounded-2xl md:grid">
-        <button type="button" onClick={() => setIndex(0)} className="relative col-span-2 row-span-2 focus-visible:outline-2 focus-visible:outline-brand-500" aria-label={`Open photo 1 of ${count}`}>
-          <SafeImage src={hero.url} alt={hero.altText ?? name} eager className="h-full w-full" sizes="50vw" fallbackLabel={`${name}: main photo`} />
-          {isIllustrativeImage(hero) && <IllustrativeTag />}
+      <div className={cn('public-gallery-grid hidden grid-cols-4 grid-rows-2 gap-1.5 overflow-hidden rounded-xl md:grid', compact ? 'h-[9.5rem]' : 'h-[21rem]')}>
+        <button
+          type="button"
+          onClick={() => setIndex(hero.imageIndex)}
+          className={cn(
+            'relative row-span-2 focus-visible:outline-2 focus-visible:outline-brand-500',
+            count === 1 ? 'col-span-4' : 'col-span-2',
+          )}
+          aria-label={`Open photo ${hero.imageIndex + 1} of ${count}`}
+        >
+          <SafeImage src={hero.image.url} alt={hero.image.altText ?? name} eager className="h-full w-full" sizes="50vw" fallbackLabel={`${name}: main photo`} />
+          {isIllustrativeImage(hero.image) && <IllustrativeTag />}
         </button>
-        {gridImages.map((image, i) => {
+        {gridImages.map(({ image, imageIndex }, i) => {
           const isLast = i === gridImages.length - 1 && remaining > 0;
           return (
-            <button key={image.url + i} type="button" onClick={() => setIndex(i + 1)} className="relative focus-visible:outline-2 focus-visible:outline-brand-500" aria-label={`Open photo ${i + 2} of ${count}`}>
+            <button
+              key={image.url + imageIndex}
+              type="button"
+              onClick={() => setIndex(imageIndex)}
+              className={cn(
+                'relative focus-visible:outline-2 focus-visible:outline-brand-500',
+                count === 2 && 'col-span-2 row-span-2',
+                count === 3 && 'row-span-2',
+                count === 4 && i === 0 && 'row-span-2',
+              )}
+              aria-label={`Open photo ${imageIndex + 1} of ${count}`}
+            >
               <SafeImage src={image.url} alt={image.altText ?? name} className="h-full w-full" sizes="25vw" fallbackLabel={`${name}: photo ${i + 2}`} />
               {isIllustrativeImage(image) && !isLast && <IllustrativeTag />}
               {isLast && (
@@ -111,13 +139,39 @@ export function PublicGallery({ images, name }) {
         })}
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
+      <div className={cn('public-gallery-toolbar flex items-center justify-between', compact && 'md:absolute md:inset-x-2.5 md:bottom-2.5 md:z-10 md:pointer-events-none')}>
+        <p className={cn('inline-flex items-center gap-1.5 text-sm text-[var(--text-muted)]', compact && 'md:rounded-full md:bg-black/65 md:px-2.5 md:py-1.5 md:text-xs md:text-white')}>
           <Images className="h-4 w-4" aria-hidden="true" /> {count} photo{count === 1 ? '' : 's'}
         </p>
-        <button type="button" onClick={() => setIndex(0)} className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline">
-          <Expand className="h-4 w-4" aria-hidden="true" /> View all photos
-        </button>
+        <div className={cn('flex items-center gap-2', compact && 'md:pointer-events-auto')}>
+          {count > 1 && (
+            <div className="hidden items-center gap-2 md:flex" aria-label="Gallery controls">
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className={cn('rounded-full bg-white shadow-sm', compact && 'h-8 w-8 min-h-8')}
+                onClick={() => setDesktopStart((current) => (current - 1 + count) % count)}
+                aria-label="Previous gallery image"
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon"
+                className={cn('rounded-full bg-white shadow-sm', compact && 'h-8 w-8 min-h-8')}
+                onClick={() => setDesktopStart((current) => (current + 1) % count)}
+                aria-label="Next gallery image"
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          )}
+          <button type="button" onClick={() => setIndex(0)} className={cn('inline-flex items-center gap-1.5 text-sm font-medium text-brand-700 hover:underline', compact && 'md:rounded-full md:bg-white md:px-3 md:py-1.5 md:text-xs md:shadow-sm')}>
+            <Expand className="h-4 w-4" aria-hidden="true" /> View all photos
+          </button>
+        </div>
       </div>
 
       {index !== null && (
