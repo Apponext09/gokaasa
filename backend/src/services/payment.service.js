@@ -16,6 +16,7 @@ import { BOOKING_STATUS, assertTransition, canTransition } from '../domain/booki
 import { PAYMENT_STATUS, canTransitionPayment, OPEN_PAYMENT_STATUSES } from '../domain/paymentStatus.js';
 import { AppError } from '../utils/AppError.js';
 import { createLogger } from '../utils/logger.js';
+import { emailNotificationService } from './emailNotification.service.js';
 
 const log = createLogger('payment');
 const CHECKOUT_SCRIPT_URL = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -86,6 +87,7 @@ async function settlePayment({ orderId, paymentId, amountMinor, currency, provid
         entityId: booking.id,
         newValue: { paymentId, amountMinor: Number(amountMinor), source },
       });
+      await emailNotificationService.enqueueBookingConfirmation(client, booking.id);
       return { kind: 'CONFIRMED', bookingId: booking.id, bookingRef: booking.booking_ref };
     }
 
@@ -133,6 +135,7 @@ async function afterSettle(result) {
   }
   if (result.kind === 'CONFIRMED') {
     const booking = await bookingRepository.findBooking(result.bookingId);
+    await emailNotificationService.processEvent(`booking.confirmed:${result.bookingRef}`);
     await notificationService.sendBookingConfirmation(booking).catch((error) => log.error('confirmation notice failed', { message: error.message }));
     log.info('booking confirmed', { bookingRef: result.bookingRef });
   }

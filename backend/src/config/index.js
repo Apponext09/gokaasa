@@ -5,6 +5,8 @@ const booleanFromEnv = z
   .default('false')
   .transform((value) => value === 'true');
 
+const optionalEmail = z.preprocess((value) => value === '' ? undefined : value, z.email().optional());
+
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -25,9 +27,15 @@ const schema = z.object({
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: booleanFromEnv,
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  MAIL_FROM: z.string().default('Gokaasa <no-reply@gokaasa.com>'),
+  SMTP_FROM: z.string().optional(),
+  MAIL_FROM: z.string().optional(),
+  BOOKING_NOTIFICATION_ADMIN_EMAIL: optionalEmail,
+  SUPPORT_EMAIL: optionalEmail,
+  SMTP_CONNECTION_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(10_000),
+  EMAIL_RETRY_INTERVAL_MS: z.coerce.number().int().min(10_000).max(3_600_000).default(60_000),
 
   HOTEL_PROVIDERS: z.string().default('openstreetmap,google_places,mock'),
   ALLOW_ILLUSTRATIVE_HOTEL_IMAGES: booleanFromEnv,
@@ -79,6 +87,11 @@ if (!parsed.success) {
 
 const env = parsed.data;
 
+const smtpParts = [env.SMTP_HOST, env.SMTP_USER, env.SMTP_PASS].filter(Boolean).length;
+if (smtpParts > 0 && smtpParts < 3) {
+  throw new Error('Invalid environment configuration:\nSMTP_HOST, SMTP_USER and SMTP_PASS must be configured together');
+}
+
 export const config = Object.freeze({
   env: env.NODE_ENV,
   isProduction: env.NODE_ENV === 'production',
@@ -104,9 +117,14 @@ export const config = Object.freeze({
   mail: {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
     user: env.SMTP_USER,
     pass: env.SMTP_PASS,
-    from: env.MAIL_FROM,
+    from: env.SMTP_FROM || env.MAIL_FROM || 'Gokaasa <noreply@mg.gokaasa.com>',
+    bookingAdminEmail: env.BOOKING_NOTIFICATION_ADMIN_EMAIL || env.ADMIN_EMAIL || null,
+    supportEmail: env.SUPPORT_EMAIL || null,
+    connectionTimeoutMs: env.SMTP_CONNECTION_TIMEOUT_MS,
+    retryIntervalMs: env.EMAIL_RETRY_INTERVAL_MS,
   },
   hotelImport: {
     providers: env.HOTEL_PROVIDERS.split(',').map((code) => code.trim()).filter(Boolean),

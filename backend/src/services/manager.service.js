@@ -3,6 +3,7 @@ import { hotelRepository } from '../repositories/hotel.repository.js';
 import { auditService } from './audit.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { AppError } from '../utils/AppError.js';
+import { emailNotificationService } from './emailNotification.service.js';
 
 export const managerService = {
   async listForHotel(hotelId) {
@@ -21,21 +22,24 @@ export const managerService = {
     if (!hotel) throw AppError.notFound('Hotel not found');
 
     const { rows } = await pool.query(
-      `SELECT u.id, r.code FROM users u
+      `SELECT u.id, u.email::text AS email, u.first_name, u.last_name, r.code FROM users u
         JOIN user_roles ur ON ur.user_id = u.id JOIN roles r ON r.id = ur.role_id
        WHERE u.id = $1 AND u.deleted_at IS NULL`,
       [userId],
     );
     if (rows.length === 0) throw AppError.notFound('User not found');
-    if (!rows.some((row) => row.code === 'HOTEL_MANAGER')) {
-      throw AppError.unprocessable('Only a user with the Hotel Manager role can be assigned to a hotel');
+    if (!rows.some((row) => ['HOTEL_MANAGER', 'HOTEL_OWNER'].includes(row.code))) {
+      throw AppError.unprocessable('Only a hotel manager or approved hotel owner can be assigned to a hotel');
     }
 
-    await withTransaction(async (client) => {
-      await client.query(
-        `INSERT INTO hotel_managers (user_id, hotel_id, assigned_by) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+    const inserted = await withTransaction(async (client) => {
+      const assignment = await client.query(
+        `INSERT INTO hotel_managers (user_id, hotel_id, assigned_by) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING RETURNING user_id`,
         [userId, hotelId, actor.id],
       );
+      if (assignment.rowCount === 0) return false;
+      const account = { id: userId, email: rows[0].email, firstName: rows[0].first_name, lastName: rows[0].last_name };
+      await emailNotificationService.enqueueHotelOnboarded(client, account, hotel);
       await auditService.record(client, {
         actor,
         action: 'hotel.manager_assigned',
@@ -43,8 +47,12 @@ export const managerService = {
         entityId: hotelId,
         newValue: { userId },
       });
+      return true;
     });
-    notificationService.sendManagerAssigned(userId, hotel).catch(() => {});
+    if (inserted) {
+      await emailNotificationService.processEvent(`hotel.onboarded:${hotel.id}:${userId}`);
+      notificationService.sendManagerAssigned(userId, hotel).catch(() => {});
+    }
     return this.listForHotel(hotelId);
   },
 

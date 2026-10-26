@@ -8,6 +8,9 @@ import { closeTestDatabase, createUserWithRole, prepareTestDatabase } from '../h
 import { pool } from '../../src/db/pool.js';
 import { addDays } from '../../src/domain/pricing.js';
 import { localToday } from '../../src/domain/businessDate.js';
+import { mailService } from '../../src/services/mail.service.js';
+import { emailNotificationService } from '../../src/services/emailNotification.service.js';
+import { withTransaction } from '../../src/db/pool.js';
 
 const MEDIA_DIR = mkdtempSync(path.join(tmpdir(), 'gokaasa-notifications-'));
 process.env.MEDIA_DIR = MEDIA_DIR;
@@ -19,6 +22,11 @@ const D0 = addDays(TODAY, 30);
 let app;
 let adminToken, managerToken, guestToken, otherToken;
 let hotelId, roomId, planId;
+const sentMail = [];
+const captureMail = async (message) => {
+  sentMail.push(message);
+  return { messageId: `test-${sentMail.length}`, accepted: [message.to], rejected: [] };
+};
 
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 const day = (offset) => addDays(D0, offset);
@@ -69,6 +77,7 @@ async function confirmedBooking(token, offset) {
 
 before(async () => {
   app = await prepareTestDatabase();
+  mailService.send = captureMail;
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
   await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
   await createUserWithRole({ email: 'notify.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
@@ -114,6 +123,7 @@ async function waitForNotification(userId, type, { timeoutMs = 3000 } = {}) {
 
 describe('booking events create real, persisted notifications', () => {
   it('a confirmed booking notifies the guest and the hotel’s assigned manager', async () => {
+    sentMail.length = 0;
     const booking = await confirmedBooking(guestToken, 0);
     const guestId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['notify.guest@example.com'])).rows[0].id;
     const managerId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['manager@example.com'])).rows[0].id;
@@ -123,6 +133,55 @@ describe('booking events create real, persisted notifications', () => {
 
     const managerNotice = await waitForNotification(managerId, 'booking.created');
     assert.ok(managerNotice.message.includes(booking.bookingRef));
+
+    const deliveries = await pool.query(
+      `SELECT recipient_type, recipient_email::text AS recipient_email, status, payload
+         FROM email_deliveries WHERE event_key = $1 ORDER BY recipient_type`,
+      [`booking.confirmed:${booking.bookingRef}`],
+    );
+    assert.deepEqual(new Set(deliveries.rows.map((row) => row.recipient_type)), new Set(['ADMIN', 'CUSTOMER', 'HOTEL']));
+    assert.ok(deliveries.rows.every((row) => row.status === 'ACCEPTED'));
+    assert.equal(deliveries.rows.find((row) => row.recipient_type === 'CUSTOMER').recipient_email, 'notify.guest@example.com');
+    assert.equal(deliveries.rows.find((row) => row.recipient_type === 'HOTEL').recipient_email, 'manager@example.com');
+    assert.ok(deliveries.rows.every((row) => row.payload.bookingRef === booking.bookingRef));
+    assert.ok(sentMail.every((message) => message.text.includes(booking.bookingRef)));
+
+    const beforeRetry = deliveries.rowCount;
+    await withTransaction((client) => emailNotificationService.enqueueBookingConfirmation(client, booking.id));
+    await emailNotificationService.processEvent(`booking.confirmed:${booking.bookingRef}`);
+    const afterRetry = await pool.query(`SELECT COUNT(*)::int AS count FROM email_deliveries WHERE event_key = $1`, [`booking.confirmed:${booking.bookingRef}`]);
+    assert.equal(afterRetry.rows[0].count, beforeRetry, 're-enqueueing the same event does not duplicate recipient deliveries');
+  });
+
+  it('retries only a failed hotel recipient without resending accepted customer or admin mail', async () => {
+    sentMail.length = 0;
+    const attempts = [];
+    let failHotel = true;
+    mailService.send = async (message) => {
+      attempts.push(message.to);
+      if (message.to === 'manager@example.com' && failHotel) {
+        failHotel = false;
+        throw new Error('temporary hotel mailbox failure');
+      }
+      return { messageId: `partial-${attempts.length}`, accepted: [message.to], rejected: [] };
+    };
+    try {
+      const booking = await confirmedBooking(guestToken, 1);
+      const eventKey = `booking.confirmed:${booking.bookingRef}`;
+      const first = await pool.query(`SELECT recipient_type, status FROM email_deliveries WHERE event_key = $1`, [eventKey]);
+      assert.equal(first.rows.find((row) => row.recipient_type === 'HOTEL').status, 'FAILED');
+      assert.ok(first.rows.filter((row) => row.recipient_type !== 'HOTEL').every((row) => row.status === 'ACCEPTED'));
+
+      const customerAttempts = attempts.filter((email) => email === 'notify.guest@example.com').length;
+      await pool.query(`UPDATE email_deliveries SET next_attempt_at = now() WHERE event_key = $1 AND status = 'FAILED'`, [eventKey]);
+      await emailNotificationService.processEvent(eventKey);
+      const retried = await pool.query(`SELECT recipient_type, status, attempt_count FROM email_deliveries WHERE event_key = $1`, [eventKey]);
+      assert.ok(retried.rows.every((row) => row.status === 'ACCEPTED'));
+      assert.equal(attempts.filter((email) => email === 'notify.guest@example.com').length, customerAttempts);
+      assert.equal(retried.rows.find((row) => row.recipient_type === 'HOTEL').attempt_count, 2);
+    } finally {
+      mailService.send = captureMail;
+    }
   });
 
   it('a cancelled booking notifies the guest', async () => {
@@ -170,6 +229,44 @@ describe('manager assignment notifies the manager', () => {
 
     const notice = await waitForNotification(secondManagerId, 'manager.assigned');
     assert.ok(notice.message.includes('Notification Second Hotel'));
+  });
+});
+
+describe('partner and property lifecycle email', () => {
+  it('emails the approved owner and sends property decisions only to that property contact', async () => {
+    sentMail.length = 0;
+    const ownerId = await createUserWithRole({ email: 'owner.notify@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
+    await pool.query(
+      `INSERT INTO partner_profiles
+         (user_id, status, business_name, business_type, contact_phone, property_name, property_city, submitted_at)
+       VALUES ($1, 'PENDING_REVIEW', 'Owner Notify Co', 'INDIVIDUAL', '+919876500099', 'Owner Hotel', 'Mumbai', now())`,
+      [ownerId],
+    );
+    const approved = await request(app).post(`/api/admin/partners/${ownerId}/approve`).set(bearer(adminToken)).send({});
+    assert.equal(approved.status, 200, JSON.stringify(approved.body));
+    assert.ok(sentMail.some((message) => message.to === 'owner.notify@example.com' && message.subject.includes('partner application has been approved')));
+
+    const ownedHotelId = await publishedHotel('Owner Lifecycle Hotel');
+    const assigned = await request(app).post(`/api/admin/hotels/${ownedHotelId}/managers`).set(bearer(adminToken)).send({ userId: ownerId });
+    assert.equal(assigned.status, 201, JSON.stringify(assigned.body));
+    assert.ok(sentMail.some((message) => message.to === 'owner.notify@example.com' && message.subject === 'Your hotel has been onboarded to Gokaasa'));
+
+    await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'UNPUBLISH' });
+    await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
+    sentMail.length = 0;
+    const ready = await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'MARK_READY' });
+    assert.equal(ready.status, 200, JSON.stringify(ready.body));
+    assert.ok(sentMail.some((message) => message.to === 'owner.notify@example.com' && message.subject === 'Your hotel has been approved on Gokaasa'));
+    assert.ok(sentMail.every((message) => message.to === 'owner.notify@example.com'));
+
+    await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'SAVE_DRAFT' });
+    await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
+    sentMail.length = 0;
+    const rejected = await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'SAVE_DRAFT', feedback: 'Add the missing reception contact details.' });
+    assert.equal(rejected.status, 200, JSON.stringify(rejected.body));
+    const rejection = sentMail.find((message) => message.to === 'owner.notify@example.com');
+    assert.equal(rejection.subject, 'Action required: Updates needed for your Gokaasa hotel');
+    assert.match(rejection.text, /Add the missing reception contact details/);
   });
 });
 

@@ -1,32 +1,21 @@
 import { pool } from '../db/pool.js';
 import { notificationService as persistedNotifications } from '../services/notification.service.js';
-import { mailService } from '../services/mail.service.js';
 import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('notifications');
 
 /** "guest@example.com" -> "g***@example.com". Logs never carry a full address. */
-const maskEmail = (email) => (typeof email === 'string' ? email.replace(/^(.).*(@.*)$/, '$1***$2') : null);
 const rupees = (minor) => `₹${(Number(minor) / 100).toLocaleString('en-IN')}`;
 
 /**
- * Persists one in-app notification (for the bell) and, where a `mail` is given, sends a real email through
- * the existing SMTP-capable mailService -- which itself already falls back to logging, never a real send,
- * when no SMTP host is configured. Both steps are best-effort: a notification failing to send or persist
- * never undoes the business event that triggered it, so every call site stays fire-and-forget.
+ * Persists one in-app notification for the bell. Transactional emails are handled by the durable
+ * emailNotificationService outbox; keeping the channels separate prevents a retry from duplicating mail.
  */
-async function notify({ userId, type, title, message, entityType = null, entityId = null }, mail) {
+async function notify({ userId, type, title, message, entityType = null, entityId = null }) {
   try {
     await persistedNotifications.create(pool, { userId, type, title, message, entityType, entityId });
   } catch (error) {
     log.error('failed to persist notification', { message: error.message, type, userId });
-  }
-  if (mail) {
-    try {
-      await mailService.send(mail);
-    } catch (error) {
-      log.error('failed to send notification email', { message: error.message, subject: mail.subject, to: maskEmail(mail.to) });
-    }
   }
 }
 
@@ -49,10 +38,7 @@ export const notificationService = {
   async sendBookingConfirmation(booking) {
     const bookingRef = booking.booking_ref ?? booking.bookingRef;
     const hotelName = booking.hotel_name ?? booking.hotel?.name ?? '';
-    await notify(
-      { userId: booking.user_id, type: 'booking.confirmed', title: 'Booking confirmed', message: `Your stay at ${hotelName} is confirmed. Booking ref ${bookingRef}.`, entityType: 'booking', entityId: booking.id },
-      { to: booking.primary_email ?? booking.primaryContact?.email, subject: `Booking confirmed: ${hotelName}`.trim(), text: `Your stay at ${hotelName} is confirmed. Booking ref ${bookingRef}.` },
-    );
+    await notify({ userId: booking.user_id, type: 'booking.confirmed', title: 'Booking confirmed', message: `Your stay at ${hotelName} is confirmed. Booking ref ${bookingRef}.`, entityType: 'booking', entityId: booking.id });
 
     const managerIds = await managerUserIdsForHotel(booking.hotel_id);
     await Promise.all(managerIds.map((userId) =>
@@ -63,10 +49,7 @@ export const notificationService = {
   async sendCancellation(booking) {
     const bookingRef = booking.booking_ref ?? booking.bookingRef;
     const hotelName = booking.hotel_name ?? booking.hotel?.name ?? '';
-    await notify(
-      { userId: booking.user_id, type: 'booking.cancelled', title: 'Booking cancelled', message: `Your booking ${bookingRef} at ${hotelName} has been cancelled.`, entityType: 'booking', entityId: booking.id },
-      { to: booking.primary_email ?? booking.primaryContact?.email, subject: `Booking cancelled: ${bookingRef}`, text: `Your booking ${bookingRef} has been cancelled.` },
-    );
+    await notify({ userId: booking.user_id, type: 'booking.cancelled', title: 'Booking cancelled', message: `Your booking ${bookingRef} at ${hotelName} has been cancelled.`, entityType: 'booking', entityId: booking.id });
 
     const managerIds = await managerUserIdsForHotel(booking.hotel_id);
     await Promise.all(managerIds.map((userId) =>
@@ -91,7 +74,6 @@ export const notificationService = {
       // entityType/entityId point at the booking, not the refund, since there is no standalone refund
       // viewer page to deep-link to -- My Trips' booking detail is where this is actually shown.
       { userId: booking.user_id, type: 'refund.initiated', title: 'Refund initiated', message: `Your refund of ${amount} for booking ${bookingRef} has been initiated.`, entityType: 'booking', entityId: booking.id },
-      { to: booking.primary_email, subject: `Refund initiated: ${bookingRef}`, text: `Your refund of ${amount} has been initiated to your original payment method.` },
     );
   },
 
@@ -99,10 +81,7 @@ export const notificationService = {
   async sendRefundCompleted(booking, refund) {
     const bookingRef = booking.booking_ref ?? booking.bookingRef;
     const amount = rupees(refund.amount_minor);
-    await notify(
-      { userId: booking.user_id, type: 'refund.completed', title: 'Refund completed', message: `Your refund of ${amount} for booking ${bookingRef} has been processed.`, entityType: 'booking', entityId: booking.id },
-      { to: booking.primary_email, subject: `Refund processed: ${bookingRef}`, text: `Your refund of ${amount} has been processed.` },
-    );
+    await notify({ userId: booking.user_id, type: 'refund.completed', title: 'Refund completed', message: `Your refund of ${amount} for booking ${bookingRef} has been processed.`, entityType: 'booking', entityId: booking.id });
   },
 
   /** Sent to the review's own author once an ADMIN approves or rejects it. */

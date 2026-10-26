@@ -8,6 +8,7 @@ import { getImportQueue, hotelImportService, setImportQueue } from '../../src/se
 import { createApp } from '../../src/app.js';
 
 const TABLES_TO_CLEAR = [
+  'email_deliveries',
   'platform_settings',
   'notifications',
   'newsletter_subscribers',

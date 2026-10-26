@@ -7,6 +7,10 @@ import { mailService } from '../../src/services/mail.service.js';
 const PASSWORD = 'Strong-pass-123';
 let app;
 const sentMail = [];
+const captureMail = async (message) => {
+  sentMail.push(message);
+  return { messageId: `test-${sentMail.length}`, accepted: [message.to], rejected: [] };
+};
 
 function cookieFrom(res) {
   const header = res.headers['set-cookie']?.find((value) => value.startsWith('gk_refresh='));
@@ -15,9 +19,7 @@ function cookieFrom(res) {
 
 before(async () => {
   app = await prepareTestDatabase();
-  mailService.send = async (message) => {
-    sentMail.push(message);
-  };
+  mailService.send = captureMail;
 });
 
 after(closeTestDatabase);
@@ -42,6 +44,10 @@ describe('registration and login', () => {
     assert.match(setCookie, /HttpOnly/);
     assert.match(setCookie, /SameSite=Strict/);
     assert.match(setCookie, /Path=\/api\/auth/);
+    assert.equal(sentMail.length, 1);
+    assert.equal(sentMail[0].to, 'asha.test@example.com');
+    assert.equal(sentMail[0].subject, 'Welcome to Gokaasa! Your account is ready');
+    assert.match(sentMail[0].html, /Welcome, Asha!/);
   });
 
   it('rejects duplicate emails regardless of case', async () => {
@@ -49,6 +55,26 @@ describe('registration and login', () => {
       .post('/api/auth/register')
       .send({ email: 'ASHA.test@example.com', password: PASSWORD, firstName: 'Asha', lastName: 'Kumar' });
     assert.equal(res.status, 409);
+    assert.equal(sentMail.length, 0, 'a failed duplicate registration must not send another welcome email');
+  });
+
+  it('keeps the account authoritative when SMTP delivery fails and records a retryable delivery', async () => {
+    mailService.send = async () => { throw new Error('temporary provider outage'); };
+    try {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({ email: 'smtp.failure@example.com', password: PASSWORD, firstName: 'Mail', lastName: 'Failure' });
+      assert.equal(res.status, 201);
+      const delivery = await (await import('../../src/db/pool.js')).pool.query(
+        `SELECT status, attempt_count, last_error FROM email_deliveries WHERE event_key = $1`,
+        [`customer.registered:${res.body.user.id}`],
+      );
+      assert.equal(delivery.rows[0].status, 'FAILED');
+      assert.equal(delivery.rows[0].attempt_count, 1);
+      assert.match(delivery.rows[0].last_error, /temporary provider outage/);
+    } finally {
+      mailService.send = captureMail;
+    }
   });
 
   it('returns field-level validation errors without revealing internals', async () => {

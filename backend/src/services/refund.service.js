@@ -9,6 +9,7 @@ import { auditService } from './audit.service.js';
 import { commissionService } from './commission.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { createLogger } from '../utils/logger.js';
+import { emailNotificationService } from './emailNotification.service.js';
 
 const log = createLogger('refund');
 
@@ -77,6 +78,14 @@ export async function processRefund(refundId) {
   });
   log.info('refund succeeded', { refundId });
   const freshBooking = await bookingRepository.findBooking(bookingId);
+  try {
+    await withTransaction((client) => emailNotificationService.enqueueBookingEvent(client, freshBooking, {
+      type: 'refund.completed', template: 'refundCompleted', amount: amountMinor,
+    }));
+    await emailNotificationService.processEvent(`refund.completed:${freshBooking.booking_ref}`);
+  } catch (error) {
+    log.error('refund-completed email enqueue failed', { bookingRef: freshBooking.booking_ref, message: error.message });
+  }
   await notificationService.sendRefundCompleted(freshBooking, { id: refundId, amount_minor: amountMinor }).catch((error) => log.error('refund-completed notice failed', { message: error.message }));
   return 'SUCCESS';
 }

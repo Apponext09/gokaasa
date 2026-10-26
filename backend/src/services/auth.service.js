@@ -10,6 +10,8 @@ import { AppError } from '../utils/AppError.js';
 import { generateToken, hashToken } from '../utils/crypto.js';
 import { createLogger } from '../utils/logger.js';
 import { partnerProfileRepository } from '../repositories/partnerProfile.repository.js';
+import { emailNotificationService } from './emailNotification.service.js';
+import { renderEmail } from '../email/templates.js';
 
 const log = createLogger('auth');
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,7 +66,7 @@ export const authService = {
 
     const passwordHash = await bcrypt.hash(input.password, config.auth.bcryptRounds);
 
-    return withTransaction(async (client) => {
+    const result = await withTransaction(async (client) => {
       const userId = await userRepository.create(client, {
         email: input.email,
         passwordHash,
@@ -74,8 +76,11 @@ export const authService = {
         roleCode: 'CUSTOMER',
       });
       const user = await userRepository.findById(userId, client);
-      return issueSession(client, user, meta);
+      await emailNotificationService.enqueueWelcome(client, user);
+      return { session: await issueSession(client, user, meta), eventKey: `customer.registered:${user.id}` };
     });
+    await emailNotificationService.processEvent(result.eventKey);
+    return result.session;
   },
 
   /**
@@ -213,10 +218,15 @@ export const authService = {
     });
 
     const resetUrl = `${config.frontendUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    await mailService.send({
-      to: user.email,
-      subject: 'Reset your Gokaasa password',
-      text: `Use this link to reset your password (valid for ${config.auth.passwordResetTtlMinutes} minutes):\n\n${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
+    const support = await pool.query(`SELECT value FROM platform_settings WHERE key = 'support_email'`);
+    const message = renderEmail('passwordReset', {
+      resetUrl, ttlMinutes: config.auth.passwordResetTtlMinutes,
+      supportEmail: config.mail.supportEmail || support.rows[0]?.value || null,
+    });
+    // Public response remains generic even if SMTP is temporarily unavailable. A later request creates a
+    // fresh one-time token; raw reset tokens are never persisted in the email outbox or logged.
+    await mailService.send({ to: user.email, ...message }).catch((error) => {
+      log.error('password reset email failed', { userId: user.id, message: error.message });
     });
   },
 

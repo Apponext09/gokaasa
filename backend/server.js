@@ -8,6 +8,7 @@ import { hotelImportRepository } from './src/repositories/hotelImport.repository
 import { createLogger } from './src/utils/logger.js';
 import { startHoldExpiryWorker } from './src/jobs/holdExpiry.js';
 import { startPresenceCleanupWorker } from './src/jobs/presenceCleanup.js';
+import { startEmailDeliveryWorker } from './src/jobs/emailDelivery.js';
 
 const log = createLogger('server');
 
@@ -39,11 +40,13 @@ async function start() {
     intervalMs: config.presence.cleanupIntervalMs,
     expireMinutes: config.presence.sessionExpireMinutes,
   });
+  const emailDeliveryWorker = startEmailDeliveryWorker({ intervalMs: config.mail.retryIntervalMs });
 
   const shutdown = (signal) => {
     log.info('shutting down', { signal });
     expiryWorker.stop();
     presenceCleanupWorker.stop();
+    emailDeliveryWorker.stop();
     server.close(async () => {
       await pool.end();
       process.exit(0);

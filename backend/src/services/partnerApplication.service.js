@@ -12,6 +12,7 @@ import { getPrivateStorage } from '../storage/privateStorage.js';
 import { detectDocumentType } from '../utils/fileSignature.js';
 import { PARTNER_ACTION, resolveTransition } from '../domain/partnerApplicationStatus.js';
 import { notificationService } from '../notifications/notificationService.js';
+import { emailNotificationService } from './emailNotification.service.js';
 import { toPage } from './presenters.js';
 import { AppError } from '../utils/AppError.js';
 import { createLogger } from '../utils/logger.js';
@@ -183,10 +184,14 @@ export const partnerApplicationService = {
     const nextStatus = resolveTransition(profile.status, PARTNER_ACTION.APPROVE);
     if (!nextStatus) throw AppError.conflict(`Cannot approve an application that is ${profile.status.toLowerCase().replaceAll('_', ' ')}`);
 
+    const eventKey = `partner.approved:${userId}:${Date.now()}`;
     await withTransaction(async (client) => {
       await partnerProfileRepository.markReviewed(client, userId, { status: 'APPROVED', reviewedBy: actor.id });
+      const user = await userRepository.findById(userId, client);
+      await emailNotificationService.enqueuePartnerDecision(client, user, { approved: true, eventKey });
       await auditService.record(client, { actor, action: 'partner.approved', entity: 'partner', entityId: userId });
     });
+    await emailNotificationService.processEvent(eventKey);
     notificationService.sendPartnerApplicationApproved(userId).catch(() => {});
     return this.getForAdmin(userId);
   },
@@ -199,10 +204,14 @@ export const partnerApplicationService = {
     const nextStatus = resolveTransition(profile.status, PARTNER_ACTION.REJECT);
     if (!nextStatus) throw AppError.conflict(`Cannot reject an application that is ${profile.status.toLowerCase().replaceAll('_', ' ')}`);
 
+    const eventKey = `partner.rejected:${userId}:${Date.now()}`;
     await withTransaction(async (client) => {
       await partnerProfileRepository.markReviewed(client, userId, { status: 'REJECTED', reviewedBy: actor.id, rejectionReason: reason });
+      const user = await userRepository.findById(userId, client);
+      await emailNotificationService.enqueuePartnerDecision(client, user, { approved: false, reason, eventKey });
       await auditService.record(client, { actor, action: 'partner.rejected', entity: 'partner', entityId: userId, newValue: { reason } });
     });
+    await emailNotificationService.processEvent(eventKey);
     notificationService.sendPartnerApplicationRejected(userId, reason).catch(() => {});
     return this.getForAdmin(userId);
   },

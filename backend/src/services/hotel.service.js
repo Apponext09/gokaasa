@@ -18,6 +18,7 @@ import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
 import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { toCsv } from '../utils/csv.js';
+import { emailNotificationService } from './emailNotification.service.js';
 
 const EXPORT_CAP = 5000;
 
@@ -251,7 +252,7 @@ export const hotelService = {
     });
   },
 
-  async transition(id, action, actor) {
+  async transition(id, action, actor, { feedback = null } = {}) {
     if (ADMIN_ONLY_ACTIONS.has(action) && !actor.roles.includes('ADMIN')) {
       throw AppError.forbidden('Only administrators can change publication status');
     }
@@ -290,12 +291,22 @@ export const hotelService = {
         entity: 'hotel',
         entityId: hotel.id,
         oldValue: { status: hotel.status },
-        newValue: { status: nextStatus },
+        newValue: { status: nextStatus, ...(feedback ? { feedback } : {}) },
       });
-      return loadHotelDetail(client, hotel.id, { includeInternal: true });
+      const updated = await loadHotelDetail(client, hotel.id, { includeInternal: true });
+      if (action === 'MARK_READY') {
+        await emailNotificationService.enqueuePropertyDecision(client, updated, { approved: true });
+      } else if (action === 'SAVE_DRAFT' && hotel.status === 'PENDING_REVIEW') {
+        await emailNotificationService.enqueuePropertyDecision(client, updated, { approved: false, feedback });
+      }
+      return updated;
     });
     if (action === 'SUBMIT_FOR_REVIEW') {
       notificationService.sendHotelSubmittedForReview(detail).catch(() => {});
+    } else if (action === 'MARK_READY') {
+      await emailNotificationService.processEvent(`property.approved:${detail.id}:${new Date(detail.updatedAt).toISOString()}`);
+    } else if (action === 'SAVE_DRAFT') {
+      await emailNotificationService.processEvent(`property.rejected:${detail.id}:${new Date(detail.updatedAt).toISOString()}`);
     }
     return detail;
   },

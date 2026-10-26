@@ -52,6 +52,7 @@ export const hotelUpdateSchema = z
 
 export const hotelStatusSchema = z.object({
   action: z.enum(HOTEL_ACTIONS),
+  feedback: z.string().trim().min(3).max(1000).optional(),
 });
 
 export const hotelAmenitiesSchema = z.object({

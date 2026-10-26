@@ -54,7 +54,12 @@ export const hotelController = {
   },
 
   async transition(req, res) {
-    const hotel = await hotelService.transition(req.validated.params.id, req.validated.body.action, actorOf(req));
+    const hotel = await hotelService.transition(
+      req.validated.params.id,
+      req.validated.body.action,
+      actorOf(req),
+      { feedback: req.validated.body.feedback },
+    );
     return res.json({ hotel });
   },
 

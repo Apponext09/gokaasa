@@ -12,6 +12,7 @@ import { auditService } from './audit.service.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { processRefund } from './refund.service.js';
 import { reviewRepository } from '../repositories/review.repository.js';
+import { emailNotificationService } from './emailNotification.service.js';
 
 const log = createLogger('booking');
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -425,11 +426,27 @@ async function performCancel(client, booking, { reason, actor }) {
 async function finishCancel(bookingId, outcome) {
   if (outcome.refundId) {
     const freshForRefundNotice = await bookingRepository.findBooking(bookingId);
+    try {
+      await withTransaction((client) => emailNotificationService.enqueueBookingEvent(client, freshForRefundNotice, {
+        type: 'refund.initiated', template: 'refundInitiated', amount: outcome.refundAmountMinor,
+      }));
+      await emailNotificationService.processEvent(`refund.initiated:${freshForRefundNotice.booking_ref}`);
+    } catch (error) {
+      log.error('refund-initiated email enqueue failed', { bookingRef: freshForRefundNotice.booking_ref, message: error.message });
+    }
     await notificationService.sendRefundInitiated(freshForRefundNotice, { amount_minor: outcome.refundAmountMinor }).catch(() => {});
     await processRefund(outcome.refundId);
   }
   log.info('booking cancelled', { bookingId, refund: Boolean(outcome.refundId), idempotent: outcome.idempotent });
   const fresh = await bookingRepository.findBooking(bookingId);
+  try {
+    await withTransaction((client) => emailNotificationService.enqueueBookingEvent(client, fresh, {
+      type: 'booking.cancelled', template: 'cancellation', refundStatus: outcome.refundId ? 'Refund in progress' : 'No refund due',
+    }));
+    await emailNotificationService.processEvent(`booking.cancelled:${fresh.booking_ref}`);
+  } catch (error) {
+    log.error('cancellation email enqueue failed', { bookingRef: fresh.booking_ref, message: error.message });
+  }
   await notificationService.sendCancellation(fresh).catch(() => {});
   return buildBookingDto(null, fresh, { includePreview: false });
 }
