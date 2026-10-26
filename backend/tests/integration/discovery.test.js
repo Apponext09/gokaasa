@@ -232,7 +232,7 @@ describe('5-7. price, star and amenity filtering', () => {
     assert.equal(free.body.items[0].bestOffer.ratePlanName, 'Room only');
   });
 
-  it('filters by guest rating only for hotels that have one', async () => {
+  it('filters by the guest rating displayed on the hotel card', async () => {
     assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&guestRating=4.5`)), [ids.seaBreeze]);
   });
 });

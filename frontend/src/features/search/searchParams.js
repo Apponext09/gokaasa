@@ -135,6 +135,7 @@ export function parseSearchParams(params) {
   return {
     destination: slugifyPlace(get('destination') ?? '') || null,
     area: slugifyPlace(get('area') ?? '') || null,
+    name: String(get('name') ?? '').trim().slice(0, 120) || null,
     coupon: COUPON_CODE.test(String(get('coupon') ?? '').toUpperCase())
       ? String(get('coupon')).toUpperCase()
       : null,
@@ -164,6 +165,7 @@ export function toSearchParams(state, { includeCoupon = true } = {}) {
   if (state.occupancy) params.set('occ', formatOccupancy(state.occupancy));
   if (state.sort && state.sort !== 'recommended') params.set('sort', state.sort);
   if (state.page && state.page > 1) params.set('page', String(state.page));
+  if (state.name) params.set('name', String(state.name).trim().slice(0, 120));
   const f = state.filters ?? {};
   if (f.minPrice != null) params.set('minPrice', String(f.minPrice));
   if (f.maxPrice != null) params.set('maxPrice', String(f.maxPrice));

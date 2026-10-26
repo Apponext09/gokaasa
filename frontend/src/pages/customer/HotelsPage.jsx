@@ -19,6 +19,7 @@ import {
   validateStay,
 } from "@/features/search/searchParams.js";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta.js";
+import { useDebounce } from "@/hooks/useDebounce.js";
 import { useAuth } from "@/features/auth/AuthContext.jsx";
 import { discoveryApi } from "@/services/endpoints.js";
 import { normalizeError } from "@/services/api.js";
@@ -38,8 +39,8 @@ const titleCase = (slug) =>
 const shortDate = (iso) =>
   new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 
-function buildRequest(state, destination) {
-  const p = toSearchParams(state, { includeCoupon: false });
+function buildRequest(state, destination, name) {
+  const p = toSearchParams({ ...state, name: name || null }, { includeCoupon: false });
   if (destination) p.set("destination", destination);
   if (state.area) p.set("area", state.area);
   return p;
@@ -60,7 +61,8 @@ export function HotelsPage() {
   const [error, setError] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
-  const [nameQuery, setNameQuery] = useState("");
+  const nameQuery = state.name ?? "";
+  const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
   const { status: authStatus } = useAuth();
   const geolocation = useGeolocation({ autoRequest: authStatus !== "loading" });
 
@@ -85,14 +87,14 @@ export function HotelsPage() {
     setParams(search, { replace: true });
   }, [destination, effectiveState, params, setParams, state.area]);
 
-  const requestKey = buildRequest(effectiveState, destination).toString();
+  const requestKey = buildRequest(effectiveState, destination, debouncedNameQuery).toString();
 
   useEffect(() => {
     if (authStatus === "loading") return undefined;
     const ctrl = new AbortController();
     setStatus("loading");
     setError(null);
-    const reqParams = buildRequest(effectiveState, destination);
+    const reqParams = buildRequest(effectiveState, destination, debouncedNameQuery);
     discoveryApi
       .search(Object.fromEntries(reqParams), { signal: ctrl.signal })
       .then((result) => { setData(result); setStatus("ready"); })
@@ -105,12 +107,12 @@ export function HotelsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestKey, retryKey, authStatus]);
 
-  const update = (patch, { resetPage = true } = {}) => {
+  const update = (patch, { resetPage = true, replace = false } = {}) => {
     const next = { ...state, ...patch, page: resetPage && !("page" in patch) ? 1 : (patch.page ?? state.page) };
     const search = toSearchParams(next);
     if (state.area) search.set("area", state.area);
     if (destination) search.set("destination", destination);
-    setParams(search, { replace: false });
+    setParams(search, { replace });
   };
 
   useDocumentMeta({
@@ -196,9 +198,9 @@ export function HotelsPage() {
       priceBounds={data?.priceBounds}
       disabled={status === "loading"}
       nameQuery={nameQuery}
-      onNameQueryChange={setNameQuery}
+      onNameQueryChange={(value) => update({ name: value || null }, { replace: true })}
       onChange={(filters) => update({ filters })}
-      onClear={() => { update({ filters: {} }); setNameQuery(""); }}
+      onClear={() => update({ filters: {}, name: null })}
     />
   );
 
@@ -298,7 +300,7 @@ export function HotelsPage() {
                   <>Hotels in <span>{label}</span></>
                 ) : "All Hotels"}
                 {status === "ready" && (
-                  <span className="hotels-results-count"> ({filteredItems.length} Propert{filteredItems.length === 1 ? "y" : "ies"} Found)</span>
+                  <span className="hotels-results-count"> ({data?.pagination.total ?? 0} Propert{data?.pagination.total === 1 ? "y" : "ies"} Found)</span>
                 )}
                 {status === "loading" && !data && <span className="hotels-results-count"> (Searching...)</span>}
               </h2>
@@ -340,7 +342,7 @@ export function HotelsPage() {
                 <div className="hotels-empty-icon-wrap"><Search className="h-10 w-10 text-slate-400" /></div>
                 <h3>No Hotels Found{label ? ` in ${label}` : ""}</h3>
                 <p>Try clearing some filters or searching a nearby destination.</p>
-                <Button variant="secondary" onClick={() => { update({ filters: {} }); setNameQuery(""); }}>Clear All Filters</Button>
+                <Button variant="secondary" onClick={() => update({ filters: {}, name: null })}>Clear All Filters</Button>
               </div>
             )}
 
@@ -380,7 +382,7 @@ export function HotelsPage() {
             </div>
             {filtersPanel}
             <div className="sticky bottom-0 -mx-5 mt-5 border-t border-slate-100 bg-white px-5 py-3">
-              <Button className="w-full" onClick={() => setSheetOpen(false)}>Show {filteredItems.length} hotels</Button>
+              <Button className="w-full" onClick={() => setSheetOpen(false)}>Show {data?.pagination.total ?? 0} hotels</Button>
             </div>
           </div>
         </div>

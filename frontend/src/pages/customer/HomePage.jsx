@@ -38,6 +38,7 @@ import { OfferCard } from '@/features/offers/OfferCard.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
+import { useDebounce } from '@/hooks/useDebounce.js';
 
 import {
   discoveryApi,
@@ -273,7 +274,9 @@ function HomeHotelListing({ search = null, geolocation }) {
   const [filters, setFilters] = useState({});
   const [sort, setSort] = useState('recommended');
   const [nameQuery, setNameQuery] = useState('');
-  const [priceBounds, setPriceBounds] = useState(null);
+  const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
+  const [priceBounds, setPriceBounds] = useState(undefined);
+  const [resultTotal, setResultTotal] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [listingError, setListingError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -295,6 +298,7 @@ function HomeHotelListing({ search = null, geolocation }) {
     checkOut: listingState.checkOut,
     occupancy: listingState.occupancy,
     coupon: listingState.coupon,
+    name: debouncedNameQuery,
   });
 
   useEffect(() => {
@@ -304,12 +308,14 @@ function HomeHotelListing({ search = null, geolocation }) {
     const params = Object.fromEntries(toSearchParams(listingState));
     if (search?.destination) params.destination = search.destination;
     if (search?.area) params.area = search.area;
+    if (debouncedNameQuery) params.name = debouncedNameQuery;
     params.limit = search?.hotelSlug ? 50 : 12;
     discoveryApi
       .search(params, { signal: controller.signal })
       .then((result) => {
         setHotels(result.items ?? []);
-        if (result.priceBounds) setPriceBounds(result.priceBounds);
+        setPriceBounds(result.priceBounds ?? null);
+        setResultTotal(result.pagination?.total ?? result.items?.length ?? 0);
         setStatus('ready');
       })
       .catch((requestError) => {
@@ -341,6 +347,7 @@ function HomeHotelListing({ search = null, geolocation }) {
     <HotelsFilterPanel
       filters={filters}
       priceBounds={priceBounds}
+      disabled={status === 'loading'}
       nameQuery={nameQuery}
       onNameQueryChange={setNameQuery}
       onChange={setFilters}
@@ -399,7 +406,7 @@ function HomeHotelListing({ search = null, geolocation }) {
               <h3 className="hotels-results-heading">
                 Hotels{' '}
                 {status === 'ready' && (
-                  <span className="hotels-results-count">({filtered.length} Properties Found)</span>
+                  <span className="hotels-results-count">({resultTotal} Properties Found)</span>
                 )}
               </h3>
               <div className="flex items-center gap-2">
@@ -472,7 +479,7 @@ function HomeHotelListing({ search = null, geolocation }) {
             </div>
             {filtersPanel}
             <div className="sticky bottom-0 -mx-4 mt-4 border-t border-slate-100 bg-white px-4 py-3">
-              <Button className="w-full" onClick={() => setSheetOpen(false)}>Show {filtered.length} hotels</Button>
+              <Button className="w-full" onClick={() => setSheetOpen(false)}>Show {resultTotal} hotels</Button>
             </div>
           </div>
         </div>

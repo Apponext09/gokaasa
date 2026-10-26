@@ -27,6 +27,7 @@ export const hotelSearchQuery = z
   .object({
     destination: slug.optional(),
     area: slug.optional(),
+    name: z.string().trim().min(1).max(120).optional(),
     checkIn: isoDate,
     checkOut: isoDate,
     occ: z.string().max(300).optional(),
@@ -67,6 +68,7 @@ export const hotelSearchQuery = z
     return {
       destination: value.destination,
       area: value.area,
+      name: value.name,
       checkIn: value.checkIn,
       checkOut: value.checkOut,
       occupancy,

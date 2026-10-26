@@ -193,6 +193,7 @@ export const hotelSearchService = {
     const rows = await hotelSearchRepository.search({
       cities,
       areas,
+      name: query.name ?? null,
       nights,
       occupancy: occupancy.map((room) => ({ adults: room.adults, childCount: room.childAges.length })),
       filters: {

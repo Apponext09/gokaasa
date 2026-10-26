@@ -524,9 +524,11 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
             >
               Save & continue <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <Button variant="secondary" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'UNPUBLISHED'].includes(hotel.status)} onClick={handleSubmitForReview}>
-              <Send className="h-4 w-4" aria-hidden="true" /> Submit for review
-            </Button>
+            {!isAdmin && (
+              <Button variant="secondary" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'UNPUBLISHED'].includes(hotel.status)} onClick={handleSubmitForReview}>
+                <Send className="h-4 w-4" aria-hidden="true" /> Submit for review
+              </Button>
+            )}
             <Button
               variant="primary"
               disabled={!isAdmin || readOnly || busy !== null || hotel.status === 'PUBLISHED' || (!hasUnsaved && blockers.length > 0)}

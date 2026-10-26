@@ -88,7 +88,7 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved }) {
           <FormField id="rp-tax" label="Tax (%)" error={e.taxPercent?.message} hint="Applied after discount">
             <Input id="rp-tax" type="number" inputMode="decimal" min={0} max={100} step="0.01" invalid={!!e.taxPercent} {...register('taxPercent')} />
           </FormField>
-          <FormField id="rp-fee" label="Fee per night (₹)" error={e.feeRupees?.message}>
+          <FormField id="rp-fee" label="Extra fee per night (₹)" error={e.feeRupees?.message}>
             <Input id="rp-fee" inputMode="decimal" invalid={!!e.feeRupees} {...register('feeRupees')} />
           </FormField>
           <FormField id="rp-status" label="Status" error={e.status?.message}>

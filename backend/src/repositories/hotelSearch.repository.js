@@ -14,10 +14,10 @@ import { pool } from '../db/pool.js';
  */
 
 const SORT_SQL = {
-  recommended: 'guest_rating DESC NULLS LAST, review_count DESC, star_rating DESC NULLS LAST, id ASC',
+  recommended: 'display_guest_rating DESC NULLS LAST, review_count DESC, star_rating DESC NULLS LAST, id ASC',
   price_asc: 'per_night ASC, id ASC',
   price_desc: 'per_night DESC, id ASC',
-  guest_rating: 'guest_rating DESC NULLS LAST, review_count DESC, id ASC',
+  guest_rating: 'display_guest_rating DESC NULLS LAST, review_count DESC, id ASC',
   star_rating: 'star_rating DESC NULLS LAST, guest_rating DESC NULLS LAST, id ASC',
 };
 
@@ -110,7 +110,7 @@ export const hotelSearchRepository = {
 
   /**
    * @param {object} q
-   *   cities: lowercased city names, or null for any city
+   *   cities: lowercased city names, or null for any city; name: optional case-insensitive hotel-name fragment
    *   areas: lowercased area names, or null
    *   stays: { checkIn, nights: ['YYYY-MM-DD', ...] }
    *   occupancy: [{ adults, childCount }]
@@ -132,11 +132,14 @@ export const hotelSearchRepository = {
             AND ($1::text[] IS NULL OR lower(h.city) = ANY($1::text[]))
             AND ($2::text[] IS NULL OR lower(h.area) = ANY($2::text[]))
             AND ($3::int[] IS NULL OR h.star_rating = ANY($3::int[]))
-            AND ($4::numeric IS NULL OR h.guest_rating >= $4::numeric)
+            AND ($4::numeric IS NULL OR COALESCE(h.guest_rating, (
+                  SELECT AVG(r.rating) FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED'
+                )) >= $4::numeric)
             AND ($5::text[] IS NULL OR h.property_type = ANY($5::text[]))
             AND ($6::text[] IS NULL OR (
                   SELECT COUNT(DISTINCT a.code) FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
                    WHERE ha.hotel_id = h.id AND a.code = ANY($6::text[])) = cardinality($6::text[]))
+            AND ($19::text IS NULL OR h.name ILIKE '%' || $19::text || '%')
        ),
        room_nights AS (
          SELECT rt.id AS room_type_id, rt.hotel_id, rt.total_units, rt.max_adults, rt.max_children, rt.max_occupancy,
@@ -191,6 +194,7 @@ export const hotelSearchRepository = {
        ),
        listing AS (
          SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
+                COALESCE(h.guest_rating, (SELECT AVG(r.rating) FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED')) AS display_guest_rating,
                 NULL::numeric AS distance_km, h.latitude, h.longitude,
                 h.property_type,
                 hb.room_type_id, rt.name AS room_name, rt.room_code, rt.bed_type, rt.room_size_sqm, rt.view,
@@ -198,7 +202,7 @@ export const hotelSearchRepository = {
                 hb.policy_code, hb.policy_name, hb.is_non_refundable, hb.cancellation_deadline_hours, hb.refund_percent,
                 hb.base_total, hb.discount_total, hb.tax_total, hb.fee_total, hb.final_total,
                 hb.available_rooms AS rooms_left,
-                ROUND(hb.final_total::numeric / $8::int)::bigint AS per_night,
+                ROUND((hb.base_total - hb.discount_total)::numeric / $8::int)::bigint AS per_night,
                 (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                    FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                   ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
@@ -207,8 +211,8 @@ export const hotelSearchRepository = {
                 ($14::bigint IS NOT NULL AND EXISTS (SELECT 1 FROM wishlists w WHERE w.user_id = $14::bigint AND w.hotel_id = h.id)) AS wishlisted,
                 (SELECT json_build_object('average', ROUND(AVG(r.rating)::numeric, 1), 'count', COUNT(*))
                    FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED') AS internal_rating,
-                MIN(ROUND(hb.final_total::numeric / $8::int)::bigint) OVER () AS price_floor,
-                MAX(ROUND(hb.final_total::numeric / $8::int)::bigint) OVER () AS price_ceiling
+                MIN(ROUND((hb.base_total - hb.discount_total)::numeric / $8::int)::bigint) OVER () AS price_floor,
+                MAX(ROUND((hb.base_total - hb.discount_total)::numeric / $8::int)::bigint) OVER () AS price_ceiling
            FROM hotel_best hb
            JOIN hotels h ON h.id = hb.hotel_id
            JOIN room_types rt ON rt.id = hb.room_type_id
@@ -241,6 +245,7 @@ export const hotelSearchRepository = {
         f.maxPerNight,
         q.limit,
         q.offset,
+        q.name ?? null,
       ],
     );
     return rows;

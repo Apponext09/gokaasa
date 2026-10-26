@@ -14,17 +14,19 @@ import {
 } from '../../src/features/search/searchParams.js';
 
 test('a shared URL restores the same search after a reload', () => {
-  const url = new URLSearchParams('checkIn=2026-10-15&checkOut=2026-10-17&occ=2-7.12|1&sort=price_asc&stars=5,4&amenities=WIFI,POOL&minPrice=5000&maxPrice=15000');
+  const url = new URLSearchParams('checkIn=2026-10-15&checkOut=2026-10-17&occ=2-7.12|1&sort=price_asc&name=Sea%20Breeze&stars=5,4&amenities=WIFI,POOL&minPrice=5000&maxPrice=15000');
   const state = parseSearchParams(url);
   assert.equal(state.checkIn, '2026-10-15');
   assert.deepEqual(state.occupancy, [{ adults: 2, childAges: [7, 12] }, { adults: 1, childAges: [] }]);
   assert.deepEqual(state.filters.stars, [4, 5]);
   assert.deepEqual(state.filters.amenities, ['WIFI', 'POOL']);
   assert.equal(state.filters.minPrice, 5000);
+  assert.equal(state.name, 'Sea Breeze');
   const back = toSearchParams(state);
   assert.equal(back.get('occ'), '2-7.12|1');
   assert.equal(back.get('sort'), 'price_asc');
   assert.equal(back.get('stars'), '4,5');
+  assert.equal(back.get('name'), 'Sea Breeze');
 });
 
 test('invalid URL values fall back to safe defaults instead of breaking the page', () => {
