@@ -1362,9 +1362,17 @@ body {
   overflow: hidden;
   margin-top: 2px;
   color: rgb(255 255 255 / 85%);
-  font-size: 11px;
+  font-size: 11.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card-explore-count {
+  margin-top: 3px;
+  color: rgb(255 255 255 / 85%);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 @media (max-width: 1023px) {

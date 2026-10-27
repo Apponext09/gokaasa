@@ -737,10 +737,11 @@ export function HomePage() {
                     showFallbackContent={false}
                   />
                   <span className="collection-overlay-gradient" aria-hidden="true" />
-                  <span className="collection-card-badge">{category.hotelCount}+ Stays</span>
                   <div className="collection-card-caption">
                     <h3>{category.label}</h3>
-                    <p>Find the perfect {category.label.toLowerCase()} stay</p>
+                    <p className="card-explore-count">
+                      Explore {category.hotelCount} {category.label.toLowerCase()}{category.hotelCount === 1 ? '' : 's'}
+                    </p>
                   </div>
                 </div>
               </Link>
@@ -778,8 +779,8 @@ export function HomePage() {
                     <span className="pop-card-overlay" aria-hidden="true" />
                     <div className="pop-card-content">
                       <h3 className="pop-card-city">{place.label}</h3>
-                      <p className="pop-card-desc">
-                        {place.hotelCount} hotel{place.hotelCount === 1 ? '' : 's'} to explore
+                      <p className="pop-card-desc card-explore-count">
+                        Explore {place.hotelCount} hotel{place.hotelCount === 1 ? '' : 's'}
                       </p>
                     </div>
                   </div>
