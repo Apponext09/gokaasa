@@ -38,7 +38,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
   const [tab, setTab] = useState('ALL');
   const inputRef = useRef(null);
   const listId = useId();
-  const debounced = useDebounce(text, 250);
+  const debounced = useDebounce(text, 150);
 
   useEffect(() => {
     setText(value?.label ?? '');
@@ -99,6 +99,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
 
   const choose = (item) => {
     setText(item.label);
+    onTextChange?.(item.label);
     setItems([]);
     setFocused(false);
     inputRef.current?.blur();
@@ -179,6 +180,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
               setItems([]);
               setTab('ALL');
               onChange(null);
+              onTextChange?.('');
               inputRef.current?.focus();
             }}
             className="grid h-7 w-7 place-items-center rounded-full text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"

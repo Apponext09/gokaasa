@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Sparkles, Tag } from 'lucide-react';
 import { Skeleton } from '@/components/ui/surfaces.jsx';
-import { EmptyState } from '@/components/shared/index.jsx';
+import { EmptyState, Pagination } from '@/components/shared/index.jsx';
 import { OfferCard } from '@/features/offers/OfferCard.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { offerApi } from '@/services/endpoints.js';
@@ -19,11 +19,13 @@ const CATEGORIES = [
 
 const OFFERS_HERO_IMAGE =
   'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=2000&q=88';
+const OFFERS_PAGE_SIZE = 9;
 
 export function OffersPage() {
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
   const [category, setCategory] = useState('all');
+  const [page, setPage] = useState(1);
 
   useDocumentMeta({
     title: 'Gokaasa Offers & Hotel Deals',
@@ -46,6 +48,9 @@ export function OffersPage() {
     const active = CATEGORIES.find((c) => c.key === category);
     return !active || active.key === 'all' ? offers : offers.filter(active.test);
   }, [offers, category]);
+  const totalPages = Math.max(1, Math.ceil(visible.length / OFFERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedOffers = visible.slice((currentPage - 1) * OFFERS_PAGE_SIZE, currentPage * OFFERS_PAGE_SIZE);
 
   return (
     <div>
@@ -75,7 +80,7 @@ export function OffersPage() {
                 key={c.key}
                 type="button"
                 aria-pressed={category === c.key}
-                onClick={() => setCategory(c.key)}
+                onClick={() => { setCategory(c.key); setPage(1); }}
                 className={cn(
                   'inline-flex items-center rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
                   category === c.key ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-[var(--border-subtle)] bg-[var(--surface-card)] text-[var(--text-body)] hover:bg-[var(--surface-muted)]',
@@ -100,9 +105,12 @@ export function OffersPage() {
         )}
 
         {offers && offers.length > 0 && (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {pagedOffers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
+            </div>
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+          </>
         )}
       </div>
     </div>

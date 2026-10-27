@@ -24,6 +24,7 @@ import {
 
 import {
   FullPageSpinner,
+  Pagination,
   homePathFor,
 } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
@@ -268,6 +269,8 @@ const HOME_SORT_OPTIONS = [
   { value: 'star_rating', label: 'Star Rating' },
 ];
 
+const HOME_HOTELS_PAGE_SIZE = 12;
+
 function HomeHotelListing({ search = null, geolocation }) {
   const [hotels, setHotels] = useState([]);
   const [status, setStatus] = useState('loading');
@@ -277,6 +280,8 @@ function HomeHotelListing({ search = null, geolocation }) {
   const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
   const [priceBounds, setPriceBounds] = useState(undefined);
   const [resultTotal, setResultTotal] = useState(0);
+  const [resultPagination, setResultPagination] = useState(null);
+  const [page, setPage] = useState(1);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [listingError, setListingError] = useState(null);
   const [retryKey, setRetryKey] = useState(0);
@@ -294,12 +299,19 @@ function HomeHotelListing({ search = null, geolocation }) {
     destination: search?.destination ?? null,
     area: search?.area ?? null,
     hotelSlug: search?.hotelSlug ?? null,
+    searchName: search?.name ?? null,
     checkIn: listingState.checkIn,
     checkOut: listingState.checkOut,
     occupancy: listingState.occupancy,
     coupon: listingState.coupon,
-    name: debouncedNameQuery,
+    filterName: debouncedNameQuery,
+    sort,
+    filters,
   });
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchKey]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -308,14 +320,16 @@ function HomeHotelListing({ search = null, geolocation }) {
     const params = Object.fromEntries(toSearchParams(listingState));
     if (search?.destination) params.destination = search.destination;
     if (search?.area) params.area = search.area;
-    if (debouncedNameQuery) params.name = debouncedNameQuery;
-    params.limit = search?.hotelSlug ? 50 : 12;
+    if (search?.name || debouncedNameQuery) params.name = search?.name ?? debouncedNameQuery;
+    params.page = page;
+    params.limit = HOME_HOTELS_PAGE_SIZE;
     discoveryApi
       .search(params, { signal: controller.signal })
       .then((result) => {
         setHotels(result.items ?? []);
         setPriceBounds(result.priceBounds ?? null);
         setResultTotal(result.pagination?.total ?? result.items?.length ?? 0);
+        setResultPagination(result.pagination ?? null);
         setStatus('ready');
       })
       .catch((requestError) => {
@@ -326,7 +340,7 @@ function HomeHotelListing({ search = null, geolocation }) {
     return () => controller.abort();
     // listingState is intentionally represented by its URL-backed inputs here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sort, filters, retryKey, searchKey]);
+  }, [page, retryKey, searchKey]);
 
   const hotelsWithDistance = useMemo(() => {
     if (!geolocation.coords) return hotels;
@@ -371,7 +385,13 @@ function HomeHotelListing({ search = null, geolocation }) {
           <div>
             <p className="home-hl-eyebrow">{search ? 'Search results' : 'Explore top stays'}</p>
             <h2 className="home-hl-title">
-              {search ? (search.hotelSlug ? search.label : `Hotels in ${search.label}`) : 'Browse All Hotels'}
+              {search
+                ? (search.hotelSlug
+                    ? search.label
+                    : search.name
+                      ? `Hotels matching ${search.label}`
+                      : `Hotels in ${search.label}`)
+                : 'Browse All Hotels'}
             </h2>
           </div>
         </div>
@@ -446,11 +466,20 @@ function HomeHotelListing({ search = null, geolocation }) {
             )}
 
             {status === 'ready' && filtered.length > 0 && (
-              <div className="hotels-cards-stream">
-                {filtered.map((hotel) => (
-                  <HotelCard key={hotel.id} hotel={hotel} state={listingState} />
-                ))}
-              </div>
+              <>
+                <div className="hotels-cards-stream">
+                  {filtered.map((hotel) => (
+                    <HotelCard key={hotel.id} hotel={hotel} state={listingState} />
+                  ))}
+                </div>
+                {resultPagination && (
+                  <Pagination
+                    page={resultPagination.page}
+                    totalPages={resultPagination.totalPages}
+                    onPageChange={setPage}
+                  />
+                )}
+              </>
             )}
 
             {status === 'ready' && filtered.length === 0 && (
@@ -499,6 +528,7 @@ export function HomePage() {
   const [error, setError] = useState(null);
   const [heroIndex, setHeroIndex] = useState(0);
   const [hotelSearch, setHotelSearch] = useState(null);
+  const [hotelSearchVersion, setHotelSearchVersion] = useState(0);
   const [openHomeFaq, setOpenHomeFaq] = useState(0);
 
   useDocumentMeta({
@@ -622,6 +652,7 @@ export function HomePage() {
             variant="hero"
             onSearch={(nextSearch) => {
               setHotelSearch(nextSearch);
+              setHotelSearchVersion((version) => version + 1);
               window.setTimeout(() => {
                 document.getElementById('home-hotel-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }, 0);
@@ -761,7 +792,7 @@ export function HomePage() {
 
       {/* NEARBY HOTELS */}
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
-      <HomeHotelListing search={hotelSearch} geolocation={geolocation} />
+      <HomeHotelListing key={hotelSearchVersion} search={hotelSearch} geolocation={geolocation} />
 
       <Reveal>
         <div className="customer-section customer-section--compact customer-section--divided home-nearby-wrap">

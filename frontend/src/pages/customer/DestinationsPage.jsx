@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/surfaces.jsx';
-import { PageHeader, EmptyState } from '@/components/shared/index.jsx';
+import { PageHeader, EmptyState, Pagination } from '@/components/shared/index.jsx';
 import { DestinationTile } from '@/features/home/DestinationTile.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 
+const DESTINATIONS_PAGE_SIZE = 12;
+
 export function DestinationsPage() {
   const [places, setPlaces] = useState(null);
   const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
 
   useDocumentMeta({
     title: 'Gokaasa | Browse destinations',
@@ -20,13 +23,17 @@ export function DestinationsPage() {
   useEffect(() => {
     let cancelled = false;
     discoveryApi
-      .popularDestinations({ limit: 24 })
+      .popularDestinations({ limit: 50 })
       .then((items) => !cancelled && setPlaces(items))
       .catch((err) => !cancelled && setError(normalizeError(err).message));
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil((places?.length ?? 0) / DESTINATIONS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visiblePlaces = places?.slice((currentPage - 1) * DESTINATIONS_PAGE_SIZE, currentPage * DESTINATIONS_PAGE_SIZE) ?? [];
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">
@@ -50,11 +57,16 @@ export function DestinationsPage() {
       )}
 
       {places?.length > 0 && (
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {places.map((place) => (
-            <DestinationTile key={place.destination} place={place} />
-          ))}
-        </div>
+        <>
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {visiblePlaces.map((place) => (
+              <DestinationTile key={place.destination} place={place} />
+            ))}
+          </div>
+          <div className="mt-6">
+            <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+          </div>
+        </>
       )}
     </div>
   );

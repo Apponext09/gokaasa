@@ -5514,6 +5514,9 @@ body {
 }
 
 .hotel-change-search {
+  position: sticky;
+  top: 4.5rem;
+  z-index: 25;
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(18rem, 1.1fr) minmax(12rem, 0.75fr) auto;
   align-items: stretch;
@@ -5571,6 +5574,7 @@ body {
 
 @media (max-width: 767px) {
   .hotel-change-search {
+    top: 3.875rem;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.2rem;
     padding: 0.3rem;
@@ -11582,4 +11586,31 @@ body {
   font-size: 0.62rem !important;
   min-height: 1.55rem !important;
   height: 1.55rem !important;
+}
+
+/* Hotel detail page: keep section geometry square while retaining the rounded search bar. */
+.customer-hotel-details .hotel-details-primary-card,
+.customer-hotel-details .hotel-details-info-grid,
+.customer-hotel-details .hotel-details-secondary-grid,
+.customer-hotel-details #rooms,
+.customer-hotel-details #offers,
+.customer-hotel-details #reviews,
+.customer-hotel-details #similar,
+.customer-hotel-details .hotel-booking-snapshot,
+.customer-hotel-details .public-gallery-grid,
+.customer-hotel-details .public-gallery-mobile-strip,
+.customer-hotel-details .hotel-overview-facts,
+.customer-hotel-details .rooms-search-editor,
+.customer-hotel-details #rooms .customer-room-card,
+.customer-hotel-details #rooms .customer-rate-plan,
+.customer-hotel-details #offers .customer-offer-card,
+.customer-hotel-details #reviews .hotel-reviews-empty,
+.customer-hotel-details #reviews .hotel-review-summary,
+.customer-hotel-details #reviews .hotel-review-card,
+.customer-hotel-details #similar .customer-hotel-card {
+  border-radius: 0 !important;
+}
+
+.customer-hotel-details .hotel-change-search {
+  border-radius: 0.75rem;
 }

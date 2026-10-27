@@ -5,7 +5,7 @@ import { CalendarDays, Download, Luggage } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Tabs } from '@/components/ui/tabs.jsx';
 import { Badge, Card } from '@/components/ui/surfaces.jsx';
-import { EmptyState, PageHeader } from '@/components/shared/index.jsx';
+import { EmptyState, PageHeader, Pagination } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
 import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
@@ -16,6 +16,7 @@ import { normalizeError } from '@/services/api.js';
 import { bookingApi } from '@/services/endpoints.js';
 
 const INVOICEABLE_STATUSES = ['CONFIRMED', 'REFUND_PENDING', 'REFUNDED'];
+const TRIPS_PAGE_SIZE = 6;
 
 const TABS = [
   { value: 'upcoming', label: 'Upcoming' },
@@ -33,6 +34,7 @@ const EMPTY = {
 export function MyTripsPage() {
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.value === params.get('tab')) ? params.get('tab') : 'upcoming';
+  const requestedPage = Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1);
   const [state, setState] = useState({ items: [], loading: true, error: null });
   const [cancelling, setCancelling] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -52,6 +54,9 @@ export function MyTripsPage() {
   }, [tab, reloadKey]);
 
   const refresh = () => setReloadKey((key) => key + 1);
+  const totalPages = Math.max(1, Math.ceil(state.items.length / TRIPS_PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const visibleTrips = state.items.slice((page - 1) * TRIPS_PAGE_SIZE, page * TRIPS_PAGE_SIZE);
 
   return (
     <div className="my-trips-page mx-auto w-full max-w-5xl space-y-6 px-4 py-8 sm:px-6">
@@ -66,7 +71,7 @@ export function MyTripsPage() {
       )}
 
       <ul className="my-trips-list space-y-4">
-        {state.items.map((trip) => {
+        {visibleTrips.map((trip) => {
           const status = BOOKING_STATUS_LABEL[trip.status] ?? BOOKING_STATUS_LABEL.PAYMENT_PENDING;
           return (
             <li key={trip.id}>
@@ -129,6 +134,14 @@ export function MyTripsPage() {
           );
         })}
       </ul>
+
+      {!state.loading && !state.error && state.items.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={(nextPage) => setParams({ tab, page: String(nextPage) })}
+        />
+      )}
 
       <CancelBookingDialog
         bookingId={cancelling}

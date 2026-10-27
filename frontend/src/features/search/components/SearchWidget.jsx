@@ -5,17 +5,19 @@ import { Button } from '@/components/ui/button.jsx';
 import { DestinationField } from '@/features/search/components/DestinationField.jsx';
 import { DateRangePicker } from '@/features/search/components/DateRangePicker.jsx';
 import { GuestsPopover } from '@/features/search/components/GuestsPopover.jsx';
-import { addDays, nightsBetween, slugifyPlace, stayParams, todayIso, validateStay } from '@/features/search/searchParams.js';
+import { addDays, nightsBetween, stayParams, todayIso, validateStay } from '@/features/search/searchParams.js';
 
 const titleCase = (slug) => slug.split('-').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 
 /** Where the search goes for a chosen destination. Hotels open directly; places open the Hotels listing page. */
-export function searchTargetFor(destination, stay, occupancy, coupon = null) {
+function searchTargetFor(destination, stay, occupancy, coupon = null) {
   const params = stayParams({ ...stay, occupancy, coupon });
   // A specific hotel — go straight to its detail page
   if (destination.type === 'HOTEL' && destination.hotelSlug) {
     return `/hotels/${destination.destination}/${destination.hotelSlug}?${params}`;
   }
+  // Free text can be a hotel name. Keep it as a name filter instead of treating it as a city slug.
+  if (destination.type === 'TEXT' && destination.name) params.set('name', destination.name);
   // A city/area — go to HotelsPage with destination as query param
   if (destination.type === 'AREA' && destination.area) params.set('area', destination.area);
   if (destination.destination) params.set('destination', destination.destination);
@@ -48,17 +50,18 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted, onSearch 
       return;
     }
     let target = destination;
-    if (!target && typed.trim()) target = { type: 'TEXT', label: typed.trim(), destination: slugifyPlace(typed) };
-    if (!target?.destination) {
+    if (!target && typed.trim()) target = { type: 'TEXT', label: typed.trim(), name: typed.trim() };
+    if (!target?.destination && !target?.name) {
       setError('Choose where you are going');
       return;
     }
     setError(null);
     if (onSearch) {
       onSearch({
-        destination: target.destination,
+        destination: target.destination ?? null,
         area: target.type === 'AREA' ? target.area : null,
         hotelSlug: target.type === 'HOTEL' ? target.hotelSlug : null,
+        name: target.type === 'TEXT' ? target.name : target.type === 'HOTEL' ? target.label : null,
         label: target.label,
         checkIn: stay.checkIn,
         checkOut: stay.checkOut,

@@ -4,15 +4,18 @@ import { Search, UserCog } from 'lucide-react';
 import { Card, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
-import { EmptyState, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
+import { EmptyState, PageHeader, Pagination, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+
+const MANAGERS_PAGE_SIZE = 20;
 
 /** Hotel managers are realistically few, so this page filters client-side rather than round-tripping per keystroke. */
 export function ManagersPage() {
   const [managers, setManagers] = useState(null);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,6 +32,9 @@ export function ManagersPage() {
     const haystack = `${manager.firstName} ${manager.lastName} ${manager.email}`.toLowerCase();
     return haystack.includes(search.trim().toLowerCase());
   });
+  const totalPages = Math.max(1, Math.ceil((filtered?.length ?? 0) / MANAGERS_PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const visibleManagers = filtered?.slice((currentPage - 1) * MANAGERS_PAGE_SIZE, currentPage * MANAGERS_PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -37,7 +43,7 @@ export function ManagersPage() {
       <Card className="filter-panel p-4">
         <div className="relative max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
-          <Input aria-label="Search managers" placeholder="Name or email" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input aria-label="Search managers" placeholder="Name or email" className="pl-9" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
         </div>
       </Card>
 
@@ -60,7 +66,7 @@ export function ManagersPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {filtered?.map((manager) => (
+              {visibleManagers?.map((manager) => (
                 <TableRow key={manager.id}>
                   <TableCell>
                     <Link to={`/admin/managers/${manager.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
@@ -84,6 +90,9 @@ export function ManagersPage() {
           </Table>
         )}
       </Card>
+      {filtered && filtered.length > 0 && (
+        <Pagination page={currentPage} totalPages={totalPages} onPageChange={setPage} />
+      )}
     </div>
   );
 }
