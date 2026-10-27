@@ -29,6 +29,7 @@ function hotelImageAdapter(hotelId) {
   return {
     name: 'hotel',
     upload: (file, onProgress) => adminApi.uploadImage(hotelId, file, { category: 'OTHER' }, onProgress),
+    replace: (image, file, onProgress) => adminApi.replaceImage(hotelId, image.id, file, onProgress),
     remove: (image) => adminApi.deleteImage(hotelId, image.id),
     setCover: (image) => adminApi.setCover(hotelId, image.id),
     reorder: (imageIds) => adminApi.reorderImages(hotelId, imageIds),

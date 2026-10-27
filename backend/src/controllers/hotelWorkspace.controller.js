@@ -59,6 +59,17 @@ export const hotelWorkspaceController = {
     return res.json({ image });
   },
 
+  async replaceImage(req, res) {
+    if (!req.file) throw AppError.badRequest('Choose an image to upload');
+    const image = await hotelImageService.replace(
+      req.validated.params.id,
+      req.validated.params.imageId,
+      req.file,
+      actorOf(req),
+    );
+    return res.status(200).json({ image });
+  },
+
   async setCover(req, res) {
     const image = await hotelImageService.setCover(req.validated.params.id, req.validated.params.imageId, actorOf(req));
     return res.json({ image });

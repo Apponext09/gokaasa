@@ -204,6 +204,11 @@ describe('4. occupancy filtering', () => {
 });
 
 describe('5-7. price, star and amenity filtering', () => {
+  it('filters by a case-insensitive hotel-name fragment', async () => {
+    assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&name=SEA`)), [ids.seaBreeze]);
+    assert.deepEqual(idsOf(await search(`${stayParams}&name=${encodeURIComponent('garden stay')}`)), [ids.garden]);
+  });
+
   it('filters by per-night price in rupees', async () => {
     const res = await search(`${stayParams}&destination=mumbai&minPrice=7000&maxPrice=8500`);
     assert.deepEqual(idsOf(res), [ids.seaBreeze], 'Sea Breeze from ₹8,000 a night; Garden Stay at ₹5,000 is below the range');

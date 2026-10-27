@@ -88,6 +88,54 @@ export const roomImageService = {
     }
   },
 
+  async replace(roomTypeId, imageId, file, actor) {
+    if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
+    const detected = detectImageType(file.buffer);
+    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+    if (detected.mime !== file.mimetype) throw AppError.unsupportedMediaType('The file contents do not match its declared type');
+
+    const contentHash = createHash('sha256').update(file.buffer).digest('hex');
+    const storageKey = `rooms/${roomTypeId}/${randomUUID()}.${detected.ext}`;
+    const storage = getStorage();
+    await storage.put(storageKey, file.buffer);
+    let previousStorageKey = null;
+
+    try {
+      await withTransaction(async (client) => {
+        await requireEditableRoom(client, roomTypeId);
+        const existing = await roomTypeRepository.findImage(roomTypeId, imageId, client);
+        if (!existing) throw AppError.notFound('Image not found');
+        previousStorageKey = existing.storage_key;
+
+        await client.query(
+          `UPDATE room_images SET storage_key = $1, mime_type = $2, byte_size = $3, content_hash = $4 WHERE id = $5 AND room_type_id = $6`,
+          [storageKey, detected.mime, file.buffer.length, contentHash, imageId, roomTypeId],
+        );
+
+        await auditService.record(client, {
+          actor,
+          action: 'room_type.image_replaced',
+          entity: 'room_type',
+          entityId: roomTypeId,
+          oldValue: { imageId, byteSize: existing.byte_size },
+          newValue: { imageId, byteSize: file.buffer.length, mimeType: detected.mime },
+        });
+      });
+
+      if (previousStorageKey && previousStorageKey !== storageKey) {
+        await storage.remove(previousStorageKey).catch((cleanupError) =>
+          log.error('old room image cleanup failed', { storageKey: previousStorageKey, message: cleanupError.message }),
+        );
+      }
+
+      const updated = (await roomTypeRepository.listImages(roomTypeId)).find((image) => image.id === imageId);
+      return toRoomImage(updated);
+    } catch (error) {
+      await storage.remove(storageKey).catch((cleanupError) => log.error('orphan cleanup failed', { storageKey, message: cleanupError.message }));
+      throw error;
+    }
+  },
+
   async setCover(roomTypeId, imageId, actor) {
     await withTransaction(async (client) => {
       await requireEditableRoom(client, roomTypeId);

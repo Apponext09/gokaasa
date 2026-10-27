@@ -53,6 +53,12 @@ export const roomInventoryController = {
     return res.status(204).end();
   },
 
+  async replaceRoomImage(req, res) {
+    if (!req.file) throw AppError.badRequest('Choose an image to upload');
+    const image = await roomImageService.replace(req.validated.params.id, req.validated.params.imageId, req.file, actorOf(req));
+    return res.status(200).json({ image });
+  },
+
   async setRoomCover(req, res) {
     return res.json({ images: await roomImageService.setCover(req.validated.params.id, req.validated.params.imageId, actorOf(req)) });
   },

@@ -222,6 +222,64 @@ export const hotelImageService = {
     });
   },
 
+  async replace(hotelId, imageId, file, actor) {
+    if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
+    const detected = detectImageType(file.buffer);
+    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+    if (file.mimetype && detected.mime !== file.mimetype) {
+      throw AppError.unsupportedMediaType('The file contents do not match its declared type');
+    }
+
+    const contentHash = createHash('sha256').update(file.buffer).digest('hex');
+    const storageKey = `hotels/${hotelId}/${randomUUID()}.${detected.ext}`;
+    const storage = getStorage();
+
+    await storage.put(storageKey, file.buffer);
+    let previousStorageKey = null;
+
+    try {
+      const row = await withTransaction(async (client) => {
+        await requireEditableHotel(client, hotelId);
+        const existing = await requireImage(client, hotelId, imageId);
+        previousStorageKey = existing.storage_key;
+
+        await hotelImageRepository.updateFields(client, imageId, {
+          storage_key: storageKey,
+          mime_type: detected.mime,
+          byte_size: file.buffer.length,
+          content_hash: contentHash,
+          origin: 'UPLOADED',
+          source_url: null,
+          source_provider: null,
+        });
+
+        await auditService.record(client, {
+          actor,
+          action: 'hotel.image_replaced',
+          entity: 'hotel',
+          entityId: hotelId,
+          oldValue: { imageId, byteSize: existing.byte_size },
+          newValue: { imageId, byteSize: file.buffer.length, mimeType: detected.mime },
+        });
+
+        return hotelImageRepository.findActive(hotelId, imageId, client);
+      });
+
+      if (previousStorageKey && previousStorageKey !== storageKey) {
+        await storage.remove(previousStorageKey).catch((cleanupError) =>
+          log.error('old image cleanup failed', { storageKey: previousStorageKey, message: cleanupError.message }),
+        );
+      }
+
+      return toImage(row);
+    } catch (error) {
+      await storage.remove(storageKey).catch((cleanupError) =>
+        log.error('orphan cleanup failed', { storageKey, message: cleanupError.message }),
+      );
+      throw error;
+    }
+  },
+
   /** Cover is an explicit selection. Exactly one active image can be the cover at a time. */
   async setCover(hotelId, imageId, actor) {
     return withTransaction(async (client) => {

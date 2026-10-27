@@ -63,6 +63,15 @@ export const adminApi = {
       })
       .then((r) => r.data.image);
   },
+  replaceImage: (id, imageId, file, onProgress) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api
+      .post(`/admin/hotels/${id}/images/${imageId}/replace`, form, {
+        onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
+      })
+      .then((r) => r.data.image);
+  },
   updateImage: (id, imageId, body) => api.patch(`/admin/hotels/${id}/images/${imageId}`, body).then((r) => r.data.image),
   setCover: (id, imageId) => api.post(`/admin/hotels/${id}/images/${imageId}/cover`).then((r) => r.data.image),
   reorderImages: (id, imageIds) => api.put(`/admin/hotels/${id}/images/order`, { imageIds }).then((r) => r.data.images),
@@ -165,6 +174,15 @@ export const roomApi = {
     form.append('image', file);
     return api
       .post(`/admin/room-types/${roomId}/images`, form, {
+        onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
+      })
+      .then((r) => r.data.image);
+  },
+  replaceImage: (roomId, imageId, file, onProgress) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api
+      .post(`/admin/room-types/${roomId}/images/${imageId}/replace`, form, {
         onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
       })
       .then((r) => r.data.image);

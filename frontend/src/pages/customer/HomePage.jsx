@@ -270,13 +270,17 @@ const HOME_SORT_OPTIONS = [
 ];
 
 const HOME_HOTELS_PAGE_SIZE = 12;
+const titleCaseSlug = (slug) => String(slug ?? '')
+  .split('-')
+  .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
+  .join(' ');
 
 function HomeHotelListing({ search = null, geolocation }) {
   const [hotels, setHotels] = useState([]);
   const [status, setStatus] = useState('loading');
   const [filters, setFilters] = useState({});
   const [sort, setSort] = useState('recommended');
-  const [nameQuery, setNameQuery] = useState('');
+  const [nameQuery, setNameQuery] = useState(search?.name ?? '');
   const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
   const [priceBounds, setPriceBounds] = useState(undefined);
   const [resultTotal, setResultTotal] = useState(0);
@@ -299,7 +303,6 @@ function HomeHotelListing({ search = null, geolocation }) {
     destination: search?.destination ?? null,
     area: search?.area ?? null,
     hotelSlug: search?.hotelSlug ?? null,
-    searchName: search?.name ?? null,
     checkIn: listingState.checkIn,
     checkOut: listingState.checkOut,
     occupancy: listingState.occupancy,
@@ -320,7 +323,7 @@ function HomeHotelListing({ search = null, geolocation }) {
     const params = Object.fromEntries(toSearchParams(listingState));
     if (search?.destination) params.destination = search.destination;
     if (search?.area) params.area = search.area;
-    if (search?.name || debouncedNameQuery) params.name = search?.name ?? debouncedNameQuery;
+    if (debouncedNameQuery) params.name = debouncedNameQuery;
     params.page = page;
     params.limit = HOME_HOTELS_PAGE_SIZE;
     discoveryApi
@@ -350,22 +353,33 @@ function HomeHotelListing({ search = null, geolocation }) {
       return distanceKm == null ? hotel : { ...hotel, distanceKm };
     });
   }, [geolocation.coords, hotels]);
-  const destinationHotels = search?.hotelSlug
+  const destinationHotels = search?.hotelSlug && debouncedNameQuery === search.name
     ? hotelsWithDistance.filter((hotel) => hotel.slug === search.hotelSlug)
     : hotelsWithDistance;
-  const filtered = nameQuery.trim()
-    ? destinationHotels.filter((h) => h.name.toLowerCase().includes(nameQuery.toLowerCase()))
-    : destinationHotels;
+  const filtered = destinationHotels;
+
+  const clearFilters = () => {
+    setFilters({});
+    setNameQuery('');
+    setPage(1);
+  };
+
+  const locationLabel = search?.area
+    ? titleCaseSlug(search.area)
+    : search?.destination
+      ? titleCaseSlug(search.destination)
+      : '';
+  const activeName = nameQuery.trim();
+  const hasActiveSearch = Boolean(activeName || locationLabel);
 
   const filtersPanel = (
     <HotelsFilterPanel
       filters={filters}
       priceBounds={priceBounds}
-      disabled={status === 'loading'}
       nameQuery={nameQuery}
       onNameQueryChange={setNameQuery}
       onChange={setFilters}
-      onClear={() => { setFilters({}); setNameQuery(''); }}
+      onClear={clearFilters}
     />
   );
 
@@ -383,15 +397,13 @@ function HomeHotelListing({ search = null, geolocation }) {
         {/* Section header */}
         <div className="home-hl-header">
           <div>
-            <p className="home-hl-eyebrow">{search ? 'Search results' : 'Explore top stays'}</p>
+            <p className="home-hl-eyebrow">{hasActiveSearch ? 'Search results' : 'Explore top stays'}</p>
             <h2 className="home-hl-title">
-              {search
-                ? (search.hotelSlug
-                    ? search.label
-                    : search.name
-                      ? `Hotels matching ${search.label}`
-                      : `Hotels in ${search.label}`)
-                : 'Browse All Hotels'}
+              {activeName
+                ? `Hotels matching ${activeName}`
+                : locationLabel
+                  ? `Hotels in ${locationLabel}`
+                  : 'Browse All Hotels'}
             </h2>
           </div>
         </div>
@@ -484,11 +496,8 @@ function HomeHotelListing({ search = null, geolocation }) {
 
             {status === 'ready' && filtered.length === 0 && (
               <div className="hotels-no-results-card">
-                <h3>No Hotels Match Your Filters</h3>
-                <p>Try clearing some filters to see available stays.</p>
-                <Button variant="secondary" onClick={() => { setFilters({}); setNameQuery(''); }}>
-                  Clear Filters
-                </Button>
+                <h3>No Hotels Found</h3>
+                <p>No hotels are currently available for this search.</p>
               </div>
             )}
 

@@ -63,6 +63,7 @@ export function HotelsPage() {
   const [retryKey, setRetryKey] = useState(0);
   const nameQuery = state.name ?? "";
   const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
+  const nameSearchIsSettling = nameQuery.trim() !== debouncedNameQuery;
   const { status: authStatus } = useAuth();
   const geolocation = useGeolocation({ autoRequest: authStatus !== "loading" });
 
@@ -88,6 +89,14 @@ export function HotelsPage() {
   }, [destination, effectiveState, params, setParams, state.area]);
 
   const requestKey = buildRequest(effectiveState, destination, debouncedNameQuery).toString();
+  const searchWidgetKey = [
+    destination,
+    state.area ?? "",
+    state.name ?? "",
+    state.checkIn ?? "",
+    state.checkOut ?? "",
+    JSON.stringify(state.occupancy),
+  ].join("|");
 
   useEffect(() => {
     if (authStatus === "loading") return undefined;
@@ -129,10 +138,8 @@ export function HotelsPage() {
           return distanceKm == null ? hotel : { ...hotel, distanceKm };
         })
       : data.items;
-    if (!nameQuery.trim()) return items;
-    const q = nameQuery.toLowerCase();
-    return items.filter((h) => h.name.toLowerCase().includes(q));
-  }, [data?.items, geolocation.coords, nameQuery]);
+    return items;
+  }, [data?.items, geolocation.coords]);
 
   // Dynamically extract up to the first 5 unique hotel images for the searched location
   const locationImages = useMemo(() => {
@@ -196,7 +203,6 @@ export function HotelsPage() {
     <HotelsFilterPanel
       filters={state.filters}
       priceBounds={data?.priceBounds}
-      disabled={status === "loading"}
       nameQuery={nameQuery}
       onNameQueryChange={(value) => update({ name: value || null }, { replace: true })}
       onChange={(filters) => update({ filters })}
@@ -237,14 +243,16 @@ export function HotelsPage() {
           <div className="hotels-page-search-box">
             <div className="hotels-search-desktop">
               <SearchWidget
+                key={`desktop-${searchWidgetKey}`}
                 variant="compact"
-                initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
+                initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
               />
             </div>
             <div className="hotels-search-mobile">
               <SearchWidget
+                key={`mobile-${searchWidgetKey}`}
                 variant="hero"
-                initial={{ destination, area: state.area, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
+                initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
               />
             </div>
           </div>
@@ -322,7 +330,7 @@ export function HotelsPage() {
               </div>
             </div>
 
-            {status === "loading" && !data && (
+            {(status === "loading" || nameSearchIsSettling) && (
               <div className="hotels-cards-stream">
                 {[0, 1, 2, 3].map((i) => <HotelCardSkeleton key={i} />)}
               </div>
@@ -337,7 +345,7 @@ export function HotelsPage() {
               </Alert>
             )}
 
-            {status === "ready" && filteredItems.length === 0 && (
+            {status === "ready" && !nameSearchIsSettling && filteredItems.length === 0 && (
               <div className="hotels-no-results-card">
                 <div className="hotels-empty-icon-wrap"><Search className="h-10 w-10 text-slate-400" /></div>
                 <h3>No Hotels Found{label ? ` in ${label}` : ""}</h3>
@@ -346,7 +354,7 @@ export function HotelsPage() {
               </div>
             )}
 
-            {status !== "error" && filteredItems.length > 0 && (
+            {status === "ready" && !nameSearchIsSettling && filteredItems.length > 0 && (
               <div className="hotels-cards-stream">
                 {filteredItems.map((hotel, index) => (
                   <StaggeredReveal key={hotel.id} index={index}>
@@ -356,15 +364,15 @@ export function HotelsPage() {
               </div>
             )}
 
-            {data && data.pagination.totalPages > 1 && (
+            {status === "ready" && data && data.pagination.totalPages > 1 && (
               <div className="mt-8">
                 <Pagination page={data.pagination.page} totalPages={data.pagination.totalPages} onPageChange={(page) => update({ page }, { resetPage: false })} />
               </div>
             )}
-            {data && hasStay && (
+            {status === "ready" && data && hasStay && (
               <p className="hotels-price-note">Nightly prices are before taxes and fees; stay totals include them. Last checked {formatDateTime(new Date())}.</p>
             )}
-            {data && browseMode && (
+            {status === "ready" && data && browseMode && (
               <p className="hotels-price-note">Add check-in and check-out dates above to see live prices and availability.</p>
             )}
           </section>

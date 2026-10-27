@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button.jsx";
 import { Checkbox, Input } from "@/components/ui/form-controls.jsx";
@@ -39,9 +39,9 @@ const toggle = (list, value) =>
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-function rangeFromFilters(filters, floor, ceiling) {
-  const min = clamp(filters.minPrice ?? floor, floor, ceiling);
-  const max = clamp(filters.maxPrice ?? ceiling, min, ceiling);
+function rangeFromFilters(filters, ceiling) {
+  const min = filters.minPrice != null ? clamp(filters.minPrice, 0, ceiling) : 0;
+  const max = filters.maxPrice != null ? clamp(filters.maxPrice, min, ceiling) : ceiling;
   return { min, max };
 }
 
@@ -63,28 +63,48 @@ export function HotelsFilterPanel({
   nameQuery = "",
   onNameQueryChange,
 }) {
-  const floor = priceBounds ? Math.floor(priceBounds.minPerNightMinor / 100) : 1500;
-  const ceiling = priceBounds ? Math.max(Math.ceil(priceBounds.maxPerNightMinor / 100), floor) : 35000;
+  const floor = 0;
+  const ceiling = 1000000;
 
-  const [range, setRange] = useState(() => rangeFromFilters(filters, floor, ceiling));
+  const isUserActionRef = useRef(false);
+  const [range, setRange] = useState(() => rangeFromFilters(filters, ceiling));
   const debouncedRange = useDebounce(range, 400);
 
+  // Sync debounced price range changes to parent ONLY when initiated by user interaction
   useEffect(() => {
-    if (priceBounds === null) return;
-    const minPrice = debouncedRange.min > floor ? debouncedRange.min : undefined;
-    const maxPrice = debouncedRange.max < ceiling ? debouncedRange.max : undefined;
+    if (!isUserActionRef.current) return;
+    isUserActionRef.current = false;
+
+    const rawMin = debouncedRange.min === "" ? 0 : Number(debouncedRange.min);
+    const rawMax = debouncedRange.max === "" ? ceiling : Number(debouncedRange.max);
+    const effectiveMin = clamp(Number.isNaN(rawMin) ? 0 : rawMin, 0, ceiling);
+    const effectiveMax = clamp(Number.isNaN(rawMax) ? ceiling : rawMax, effectiveMin, ceiling);
+
+    const minPrice = effectiveMin > 0 ? effectiveMin : undefined;
+    const maxPrice = effectiveMax < ceiling ? effectiveMax : undefined;
     if (minPrice !== filters.minPrice || maxPrice !== filters.maxPrice) {
       onChange({ ...filters, minPrice, maxPrice });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedRange, priceBounds]);
+  }, [debouncedRange]);
 
+  // Sync incoming external filter changes to local range
   useEffect(() => {
-    if (priceBounds === null) return;
-    setRange(rangeFromFilters(filters, floor, ceiling));
-  }, [filters.minPrice, filters.maxPrice, floor, ceiling, priceBounds]);
+    if (!isUserActionRef.current) {
+      setRange(rangeFromFilters(filters, ceiling));
+    }
+  }, [filters.minPrice, filters.maxPrice]);
 
   const set = (patch) => onChange({ ...filters, ...patch });
+
+  const clearAll = () => {
+    isUserActionRef.current = false;
+    setRange({ min: 0, max: ceiling });
+    if (onNameQueryChange) {
+      onNameQueryChange("");
+    }
+    onClear();
+  };
 
   const activeCount = [
     nameQuery.trim(),
@@ -105,7 +125,7 @@ export function HotelsFilterPanel({
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-[var(--text-strong)]">Filters</h2>
         {activeCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={onClear}>
+          <Button variant="ghost" size="sm" onClick={clearAll}>
             Clear all ({activeCount})
           </Button>
         )}
@@ -124,20 +144,35 @@ export function HotelsFilterPanel({
 
       {/* Price per night */}
       <Section title="Price per night">
-        {priceBounds === null ? (
-          <p className="text-xs text-[var(--text-muted)]">No nightly prices are available for the current search.</p>
-        ) : (
-          <>
             <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1 text-xs text-[var(--text-muted)]">
                 Min (Rs.)
                 <Input
                   type="number"
                   inputMode="numeric"
-                  min={floor}
-                  max={range.max}
+                  min={0}
+                  max={typeof range.max === "number" ? range.max : ceiling}
                   value={range.min}
-                  onChange={(e) => setRange((r) => ({ ...r, min: clamp(Number(e.target.value) || floor, floor, r.max) }))}
+                  onChange={(e) => {
+                    isUserActionRef.current = true;
+                    const val = e.target.value;
+                    if (val === "") {
+                      setRange((r) => ({ ...r, min: "" }));
+                    } else {
+                      const num = Math.max(0, Number(val));
+                      setRange((r) => ({ ...r, min: Number.isNaN(num) ? 0 : num }));
+                    }
+                  }}
+                  onBlur={() => {
+                    isUserActionRef.current = true;
+                    setRange((r) => {
+                      const minNum = r.min === "" ? 0 : Number(r.min);
+                      const maxNum = r.max === "" ? ceiling : Number(r.max);
+                      const safeMax = clamp(Number.isNaN(maxNum) ? ceiling : maxNum, 0, ceiling);
+                      const safeMin = clamp(Number.isNaN(minNum) ? 0 : minNum, 0, safeMax);
+                      return { min: safeMin, max: safeMax };
+                    });
+                  }}
                   aria-label="Minimum price per night"
                 />
               </label>
@@ -146,10 +181,29 @@ export function HotelsFilterPanel({
                 <Input
                   type="number"
                   inputMode="numeric"
-                  min={range.min}
+                  min={typeof range.min === "number" ? range.min : 0}
                   max={ceiling}
                   value={range.max}
-                  onChange={(e) => setRange((r) => ({ ...r, max: clamp(Number(e.target.value) || ceiling, r.min, ceiling) }))}
+                  onChange={(e) => {
+                    isUserActionRef.current = true;
+                    const val = e.target.value;
+                    if (val === "") {
+                      setRange((r) => ({ ...r, max: "" }));
+                    } else {
+                      const num = Math.max(0, Number(val));
+                      setRange((r) => ({ ...r, max: Number.isNaN(num) ? ceiling : num }));
+                    }
+                  }}
+                  onBlur={() => {
+                    isUserActionRef.current = true;
+                    setRange((r) => {
+                      const minNum = r.min === "" ? 0 : Number(r.min);
+                      const maxNum = r.max === "" ? ceiling : Number(r.max);
+                      const safeMin = clamp(Number.isNaN(minNum) ? 0 : minNum, 0, ceiling);
+                      const safeMax = clamp(Number.isNaN(maxNum) ? ceiling : maxNum, safeMin, ceiling);
+                      return { min: safeMin, max: safeMax };
+                    });
+                  }}
                   aria-label="Maximum price per night"
                 />
               </label>
@@ -157,20 +211,22 @@ export function HotelsFilterPanel({
             <input
               type="range"
               aria-label="Maximum price slider"
-              min={floor}
+              min={0}
               max={ceiling}
-              step={1}
-              value={range.max}
-              disabled={floor === ceiling}
-              onChange={(e) => setRange((r) => ({ ...r, max: clamp(Number(e.target.value), r.min, ceiling) }))}
+              step={500}
+              value={typeof range.max === "number" ? range.max : ceiling}
+              disabled={ceiling <= 0}
+              onChange={(e) => {
+                isUserActionRef.current = true;
+                const minLimit = typeof range.min === "number" ? range.min : 0;
+                setRange((r) => ({ ...r, max: clamp(Number(e.target.value), minLimit, ceiling) }));
+              }}
               className="mt-1 w-full accent-brand-600"
             />
             <div className="flex justify-between text-[11px] text-[var(--text-muted)]">
-              <span>Rs.{floor.toLocaleString("en-IN")}</span>
+              <span>Rs.0</span>
               <span>Rs.{ceiling.toLocaleString("en-IN")}</span>
             </div>
-          </>
-        )}
       </Section>
 
       {/* Star category */}

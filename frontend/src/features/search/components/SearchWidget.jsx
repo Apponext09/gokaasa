@@ -9,6 +9,35 @@ import { addDays, nightsBetween, stayParams, todayIso, validateStay } from '@/fe
 
 const titleCase = (slug) => slug.split('-').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
 
+function initialDestinationFor(initial) {
+  if (initial?.name) {
+    return {
+      type: 'TEXT',
+      label: initial.name,
+      name: initial.name,
+      destination: initial.destination ?? null,
+      area: initial.area ?? null,
+    };
+  }
+  if (initial?.area) {
+    return {
+      type: 'AREA',
+      label: titleCase(initial.area),
+      destination: initial.destination ?? null,
+      area: initial.area,
+    };
+  }
+  if (initial?.destination) {
+    return {
+      type: 'CITY',
+      label: titleCase(initial.destination),
+      destination: initial.destination,
+      area: null,
+    };
+  }
+  return null;
+}
+
 /** Where the search goes for a chosen destination. Hotels open directly; places open the Hotels listing page. */
 function searchTargetFor(destination, stay, occupancy, coupon = null) {
   const params = stayParams({ ...stay, occupancy, coupon });
@@ -19,7 +48,7 @@ function searchTargetFor(destination, stay, occupancy, coupon = null) {
   // Free text can be a hotel name. Keep it as a name filter instead of treating it as a city slug.
   if (destination.type === 'TEXT' && destination.name) params.set('name', destination.name);
   // A city/area — go to HotelsPage with destination as query param
-  if (destination.type === 'AREA' && destination.area) params.set('area', destination.area);
+  if (destination.area) params.set('area', destination.area);
   if (destination.destination) params.set('destination', destination.destination);
   return `/hotels?${params}`;
 }
@@ -31,10 +60,8 @@ function searchTargetFor(destination, stay, occupancy, coupon = null) {
 export function SearchWidget({ variant = 'hero', initial, onSubmitted, onSearch }) {
   const navigate = useNavigate();
   const today = todayIso();
-  const [destination, setDestination] = useState(
-    initial?.destination ? { type: 'CITY', label: titleCase(initial.destination), destination: initial.destination, area: initial.area ?? null } : null,
-  );
-  const [typed, setTyped] = useState('');
+  const [destination, setDestination] = useState(() => initialDestinationFor(initial));
+  const [typed, setTyped] = useState(initial?.name ?? '');
   const [stay, setStay] = useState({
     checkIn: initial?.checkIn ?? addDays(today, 1),
     checkOut: initial?.checkOut ?? addDays(today, 3),
@@ -97,7 +124,7 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted, onSearch 
   if (compact) {
     return (
       <form onSubmit={submit} noValidate aria-label="Search hotels" className="customer-compact-search grid w-full grid-cols-1 gap-2.5 md:grid-cols-[1.6fr_1.6fr_1.2fr_auto] md:items-center">
-        <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} />
+        <DestinationField id={`destination-${variant}`} value={destination} onChange={setDestination} onTextChange={setTyped} />
         {dateRange}
         <GuestsPopover idPrefix={variant} rooms={occupancy} onChange={setOccupancy} />
         <Button type="submit" size="lg" className="w-full">
@@ -115,7 +142,7 @@ export function SearchWidget({ variant = 'hero', initial, onSubmitted, onSearch 
   return (
     <form onSubmit={submit} noValidate aria-label="Search hotels" className="customer-search-widget w-full rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] p-1.5 shadow-sm">
       <div className="grid grid-cols-1 divide-y divide-[var(--border-subtle)] lg:grid-cols-[1.5fr_1.4fr_1fr_auto] lg:items-stretch lg:divide-x lg:divide-y-0">
-        <DestinationField value={destination} onChange={setDestination} onTextChange={setTyped} bare />
+        <DestinationField id={`destination-${variant}`} value={destination} onChange={setDestination} onTextChange={setTyped} bare />
         {dateRange}
         <GuestsPopover
           idPrefix={variant}

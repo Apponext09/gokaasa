@@ -226,6 +226,7 @@ export function RoomEditorPage() {
                   adapter={{
                     name: 'room',
                     upload: (file, onProgress) => roomApi.uploadImage(roomId, file, onProgress),
+                    replace: (image, file, onProgress) => roomApi.replaceImage(roomId, image.id, file, onProgress),
                     remove: (image) => roomApi.deleteImage(roomId, image.id),
                     setCover: (image) => roomApi.setCover(roomId, image.id),
                     reorder: (ids) => roomApi.reorderImages(roomId, ids),
@@ -241,7 +242,7 @@ export function RoomEditorPage() {
           </TabPanel>
 
           <TabPanel value="availability" current={tab}>
-            <RateCalendar roomId={roomId} plans={room.ratePlans} disabled={readOnly} onChanged={refresh} />
+            <RateCalendar roomId={roomId} room={room} plans={room.ratePlans} disabled={readOnly} onChanged={refresh} />
             <BlocksPanel roomId={roomId} disabled={readOnly} onChanged={refresh} />
           </TabPanel>
         </>

@@ -8,7 +8,7 @@ import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle
 import { Button } from '@/components/ui/button.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
 import { FormField, formatMoney } from '@/components/shared/index.jsx';
-import { rupeesToMinor } from '@/features/rooms/roomForm.js';
+import { minorToRupees, rupeesToMinor } from '@/features/rooms/roomForm.js';
 import { roomApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 
@@ -49,7 +49,7 @@ const bulkSchema = z
  * Day-by-day rate and inventory calendar with a bulk editor. Availability shown here is computed by the
  * server from settings, blocks and reservations; the form only sends the changes an admin asks for.
  */
-export function RateCalendar({ roomId, plans, disabled, onChanged }) {
+export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
   const [from, setFrom] = useState(isoDay(DEFAULT_FROM_OFFSET));
   const [to, setTo] = useState(isoDay(DEFAULT_TO_OFFSET));
   const [planId, setPlanId] = useState('');
@@ -81,12 +81,12 @@ export function RateCalendar({ roomId, plans, disabled, onChanged }) {
     defaultValues: {
       from: isoDay(DEFAULT_FROM_OFFSET),
       to: isoDay(DEFAULT_TO_OFFSET),
-      ratePlanId: '',
+      ratePlanId: plans?.[0] ? String(plans[0].id) : '',
       price: '',
-      units: '',
+      units: room?.totalUnits != null ? String(room.totalUnits) : '',
       closure: 'KEEP',
-      minStay: '',
-      maxStay: '',
+      minStay: room?.minStay != null ? String(room.minStay) : '',
+      maxStay: room?.maxStay != null ? String(room.maxStay) : '',
     },
     mode: 'onTouched',
   });
@@ -97,6 +97,36 @@ export function RateCalendar({ roomId, plans, disabled, onChanged }) {
 
   const planById = useMemo(() => Object.fromEntries((plans ?? []).map((p) => [p.id, p])), [plans]);
   const activePlan = planById[Number(activePlanId)];
+
+  const hasAnyPricedDay = useMemo(() => {
+    return Boolean(data?.days?.some((d) => Object.values(d.rates ?? {}).some((r) => r?.base != null)));
+  }, [data?.days]);
+
+  useEffect(() => {
+    if (activePlanId && !watch('ratePlanId')) {
+      setValue('ratePlanId', activePlanId);
+    }
+  }, [activePlanId, setValue, watch]);
+
+  useEffect(() => {
+    if (room?.totalUnits != null && !watch('units')) {
+      setValue('units', String(room.totalUnits));
+    }
+    if (room?.minStay != null && !watch('minStay')) {
+      setValue('minStay', String(room.minStay));
+    }
+    if (room?.maxStay != null && !watch('maxStay')) {
+      setValue('maxStay', String(room.maxStay));
+    }
+  }, [room?.totalUnits, room?.minStay, room?.maxStay, setValue, watch]);
+
+  useEffect(() => {
+    if (!data?.days || watch('price')) return;
+    const pricedDay = data.days.find((d) => activePlanId && d.rates?.[activePlanId]?.base != null);
+    if (pricedDay && pricedDay.rates[activePlanId]?.base != null) {
+      setValue('price', minorToRupees(pricedDay.rates[activePlanId].base));
+    }
+  }, [data, activePlanId, setValue, watch]);
 
   const apply = async (values) => {
     setApplying(true);
@@ -144,6 +174,13 @@ export function RateCalendar({ roomId, plans, disabled, onChanged }) {
           <CardDescription>Choose a date range, then change rooms for sale, open or closed, and stay length. To change the nightly base price, select the rate plan it applies to. Empty fields are not changed.</CardDescription>
         </CardHeader>
         <CardContent>
+          {!hasAnyPricedDay && data && (
+            <div className="mb-4">
+              <Alert tone="warning">
+                <strong>No room rates applied yet:</strong> Guests cannot find or book this room in search results until you set a base price and click <strong>Apply to {bulkFrom} → {bulkTo}</strong> below.
+              </Alert>
+            </div>
+          )}
           <form onSubmit={handleSubmit(apply)} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <FormField id="bulk-from" label="From" error={e.from?.message}>
               <Input id="bulk-from" type="date" invalid={!!e.from} disabled={disabled} {...register('from')} />

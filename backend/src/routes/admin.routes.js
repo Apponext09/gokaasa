@@ -290,6 +290,13 @@ adminRouter.patch(
   hotelWorkspaceController.updateImage,
 );
 adminRouter.post(
+  '/hotels/:id/images/:imageId/replace',
+  validate({ params: imageParam }),
+  requireHotelAccess(hotelIdFromParam),
+  uploadSingleImage,
+  hotelWorkspaceController.replaceImage,
+);
+adminRouter.post(
   '/hotels/:id/images/:imageId/cover',
   validate({ params: imageParam }),
   requireHotelAccess(hotelIdFromParam),
@@ -363,6 +370,13 @@ adminRouter.delete(
   validate({ params: roomImageParam }),
   requireHotelAccess(hotelIdFromRoomType),
   inv.removeRoomImage,
+);
+adminRouter.post(
+  '/room-types/:id/images/:imageId/replace',
+  validate({ params: roomImageParam }),
+  requireHotelAccess(hotelIdFromRoomType),
+  uploadSingleImage,
+  inv.replaceRoomImage,
 );
 adminRouter.post(
   '/room-types/:id/images/:imageId/cover',
