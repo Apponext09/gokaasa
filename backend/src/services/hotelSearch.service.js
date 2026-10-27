@@ -12,6 +12,7 @@ import { bestDisplayOffer } from '../domain/coupon.js';
 import { config } from '../config/index.js';
 import { toPage } from './presenters.js';
 import { AppError } from '../utils/AppError.js';
+import { catalogService } from './catalog.service.js';
 
 /**
  * Every active, in-date coupon with its hotel/city restrictions attached, fetched once per request (not
@@ -88,6 +89,7 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
     latitude: row.latitude == null ? null : Number(row.latitude),
     longitude: row.longitude == null ? null : Number(row.longitude),
     propertyType: row.property_type,
+    propertyTypeName: row.property_type_name ?? row.property_type,
     starRating: row.star_rating,
     guestRating: row.guest_rating == null ? null : Number(row.guest_rating),
     reviewCount: row.review_count,
@@ -143,6 +145,7 @@ export function toCuratedCard(row, { offers = [] } = {}) {
     countryCode: row.country_code,
     country: countryName(row.country_code),
     propertyType: row.property_type,
+    propertyTypeName: row.property_type_name ?? row.property_type,
     starRating: row.star_rating,
     guestRating: row.guest_rating == null ? null : Number(row.guest_rating),
     reviewCount: row.review_count,
@@ -184,6 +187,10 @@ export const hotelSearchService = {
   async search(query, { userId = null, today = localToday(config.booking.businessTimezone) } = {}) {
     const { checkIn, checkOut, occupancy, page, limit, filters, sort } = query;
     if (checkIn < today) throw AppError.unprocessable('Check-in cannot be in the past', [{ field: 'checkIn', message: 'Pick a date from today onwards' }]);
+    await Promise.all([
+      ...(filters.propertyTypes ?? []).map((code) => catalogService.requireActive('property-types', code)),
+      ...(filters.amenities ?? []).map((code) => catalogService.requireActive('amenities', code)),
+    ]);
 
     const nights = nightsBetween(checkIn, checkOut);
     // Destination and area used to trigger two identical published-place queries. Resolve both from one

@@ -24,7 +24,9 @@ const SORT_SQL = {
 export const hotelSearchRepository = {
   async similar({ hotelId, city, limit }) {
     const { rows } = await pool.query(
-      `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type, h.star_rating, h.guest_rating,
+      `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type,
+              (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
+              h.star_rating, h.guest_rating,
               h.review_count, FALSE AS wishlisted,
               (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
@@ -85,7 +87,9 @@ export const hotelSearchRepository = {
           WHERE rt.status = 'ACTIVE' AND rt.deleted_at IS NULL
           ORDER BY rt.hotel_id, rpr.final_price_minor ASC
        )
-       SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
+       SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type,
+              (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
+              h.star_rating, h.guest_rating, h.review_count,
               h.latitude, h.longitude, w.distance_km,
               c.base_price_minor, c.discount_minor, c.final_price_minor,
               (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
@@ -196,7 +200,7 @@ export const hotelSearchRepository = {
          SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
                 COALESCE(h.guest_rating, (SELECT AVG(r.rating) FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED')) AS display_guest_rating,
                 NULL::numeric AS distance_km, h.latitude, h.longitude,
-                h.property_type,
+                h.property_type, (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
                 hb.room_type_id, rt.name AS room_name, rt.room_code, rt.bed_type, rt.room_size_sqm, rt.view,
                 hb.plan_id, hb.plan_code, hb.plan_name, hb.meal_plan, hb.is_refundable,
                 hb.policy_code, hb.policy_name, hb.is_non_refundable, hb.cancellation_deadline_hours, hb.refund_percent,

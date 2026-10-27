@@ -11,12 +11,14 @@ import { offerRouter } from './offer.routes.js';
 import { assistantRouter } from './assistant.routes.js';
 import { presenceRouter } from './presence.routes.js';
 import { partnerRouter } from './partner.routes.js';
+import { catalogRouter } from './catalog.routes.js';
 
 export const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/hotels', hotelRouter);
 apiRouter.use('/amenities', amenityRouter);
+apiRouter.use('/catalogs', catalogRouter);
 apiRouter.use('/destinations', destinationRouter);
 apiRouter.use('/wishlist', wishlistRouter);
 apiRouter.use('/booking', bookingRouter);

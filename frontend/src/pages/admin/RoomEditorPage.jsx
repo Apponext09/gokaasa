@@ -19,6 +19,8 @@ import { CancellationPoliciesPanel } from '@/features/rooms/components/Cancellat
 import { EMPTY_ROOM_FORM, roomFormSchema, toRoomFormValues, toRoomPayload } from '@/features/rooms/roomForm.js';
 import { roomApi, hotelApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
+import { useCatalog } from '@/features/catalogs/useCatalog.js';
+import { toOptions } from '@/features/catalogs/catalogs.js';
 
 const TABS = [
   { value: 'details', label: 'Details' },
@@ -51,6 +53,7 @@ export function RoomEditorPage() {
   const [codeLoading, setCodeLoading] = useState(isNew);
   const [codeError, setCodeError] = useState(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const { items: roomCategories } = useCatalog('room-categories');
 
   const form = useForm({ resolver: zodResolver(roomFormSchema), defaultValues: EMPTY_ROOM_FORM, mode: 'onTouched' });
   const { handleSubmit, reset, formState } = form;
@@ -198,7 +201,7 @@ export function RoomEditorPage() {
       {(isNew || tab === 'details') && (
         <TabPanel value="details" current={isNew ? 'details' : tab}>
           <form onSubmit={handleSubmit(save)} noValidate className="space-y-6">
-            <RoomDetailsForm form={form} policies={policies} disabled={readOnly || saving} roomCodeReadOnly />
+            <RoomDetailsForm form={form} policies={policies} roomCategoryOptions={toOptions(roomCategories)} disabled={readOnly || saving} roomCodeReadOnly />
             <div className="sticky bottom-4 flex justify-end gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-card)]/95 p-3 shadow-sm backdrop-blur">
               {formState.isDirty && <span className="self-center text-xs text-warning-600">Unsaved changes</span>}
               <Button type="submit" loading={saving || codeLoading} disabled={readOnly || codeLoading || Boolean(codeError)}>

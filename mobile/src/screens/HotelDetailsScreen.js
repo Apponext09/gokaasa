@@ -108,7 +108,7 @@ export default function HotelDetailsScreen({ route, navigation }) {
         <FadeSlideIn style={styles.body}>
           <View style={styles.titleRow}>
             {hotel.starRating ? <StarRating count={hotel.starRating} /> : (
-              <Text style={styles.propertyType}>{PROPERTY_TYPE_LABEL[hotel.propertyType] ?? 'Stay'}</Text>
+              <Text style={styles.propertyType}>{hotel.propertyTypeName ?? PROPERTY_TYPE_LABEL[hotel.propertyType] ?? hotel.propertyType?.replaceAll('_', ' ') ?? 'Stay'}</Text>
             )}
             {ratingValue != null && (
               <View style={styles.ratingRow}>

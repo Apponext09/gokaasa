@@ -98,7 +98,7 @@ export function HotelCard({ hotel, onPress }) {
 
         <View style={styles.body}>
           {hotel.starRating ? <StarRating count={hotel.starRating} /> : (
-            <Text style={styles.propertyType}>{PROPERTY_TYPE_LABEL[hotel.propertyType] ?? 'Stay'}</Text>
+            <Text style={styles.propertyType}>{hotel.propertyTypeName ?? PROPERTY_TYPE_LABEL[hotel.propertyType] ?? hotel.propertyType?.replaceAll('_', ' ') ?? 'Stay'}</Text>
           )}
           <Text style={styles.name} numberOfLines={1}>{hotel.name}</Text>
           <View style={styles.row}>

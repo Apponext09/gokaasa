@@ -5,9 +5,11 @@ import { Button, buttonVariants } from '@/components/ui/button.jsx';
 import { Card, Alert } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
-import { EmptyState, HOTEL_STATUS_OPTIONS, HotelStatusBadge, PROPERTY_TYPE_OPTIONS, Pagination, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
+import { EmptyState, HOTEL_STATUS_OPTIONS, HotelStatusBadge, Pagination, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { useCatalog } from '@/features/catalogs/useCatalog.js';
+import { toOptions } from '@/features/catalogs/catalogs.js';
 
 const SORT_OPTIONS = [
   { value: 'updated_desc', label: 'Recently updated' },
@@ -39,6 +41,8 @@ export function HotelListPage() {
   const [searchText, setSearchText] = useState(filters.q);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const { items: propertyTypeItems } = useCatalog('property-types');
+  const propertyTypeOptions = toOptions(propertyTypeItems);
 
   // Debounce free-text search so typing does not fire a request per keystroke.
   useEffect(() => {
@@ -113,7 +117,7 @@ export function HotelListPage() {
         </Select>
         <Select aria-label="Filter by property type" value={filters.propertyType} onChange={(e) => updateFilters({ propertyType: e.target.value })}>
           <option value="">All property types</option>
-          {PROPERTY_TYPE_OPTIONS.map((option) => (
+          {propertyTypeOptions.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
           ))}
         </Select>
@@ -189,7 +193,7 @@ export function HotelListPage() {
                     <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
                       {hotel.name}
                     </Link>
-                    <p className="text-xs text-[var(--text-muted)]">{hotel.propertyType.replaceAll('_', ' ').toLowerCase()}</p>
+                    <p className="text-xs text-[var(--text-muted)]">{hotel.propertyTypeName ?? hotel.propertyType.replaceAll('_', ' ').toLowerCase()}</p>
                   </TableCell>
                   <TableCell className="text-[var(--text-body)]">{[hotel.city, hotel.countryCode].filter(Boolean).join(', ')}</TableCell>
                   <TableCell>

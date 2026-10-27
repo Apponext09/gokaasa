@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { parseOccupancy } from '../domain/occupancy.js';
 
-const ROOM_CATEGORIES = ['STANDARD', 'DELUXE', 'SUITE', 'FAMILY', 'VILLA', 'DORM', 'OTHER'];
 const BED_TYPES = ['KING', 'QUEEN', 'DOUBLE', 'TWIN', 'SINGLE', 'SOFA_BED', 'BUNK'];
 const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
 const BLOCK_REASONS = ['MAINTENANCE', 'OWNER_USE', 'OTHER'];
@@ -15,7 +14,7 @@ const percent = z.number().min(0).max(100);
 const roomFields = {
   name: z.string().trim().min(2, 'Room name is required').max(120),
   roomCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{1,19}$/, 'Use 2-20 letters, digits, hyphens or underscores'),
-  category: z.enum(ROOM_CATEGORIES),
+  category: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a valid room type'),
   description: optionalText(2000),
   roomSizeSqm: z.number().positive().max(2000).nullish(),
   bedType: z.enum(BED_TYPES).nullish(),

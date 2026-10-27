@@ -832,9 +832,7 @@ export function HotelDetailsPage() {
 
               {hotel.propertyType && (
                 <Badge tone="neutral">
-                  {hotel.propertyType
-                    .replace('_', ' ')
-                    .toLowerCase()}
+                  {hotel.propertyTypeName ?? hotel.propertyType.replaceAll('_', ' ').toLowerCase()}
                 </Badge>
               )}
             </div>
@@ -1050,9 +1048,7 @@ export function HotelDetailsPage() {
                 </dt>
 
                 <dd className="font-medium capitalize text-[var(--text-strong)]">
-                  {hotel.propertyType
-                    .replace('_', ' ')
-                    .toLowerCase()}
+                  {hotel.propertyTypeName ?? hotel.propertyType.replaceAll('_', ' ').toLowerCase()}
                 </dd>
               </div>
             )}

@@ -19,6 +19,7 @@ import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
 import { notificationService } from '../notifications/notificationService.js';
 import { toCsv } from '../utils/csv.js';
 import { emailNotificationService } from './emailNotification.service.js';
+import { catalogService } from './catalog.service.js';
 
 const EXPORT_CAP = 5000;
 
@@ -127,6 +128,7 @@ export const hotelService = {
 
   async createManual(input, actor) {
     return withTransaction(async (client) => {
+      await catalogService.requireActive('property-types', input.propertyType, client);
       const slug = await uniqueSlug(client, slugify(input.name, input.city));
       const id = await hotelRepository.insert(client, {
         ...toColumns(input),
@@ -153,6 +155,9 @@ export const hotelService = {
       if (!current) throw AppError.notFound('Hotel not found');
       if (!EDITABLE_STATUSES.includes(current.status)) {
         throw AppError.conflict('Archived hotels are read-only. Restore is not available yet.');
+      }
+      if (input.propertyType !== undefined && input.propertyType !== current.property_type) {
+        await catalogService.requireActive('property-types', input.propertyType, client);
       }
 
       const columns = toColumns(input);

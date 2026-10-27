@@ -24,7 +24,6 @@ const SORTS = [
   { value: 'star_rating', label: 'Star rating' },
 ];
 
-const PROPERTY_TYPES = ['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE'];
 const GUEST_RATING_OPTIONS = [
   { value: 3, label: '3+' },
   { value: 3.5, label: '3.5+' },
@@ -63,6 +62,7 @@ export default function SearchScreen({ route, navigation }) {
   const [sort, setSort] = useState('recommended');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [amenityOptions, setAmenityOptions] = useState([]);
+  const [propertyTypeOptions, setPropertyTypeOptions] = useState([]);
   const [guestsOpen, setGuestsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
@@ -83,6 +83,7 @@ export default function SearchScreen({ route, navigation }) {
 
   useEffect(() => {
     hotelsApi.amenities().then(setAmenityOptions).catch(() => setAmenityOptions([]));
+    hotelsApi.catalog('property-types').then(setPropertyTypeOptions).catch(() => setPropertyTypeOptions([]));
   }, []);
 
   const runSearch = useCallback(
@@ -297,6 +298,7 @@ export default function SearchScreen({ route, navigation }) {
         visible={filtersOpen}
         filters={filters}
         amenityOptions={amenityOptions}
+        propertyTypeOptions={propertyTypeOptions}
         onChange={setFilters}
         onClose={() => setFiltersOpen(false)}
       />
@@ -316,7 +318,7 @@ export default function SearchScreen({ route, navigation }) {
   );
 }
 
-function FiltersModal({ visible, filters, amenityOptions, onChange, onClose }) {
+function FiltersModal({ visible, filters, amenityOptions, propertyTypeOptions, onChange, onClose }) {
   const [draft, setDraft] = useState(filters);
   useEffect(() => {
     if (visible) setDraft(filters);
@@ -375,9 +377,9 @@ function FiltersModal({ visible, filters, amenityOptions, onChange, onClose }) {
 
             <Text style={styles.filterLabel}>Property type</Text>
             <View style={styles.chipRow}>
-              {PROPERTY_TYPES.map((p) => (
-                <Pressable key={p} style={[styles.chip, draft.propertyTypes.includes(p) && styles.chipActive]} onPress={() => toggle('propertyTypes', p)}>
-                  <Text style={[styles.chipText, draft.propertyTypes.includes(p) && styles.chipTextActive]}>{p.replace('_', ' ')}</Text>
+              {propertyTypeOptions.map((propertyType) => (
+                <Pressable key={propertyType.code} style={[styles.chip, draft.propertyTypes.includes(propertyType.code) && styles.chipActive]} onPress={() => toggle('propertyTypes', propertyType.code)}>
+                  <Text style={[styles.chipText, draft.propertyTypes.includes(propertyType.code) && styles.chipTextActive]}>{propertyType.name}</Text>
                 </Pressable>
               ))}
             </View>

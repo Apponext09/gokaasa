@@ -21,6 +21,8 @@ import { ManagersPanel } from '@/features/hotels/components/ManagersPanel.jsx';
 import { adminApi, hotelApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
+import { useCatalog } from '@/features/catalogs/useCatalog.js';
+import { toOptions } from '@/features/catalogs/catalogs.js';
 
 const FORM_ID = 'hotel-workspace-form';
 
@@ -121,6 +123,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   const [busyField, setBusyField] = useState(null);
   const [addingUrl, setAddingUrl] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const { items: propertyTypes } = useCatalog('property-types');
 
   const form = useForm({ resolver: zodResolver(hotelFormSchema), defaultValues: EMPTY_HOTEL_FORM, mode: 'onTouched' });
   const { formState, reset, register, handleSubmit } = form;
@@ -339,6 +342,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
               onVerify={verifyField}
               onAcceptSuggestion={(field) => suggestionAction(field, true)}
               onDismissSuggestion={(field) => suggestionAction(field, false)}
+              propertyTypeOptions={toOptions(propertyTypes)}
             />
           </CardContent>
         </Card>
@@ -372,6 +376,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
               onVerify={verifyField}
               onAcceptSuggestion={(field) => suggestionAction(field, true)}
               onDismissSuggestion={(field) => suggestionAction(field, false)}
+              propertyTypeOptions={toOptions(propertyTypes)}
             />
           </CardContent>
         </Card>

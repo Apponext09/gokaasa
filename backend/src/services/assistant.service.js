@@ -4,6 +4,7 @@ import { validateAiCriteria } from '../domain/assistantCriteria.js';
 import { destinationRepository } from '../repositories/destination.repository.js';
 import { AiProviderError, aiProvider } from './ai/provider.js';
 import { createLogger } from '../utils/logger.js';
+import { catalogService } from './catalog.service.js';
 
 const log = createLogger('assistant');
 const MAX_MESSAGE_LENGTH = 500;
@@ -48,6 +49,36 @@ function slugify(value) {
     .replace(/^-+|-+$/g, '');
 }
 
+async function finishExtraction(criteria, missingInformation) {
+  let destination = null;
+  let destinationCandidates = [];
+  if (criteria.destinationQuery) {
+    const resolution = await resolveDestination(criteria.destinationQuery);
+    destination = resolution.resolved;
+    destinationCandidates = resolution.candidates;
+    if (!destination && !missingInformation.includes('destination')) missingInformation.push('destination');
+  }
+
+  return {
+    ok: true,
+    criteria: {
+      destination,
+      checkIn: criteria.checkIn ?? null,
+      checkOut: criteria.checkOut ?? null,
+      occupancy: criteria.occupancy ?? null,
+      propertyType: criteria.propertyType,
+      stars: criteria.stars,
+      amenities: criteria.amenities,
+      dinnerIncluded: criteria.dinnerIncluded,
+      freeCancellation: criteria.freeCancellation,
+      budget: criteria.budget ?? null,
+    },
+    missingInformation,
+    destinationCandidates,
+    clarificationQuestion: buildClarification(missingInformation, destinationCandidates, criteria.destinationQuery),
+  };
+}
+
 export const assistantService = {
   /** Whether the AI mode can even be offered -- the frontend uses this to hide/disable the option cleanly. */
   status() {
@@ -71,47 +102,24 @@ export const assistantService = {
 
     let raw;
     try {
-      raw = await aiProvider.requestStructuredExtraction({ message, today, timezone });
+      const [propertyTypes, amenities] = await Promise.all([
+        catalogService.list('property-types', { activeOnly: true }),
+        catalogService.list('amenities', { activeOnly: true }),
+      ]);
+      raw = await aiProvider.requestStructuredExtraction({ message, today, timezone, propertyTypes, amenities });
+      const { criteria, missingInformation, problems } = validateAiCriteria(raw, {
+        today,
+        propertyTypes: propertyTypes.map((item) => item.code),
+        amenityCodes: amenities.map((item) => item.code),
+      });
+      if (problems.length) log.info('AI output had unsupported/invalid fields, dropped safely', { problems });
+
+      return await finishExtraction(criteria, missingInformation);
     } catch (error) {
       const reason = error instanceof AiProviderError ? error.code : 'UNAVAILABLE';
       log.warn('AI extraction unavailable, falling back to guided booking', { reason, detail: error.message });
       return { ok: false, reason, message: FRIENDLY_REASON[reason] ?? FRIENDLY_REASON.UNAVAILABLE };
     }
-
-    const { criteria, missingInformation, problems } = validateAiCriteria(raw, { today });
-    if (problems.length) log.info('AI output had unsupported/invalid fields, dropped safely', { problems });
-
-    let destination = null;
-    let destinationCandidates = [];
-    if (criteria.destinationQuery) {
-      const resolution = await resolveDestination(criteria.destinationQuery);
-      destination = resolution.resolved;
-      destinationCandidates = resolution.candidates;
-      if (!destination) {
-        if (!missingInformation.includes('destination')) missingInformation.push('destination');
-      }
-    }
-
-    const clarificationQuestion = buildClarification(missingInformation, destinationCandidates, criteria.destinationQuery);
-
-    return {
-      ok: true,
-      criteria: {
-        destination,
-        checkIn: criteria.checkIn ?? null,
-        checkOut: criteria.checkOut ?? null,
-        occupancy: criteria.occupancy ?? null,
-        propertyType: criteria.propertyType,
-        stars: criteria.stars,
-        amenities: criteria.amenities,
-        dinnerIncluded: criteria.dinnerIncluded,
-        freeCancellation: criteria.freeCancellation,
-        budget: criteria.budget ?? null,
-      },
-      missingInformation,
-      destinationCandidates,
-      clarificationQuestion,
-    };
   },
 };
 

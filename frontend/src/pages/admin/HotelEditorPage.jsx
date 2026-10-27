@@ -11,12 +11,15 @@ import { HotelFieldsForm } from '@/features/hotels/components/HotelFieldsForm.js
 import { EMPTY_HOTEL_FORM, TAB_FIELDS, hotelFormSchema, toPayload } from '@/features/hotels/hotelForm.js';
 import { adminApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
+import { useCatalog } from '@/features/catalogs/useCatalog.js';
+import { toOptions } from '@/features/catalogs/catalogs.js';
 
 /** Creates a hotel by hand. Everything else is edited in the workspace once the draft exists. */
 function NewHotelPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const form = useForm({ resolver: zodResolver(hotelFormSchema), defaultValues: EMPTY_HOTEL_FORM, mode: 'onTouched' });
+  const { items: propertyTypes } = useCatalog('property-types');
 
   const onSubmit = async (values) => {
     setSubmitting(true);
@@ -43,7 +46,7 @@ function NewHotelPage() {
             <CardDescription>You can complete the rest after the draft is created.</CardDescription>
           </CardHeader>
           <CardContent>
-            <HotelFieldsForm fields={[...TAB_FIELDS.overview, ...TAB_FIELDS.location]} form={form} hotel={null} />
+            <HotelFieldsForm fields={[...TAB_FIELDS.overview, ...TAB_FIELDS.location]} form={form} hotel={null} propertyTypeOptions={toOptions(propertyTypes)} />
           </CardContent>
         </Card>
         <div className="flex justify-end">

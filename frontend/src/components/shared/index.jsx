@@ -146,15 +146,6 @@ export function HotelStatusBadge({ status }) {
 
 export const HOTEL_STATUS_OPTIONS = Object.entries(HOTEL_STATUS).map(([value, { label }]) => ({ value, label }));
 
-export const PROPERTY_TYPE_OPTIONS = [
-  { value: 'HOTEL', label: 'Hotel' },
-  { value: 'RESORT', label: 'Resort' },
-  { value: 'VILLA', label: 'Villa' },
-  { value: 'APARTMENT', label: 'Apartment' },
-  { value: 'HOSTEL', label: 'Hostel' },
-  { value: 'GUEST_HOUSE', label: 'Guest house' },
-];
-
 export function formatDateTime(value) {
   if (!value) return '—';
   return new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));

@@ -37,6 +37,13 @@ export const hotelApi = {
   amenities: () => api.get('/amenities').then((r) => r.data.amenities),
 };
 
+export const catalogApi = {
+  list: (kind) => api.get(`/catalogs/${kind}`).then((r) => r.data.items),
+  adminList: (kind) => api.get(`/admin/catalogs/${kind}`).then((r) => r.data.items),
+  create: (kind, body) => api.post(`/admin/catalogs/${kind}`, body).then((r) => r.data.item),
+  update: (kind, code, body) => api.patch(`/admin/catalogs/${kind}/${encodeURIComponent(code)}`, body).then((r) => r.data.item),
+};
+
 export const adminApi = {
   dashboard: () => api.get('/admin/dashboard/summary').then((r) => r.data),
   dashboardTrends: (params) => api.get('/admin/dashboard/trends', { params }).then((r) => r.data),

@@ -20,7 +20,7 @@ export const hotelFormSchema = z.object({
   name: z.string().trim().min(2, 'Hotel name is required').max(200),
   shortName: optionalText(60),
   description: optionalText(4000),
-  propertyType: z.enum(['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE']),
+  propertyType: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a property type'),
   starRating: z.string(),
   addressLine: optionalText(300),
   area: optionalText(120),

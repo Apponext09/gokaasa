@@ -10,6 +10,7 @@ import { getStorage } from '../storage/index.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
 import { addDays } from '../domain/pricing.js';
 import { AppError } from '../utils/AppError.js';
+import { catalogService } from './catalog.service.js';
 
 // camelCase input -> snake_case column
 const COLUMN_FOR = {
@@ -155,6 +156,7 @@ export const roomTypeService = {
   async create(hotelId, input, actor) {
     return withTransaction(async (client) => {
       await requireHotel(hotelId, client);
+      await catalogService.requireActive('room-categories', input.category, client);
       let roomCode = input.roomCode;
       if (!roomCode) {
         await roomTypeRepository.lockHotelForCode(hotelId, client);
@@ -186,6 +188,9 @@ export const roomTypeService = {
       if (!room) throw AppError.notFound('Room type not found');
       if (room.status === 'ARCHIVED') throw AppError.conflict('Archived room types are read-only');
       const current = await roomTypeRepository.findById(roomTypeId, client);
+      if (input.category !== undefined && input.category !== current.category) {
+        await catalogService.requireActive('room-categories', input.category, client);
+      }
 
       if (input.roomCode && input.roomCode !== current.room_code &&
         (await roomTypeRepository.existsCode(room.hotel_id, input.roomCode, roomTypeId, client))) {

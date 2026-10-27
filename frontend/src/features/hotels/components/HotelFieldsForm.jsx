@@ -2,7 +2,7 @@ import { Check, CircleAlert, Lightbulb, ShieldCheck, X } from 'lucide-react';
 import { Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Input, Select, Textarea } from '@/components/ui/form-controls.jsx';
-import { FormField, PROPERTY_TYPE_OPTIONS } from '@/components/shared/index.jsx';
+import { FormField } from '@/components/shared/index.jsx';
 import { FIELD_LABELS } from '@/features/hotels/hotelForm.js';
 
 const STATE_BADGE = {
@@ -19,12 +19,14 @@ export function FieldStateBadge({ state }) {
   return <Badge tone={config.tone}>{config.label}</Badge>;
 }
 
-function renderControl(name, { register, disabled, invalid, ariaDescribedBy }) {
+function renderControl(name, { register, disabled, invalid, ariaDescribedBy, propertyTypeOptions, currentValue }) {
   const common = { id: name, disabled, invalid, 'aria-describedby': ariaDescribedBy };
   if (name === 'propertyType') {
+    const hasCurrent = propertyTypeOptions.some((option) => option.value === currentValue);
     return (
       <Select {...common} {...register(name)}>
-        {PROPERTY_TYPE_OPTIONS.map((option) => (
+        {!hasCurrent && currentValue && <option value={currentValue}>{String(currentValue).replaceAll('_', ' ')}</option>}
+        {propertyTypeOptions.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </Select>
@@ -55,7 +57,7 @@ function renderControl(name, { register, disabled, invalid, ariaDescribedBy }) {
  * Editable hotel fields with per-field provenance. Each field shows its server-computed state, offers
  * "Verify" once it has a value, and shows any provider suggestion next to the admin's own value.
  */
-export function HotelFieldsForm({ fields, form, hotel, disabled, onVerify, onAcceptSuggestion, onDismissSuggestion, busyField }) {
+export function HotelFieldsForm({ fields, form, hotel, disabled, onVerify, onAcceptSuggestion, onDismissSuggestion, busyField, propertyTypeOptions = [] }) {
   const { register, formState } = form;
   const errors = formState.errors;
 
@@ -82,7 +84,7 @@ export function HotelFieldsForm({ fields, form, hotel, disabled, onVerify, onAcc
               }
               error={error}
             >
-              {renderControl(name, { register, disabled, invalid: Boolean(error), ariaDescribedBy: describedBy })}
+              {renderControl(name, { register, disabled, invalid: Boolean(error), ariaDescribedBy: describedBy, propertyTypeOptions, currentValue: value })}
             </FormField>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-2">

@@ -27,7 +27,7 @@ const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
 // include dinner by definition). A URL carrying an older BREAKFAST/ROOM_ONLY value has no UI control to
 // show or clear it, so it is dropped here rather than silently filtering results the visible filter can't explain.
 export const DINNER_INCLUDED_MEAL_PLANS = Object.freeze(['HALF_BOARD', 'FULL_BOARD']);
-const PROPERTY_TYPES = ['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE'];
+const PROPERTY_TYPE_CODE = /^[A-Z][A-Z0-9_]{1,39}$/;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -149,7 +149,7 @@ export function parseSearchParams(params) {
       maxPrice: minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice ? undefined : maxPrice,
       stars,
       guestRating,
-      propertyTypes: csvList(get('propertyTypes'), oneOf(PROPERTY_TYPES)),
+      propertyTypes: csvList(get('propertyTypes'), (code) => PROPERTY_TYPE_CODE.test(code)),
       amenities: csvList(get('amenities'), (code) => AMENITY_CODE.test(code)),
       freeCancellation: get('freeCancellation') === 'true',
       mealPlans: dinnerOnly(csvList(get('mealPlans'), oneOf(MEAL_PLANS))),

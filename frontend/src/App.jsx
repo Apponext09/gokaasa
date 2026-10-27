@@ -65,6 +65,7 @@ const UsersPage = lazy(() => import('@/pages/admin/UsersPage.jsx').then((m) => (
 const UserDetailPage = lazy(() => import('@/pages/admin/UserDetailPage.jsx').then((m) => ({ default: m.UserDetailPage })));
 const PartnerApplicationsPage = lazy(() => import('@/pages/admin/PartnerApplicationsPage.jsx').then((m) => ({ default: m.PartnerApplicationsPage })));
 const PartnerApplicationDetailPage = lazy(() => import('@/pages/admin/PartnerApplicationDetailPage.jsx').then((m) => ({ default: m.PartnerApplicationDetailPage })));
+const MasterDataPage = lazy(() => import('@/pages/admin/MasterDataPage.jsx').then((m) => ({ default: m.MasterDataPage })));
 
 function NotFoundPage() {
   return (
@@ -161,6 +162,7 @@ export function App() {
         <Route path="customers/:id" element={<CustomerDetailPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
+        <Route path="masters" element={<MasterDataPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="managers" element={<ManagersPage />} />
         <Route path="managers/:id" element={<ManagerDetailPage />} />

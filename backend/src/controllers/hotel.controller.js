@@ -21,7 +21,7 @@ export const hotelController = {
   },
 
   async listAmenities(_req, res) {
-    const { rows } = await pool.query(`SELECT code, name, category FROM amenities ORDER BY category, name`);
+    const { rows } = await pool.query(`SELECT code, name, category FROM amenities WHERE is_active = TRUE ORDER BY sort_order, category, name`);
     return res.json({ amenities: rows });
   },
 

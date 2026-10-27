@@ -29,7 +29,7 @@ export const BUDGET_TYPES = Object.freeze(['PER_NIGHT', 'TOTAL_STAY']);
  * and, where it blocks a usable search, added to `missingInformation` (shown to the user as a follow-up).
  * Never throws on bad AI output -- bad output is business-as-usual here, not an exceptional case.
  */
-export function validateAiCriteria(raw, { today }) {
+export function validateAiCriteria(raw, { today, propertyTypes = REAL_PROPERTY_TYPES, amenityCodes = REAL_AMENITY_CODES }) {
   const problems = [];
   const missingInformation = [];
   const criteria = {};
@@ -108,7 +108,7 @@ export function validateAiCriteria(raw, { today }) {
   // ---- property type: a real enum value, or null for "any suitable property" (explicit, not missing) -
   if (raw.propertyType === null) {
     criteria.propertyType = null;
-  } else if (typeof raw.propertyType === 'string' && REAL_PROPERTY_TYPES.includes(raw.propertyType.toUpperCase())) {
+  } else if (typeof raw.propertyType === 'string' && propertyTypes.includes(raw.propertyType.toUpperCase())) {
     criteria.propertyType = raw.propertyType.toUpperCase();
   } else if (raw.propertyType !== undefined) {
     problems.push(`unsupported propertyType: ${JSON.stringify(raw.propertyType)}`);
@@ -126,7 +126,7 @@ export function validateAiCriteria(raw, { today }) {
   // ---- amenities: only real, already-supported codes pass through; anything else is silently dropped
   // (not rejected outright -- one unsupported amenity shouldn't block an otherwise-valid search) --------
   if (Array.isArray(raw.amenities)) {
-    const kept = raw.amenities.filter((code) => typeof code === 'string' && REAL_AMENITY_CODES.includes(code.toUpperCase())).map((c) => c.toUpperCase());
+    const kept = raw.amenities.filter((code) => typeof code === 'string' && amenityCodes.includes(code.toUpperCase())).map((c) => c.toUpperCase());
     const dropped = raw.amenities.filter((code) => !kept.includes(String(code).toUpperCase()));
     if (dropped.length) problems.push(`dropped unsupported amenities: ${JSON.stringify(dropped)}`);
     if (kept.length) criteria.amenities = [...new Set(kept)];

@@ -1,13 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/surfaces.jsx';
 import { Input, Select, Textarea } from '@/components/ui/form-controls.jsx';
 import { FormField } from '@/components/shared/index.jsx';
-import { BED_TYPE_OPTIONS, ROOM_CATEGORY_OPTIONS } from '@/features/rooms/roomForm.js';
+import { BED_TYPE_OPTIONS } from '@/features/rooms/roomForm.js';
 
 /** Inline-validated room fields in four sections. The parent owns the form instance. */
-export function RoomDetailsForm({ form, policies, disabled, roomCodeReadOnly = false }) {
+export function RoomDetailsForm({ form, policies, roomCategoryOptions = [], disabled, roomCodeReadOnly = false }) {
   const { register, formState } = form;
   const e = formState.errors;
   const field = (name) => ({ id: name, invalid: Boolean(e[name]), disabled, 'aria-describedby': e[name] ? `${name}-error` : undefined });
+  const currentCategory = form.watch('category');
+  const hasCurrentCategory = roomCategoryOptions.some((option) => option.value === currentCategory);
 
   return (
     <div className="space-y-6">
@@ -25,7 +27,8 @@ export function RoomDetailsForm({ form, policies, disabled, roomCodeReadOnly = f
           </FormField>
           <FormField id="category" label="Room type" error={e.category?.message}>
             <Select {...field('category')} {...register('category')}>
-              {ROOM_CATEGORY_OPTIONS.map((o) => (
+              {!hasCurrentCategory && currentCategory && <option value={currentCategory}>{currentCategory.replaceAll('_', ' ')}</option>}
+              {roomCategoryOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </Select>

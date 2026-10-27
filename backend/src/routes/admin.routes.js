@@ -94,6 +94,8 @@ import {
   settlementMarkPaidSchema,
   settlementReverseSchema,
 } from '../validators/settlement.validator.js';
+import { catalogController } from '../controllers/catalog.controller.js';
+import { catalogCreateSchema, catalogItemParam, catalogKindParam, catalogUpdateSchema } from '../validators/catalog.validator.js';
 
 /**
  * Everything under /api/admin requires an authenticated staff member. Individual actions narrow this
@@ -124,6 +126,11 @@ adminRouter.get('/dashboard/trends', validate({ query: dashboardTrendsQuery }), 
 adminRouter.get('/reports/hotel-performance', validate({ query: hotelPerformanceQuery }), hotelController.hotelPerformance);
 adminRouter.get('/dashboard/alerts', hotelController.dashboardAlerts);
 adminRouter.get('/search', validate({ query: adminSearchQuery }), adminSearchController.search);
+
+// Platform master data. Reads and writes are ADMIN-only because every hotel and room uses these values.
+adminRouter.get('/catalogs/:kind', validate({ params: catalogKindParam }), authorize('ADMIN'), catalogController.adminList);
+adminRouter.post('/catalogs/:kind', validate({ params: catalogKindParam, body: catalogCreateSchema }), authorize('ADMIN'), catalogController.create);
+adminRouter.patch('/catalogs/:kind/:code', validate({ params: catalogItemParam, body: catalogUpdateSchema }), authorize('ADMIN'), catalogController.update);
 
 adminRouter.get('/settings', settingsController.get);
 adminRouter.patch('/settings', validate({ body: settingsUpdateSchema }), authorize('ADMIN'), settingsController.update);

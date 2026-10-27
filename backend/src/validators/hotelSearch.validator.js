@@ -38,7 +38,7 @@ export const hotelSearchQuery = z
     maxPrice: z.coerce.number().int().min(0).max(1_000_000).optional(),
     stars: csv(z.enum(['1', '2', '3', '4', '5'])),
     guestRating: z.coerce.number().min(0).max(5).optional(),
-    propertyTypes: csv(z.enum(['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE'])),
+    propertyTypes: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Unknown property type')),
     amenities: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,40}$/, 'Unknown amenity')),
     freeCancellation: z.enum(['true', 'false']).optional(),
     mealPlans: csv(z.enum(MEAL_PLANS)),

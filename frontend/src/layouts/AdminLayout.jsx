@@ -5,6 +5,7 @@ import {
   Bell,
   Building2,
   CalendarCheck,
+  Database,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
@@ -64,6 +65,7 @@ const NAV = [
     items: [
       { to: '/admin/notifications', label: 'Notifications', icon: Bell },
       { to: '/admin/users', label: 'User Management', icon: Users, adminOnly: true },
+      { to: '/admin/masters', label: 'Masters', icon: Database, adminOnly: true },
       { to: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText, adminOnly: true },
       { to: '/admin/settings', label: 'Settings', icon: Settings },
     ],

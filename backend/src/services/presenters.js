@@ -26,6 +26,7 @@ export function toHotelSummary(row, { includeInternal = false } = {}) {
     name: row.name,
     shortName: row.short_name,
     propertyType: row.property_type,
+    propertyTypeName: row.property_type_name ?? row.property_type,
     starRating: row.star_rating,
     guestRating: row.guest_rating,
     reviewCount: row.review_count,

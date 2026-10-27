@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-export const PROPERTY_TYPES = ['HOTEL', 'RESORT', 'VILLA', 'APARTMENT', 'HOSTEL', 'GUEST_HOUSE'];
 export const HOTEL_STATUSES = ['DRAFT', 'PENDING_REVIEW', 'READY_TO_PUBLISH', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'];
 export const HOTEL_ACTIONS = ['SAVE_DRAFT', 'SUBMIT_FOR_REVIEW', 'MARK_READY', 'PUBLISH', 'UNPUBLISH', 'ARCHIVE'];
 export const SORT_KEYS = ['updated_desc', 'name_asc', 'rating_desc', 'star_desc', 'created_desc'];
@@ -25,7 +24,7 @@ const hotelFields = {
   name: z.string().trim().min(2, 'Hotel name is required').max(200),
   shortName: optionalText(60),
   description: optionalText(4000),
-  propertyType: z.enum(PROPERTY_TYPES),
+  propertyType: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a valid property type'),
   starRating: z.number().int().min(1).max(5).nullish(),
   addressLine: optionalText(300),
   area: optionalText(120),
@@ -78,7 +77,7 @@ export const adminHotelListQuery = z.object({
   city: z.string().trim().max(100).optional(),
   countryCode: z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/).optional(),
   starRating: z.coerce.number().int().min(1).max(5).optional(),
-  propertyType: z.enum(PROPERTY_TYPES).optional(),
+  propertyType: hotelFields.propertyType.optional(),
   managerId: z.coerce.number().int().positive().optional(),
   sort: z.enum(SORT_KEYS).default('updated_desc'),
 });

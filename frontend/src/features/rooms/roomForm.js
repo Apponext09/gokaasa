@@ -1,15 +1,5 @@
 import { z } from 'zod';
 
-export const ROOM_CATEGORY_OPTIONS = [
-  { value: 'STANDARD', label: 'Standard' },
-  { value: 'DELUXE', label: 'Deluxe' },
-  { value: 'SUITE', label: 'Suite' },
-  { value: 'FAMILY', label: 'Family' },
-  { value: 'VILLA', label: 'Villa' },
-  { value: 'DORM', label: 'Dormitory' },
-  { value: 'OTHER', label: 'Other' },
-];
-
 export const BED_TYPE_OPTIONS = [
   { value: '', label: 'Not specified' },
   { value: 'KING', label: 'King' },
@@ -40,7 +30,7 @@ export const roomFormSchema = z
   .object({
     name: z.string().trim().min(2, 'Room name is required').max(120),
     roomCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{1,19}$/, 'Use 2-20 letters, digits, hyphens or underscores'),
-    category: z.enum(['STANDARD', 'DELUXE', 'SUITE', 'FAMILY', 'VILLA', 'DORM', 'OTHER']),
+    category: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a room type'),
     description: text(2000),
     roomSizeSqm: z.string().trim().refine((v) => v === '' || (Number(v) > 0 && Number(v) <= 2000), 'Enter a size in square metres'),
     bedType: z.string(),

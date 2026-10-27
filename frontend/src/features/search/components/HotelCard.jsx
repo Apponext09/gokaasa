@@ -223,7 +223,7 @@ export function HotelCard({ hotel, state }) {
                 ))}
               </div>
             ) : (
-              <span className="text-xs text-[var(--text-muted)]">{PROPERTY_LABEL[hotel.propertyType] ?? 'Stay'}</span>
+              <span className="text-xs text-[var(--text-muted)]">{hotel.propertyTypeName ?? PROPERTY_LABEL[hotel.propertyType] ?? hotel.propertyType?.replaceAll('_', ' ').toLowerCase() ?? 'Stay'}</span>
             )}
             <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--text-strong)]">
               <Link to={fullPath} className="hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-500">

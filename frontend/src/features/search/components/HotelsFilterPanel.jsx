@@ -4,15 +4,8 @@ import { Button } from "@/components/ui/button.jsx";
 import { Checkbox, Input } from "@/components/ui/form-controls.jsx";
 import { useDebounce } from "@/hooks/useDebounce.js";
 import { DINNER_INCLUDED_MEAL_PLANS } from "@/features/search/searchParams.js";
-
-const PROPERTY_TYPES = [
-  { value: "HOTEL", label: "Hotel" },
-  { value: "RESORT", label: "Resort" },
-  { value: "VILLA", label: "Villa" },
-  { value: "APARTMENT", label: "Apartment" },
-  { value: "GUEST_HOUSE", label: "Guest house" },
-  { value: "HOSTEL", label: "Hostel" },
-];
+import { useCatalog } from "@/features/catalogs/useCatalog.js";
+import { toOptions } from "@/features/catalogs/catalogs.js";
 
 const GUEST_RATINGS = [
   { value: undefined, label: "Any rating" },
@@ -23,16 +16,6 @@ const GUEST_RATINGS = [
 
 const STAR_CATEGORIES = [5, 4, 3, 2, 1];
 
-const AMENITY_FILTERS = [
-  { code: "WIFI", label: "Free WiFi" },
-  { code: "POOL", label: "Swimming Pool" },
-  { code: "PARKING", label: "Free Parking" },
-  { code: "RESTAURANT", label: "Restaurant" },
-  { code: "GYM", label: "Gym / Fitness" },
-  { code: "SPA", label: "Spa" },
-  { code: "AC", label: "Air Conditioning" },
-  { code: "ROOM_SERVICE", label: "Room Service" },
-];
 
 const toggle = (list, value) =>
   list?.includes(value) ? list.filter((v) => v !== value) : [...(list ?? []), value];
@@ -63,6 +46,9 @@ export function HotelsFilterPanel({
   nameQuery = "",
   onNameQueryChange,
 }) {
+  const { items: propertyTypeItems } = useCatalog('property-types');
+  const { items: amenityItems } = useCatalog('amenities');
+  const propertyTypes = toOptions(propertyTypeItems);
   const floor = 0;
   const ceiling = 1000000;
 
@@ -265,10 +251,10 @@ export function HotelsFilterPanel({
 
       {/* Amenities */}
       <Section title="Amenities">
-        {AMENITY_FILTERS.map((amenity) => (
+        {amenityItems.map((amenity) => (
           <Checkbox
             key={amenity.code}
-            label={amenity.label}
+            label={amenity.name}
             checked={filters.amenities?.includes(amenity.code) ?? false}
             onChange={() => set({ amenities: toggle(filters.amenities, amenity.code) })}
           />
@@ -277,7 +263,7 @@ export function HotelsFilterPanel({
 
       {/* Property type */}
       <Section title="Property Type">
-        {PROPERTY_TYPES.map((type) => (
+        {propertyTypes.map((type) => (
           <Checkbox
             key={type.value}
             label={type.label}

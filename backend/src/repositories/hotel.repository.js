@@ -10,7 +10,8 @@ const SORT_OPTIONS = {
 
 /** Columns returned for every hotel. Keep this list explicit so new columns are opted into. */
 const HOTEL_COLUMNS = `
-  h.id, h.slug, h.name, h.short_name, h.description, h.property_type, h.star_rating,
+  h.id, h.slug, h.name, h.short_name, h.description, h.property_type,
+  (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name, h.star_rating,
   h.guest_rating, h.review_count, h.address_line, h.area, h.city, h.state, h.country_code,
   h.postal_code, h.location_url, h.latitude, h.longitude, h.phone, h.email::text AS email, h.website,
   h.check_in_time, h.check_out_time, h.time_zone, h.status, h.external_provider, h.external_id,

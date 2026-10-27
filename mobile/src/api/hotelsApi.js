@@ -18,6 +18,7 @@ export const hotelsApi = {
   featuredHotels: (limit = 8) => api.get('/hotels', { params: { limit } }).then((r) => r.data.items),
   handpickedHotels: (params) => api.get('/hotels/handpicked', { params }).then((r) => r.data),
   amenities: () => api.get('/amenities').then((r) => r.data.amenities),
+  catalog: (kind) => api.get(`/catalogs/${kind}`).then((r) => r.data.items),
   hotel: (ref) => api.get(`/hotels/${encodeURIComponent(ref)}`).then((r) => r.data.hotel),
   availability: (ref, params) => api.get(`/hotels/${encodeURIComponent(ref)}/availability`, { params }).then((r) => r.data),
   reviews: (ref, params) => api.get(`/hotels/${encodeURIComponent(ref)}/reviews`, { params }).then((r) => r.data),
