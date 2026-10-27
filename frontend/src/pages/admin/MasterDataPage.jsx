@@ -21,7 +21,7 @@ export function MasterDataPage() {
   if (!isAdmin) return <Navigate to="/admin/dashboard" replace />;
   return (
     <div className="space-y-6">
-      <PageHeader title="Masters" description="Manage property types, room types and amenities used across the platform." />
+      <PageHeader title="Masters" description="Manage property types, room categories, bed types, image categories and amenities used across the platform." />
       <Tabs value={kind} onChange={setKind} label="Master type" items={Object.entries(MASTER_DEFINITIONS).map(([value, definition]) => ({ value, label: definition.label }))} />
       <CatalogManager key={kind} kind={kind} />
     </div>

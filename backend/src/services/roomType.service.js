@@ -157,6 +157,7 @@ export const roomTypeService = {
     return withTransaction(async (client) => {
       await requireHotel(hotelId, client);
       await catalogService.requireActive('room-categories', input.category, client);
+      if (input.bedType != null) await catalogService.requireActive('bed-types', input.bedType, client);
       let roomCode = input.roomCode;
       if (!roomCode) {
         await roomTypeRepository.lockHotelForCode(hotelId, client);
@@ -190,6 +191,9 @@ export const roomTypeService = {
       const current = await roomTypeRepository.findById(roomTypeId, client);
       if (input.category !== undefined && input.category !== current.category) {
         await catalogService.requireActive('room-categories', input.category, client);
+      }
+      if (input.bedType !== undefined && input.bedType !== current.bed_type && input.bedType != null) {
+        await catalogService.requireActive('bed-types', input.bedType, client);
       }
 
       if (input.roomCode && input.roomCode !== current.room_code &&

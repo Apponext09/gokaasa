@@ -1,16 +1,5 @@
 import { z } from 'zod';
 
-export const BED_TYPE_OPTIONS = [
-  { value: '', label: 'Not specified' },
-  { value: 'KING', label: 'King' },
-  { value: 'QUEEN', label: 'Queen' },
-  { value: 'DOUBLE', label: 'Double' },
-  { value: 'TWIN', label: 'Twin' },
-  { value: 'SINGLE', label: 'Single' },
-  { value: 'SOFA_BED', label: 'Sofa bed' },
-  { value: 'BUNK', label: 'Bunk' },
-];
-
 export const MEAL_PLAN_OPTIONS = [
   { value: 'ROOM_ONLY', label: 'Room only' },
   { value: 'BREAKFAST', label: 'Breakfast included' },

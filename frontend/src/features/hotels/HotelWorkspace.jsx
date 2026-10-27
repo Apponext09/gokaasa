@@ -12,7 +12,7 @@ import { EmptyState, HotelStatusBadge, PageHeader, formatDateTime } from '@/comp
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { EMPTY_HOTEL_FORM, TAB_FIELDS, hotelFormSchema, toFormValues, toPayload } from '@/features/hotels/hotelForm.js';
 import { HotelFieldsForm } from '@/features/hotels/components/HotelFieldsForm.jsx';
-import { ImageGallery, IMAGE_CATEGORY_OPTIONS } from '@/features/hotels/components/ImageGallery.jsx';
+import { ImageGallery } from '@/features/hotels/components/ImageGallery.jsx';
 import { AmenityPicker } from '@/features/hotels/components/AmenityPicker.jsx';
 import { ImportHistory } from '@/features/hotels/components/ImportHistory.jsx';
 import { RoomTypeList } from '@/features/rooms/components/RoomTypeList.jsx';
@@ -124,6 +124,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   const [addingUrl, setAddingUrl] = useState(null);
   const [confirm, setConfirm] = useState(null);
   const { items: propertyTypes } = useCatalog('property-types');
+  const { items: imageCategories } = useCatalog('image-categories');
 
   const form = useForm({ resolver: zodResolver(hotelFormSchema), defaultValues: EMPTY_HOTEL_FORM, mode: 'onTouched' });
   const { formState, reset, register, handleSubmit } = form;
@@ -393,7 +394,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
               images={hotel.images}
               disabled={readOnly}
               onChanged={refreshKeepingDraft}
-              categories={IMAGE_CATEGORY_OPTIONS}
+              categories={toOptions(imageCategories)}
               maxImages={30}
               adapter={hotelImageAdapter(hotelId)}
             />

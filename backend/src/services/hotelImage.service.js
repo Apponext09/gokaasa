@@ -11,10 +11,9 @@ import { createLogger } from '../utils/logger.js';
 import { toImage } from './presenters.js';
 import { hotelImportRepository } from '../repositories/hotelImport.repository.js';
 import { normalizeImageCategory } from '../normalizers/hotelNormalizer.js';
+import { catalogService } from './catalog.service.js';
 
 const log = createLogger('hotel-images');
-
-export const IMAGE_CATEGORIES = Object.freeze(['EXTERIOR', 'LOBBY', 'ROOM', 'BATHROOM', 'RESTAURANT', 'POOL', 'GYM', 'SPA', 'OTHER']);
 
 async function requireEditableHotel(client, hotelId) {
   const hotel = await hotelRepository.findById(hotelId, { client });
@@ -52,6 +51,7 @@ async function storeAndInsertImage(hotelId, { buffer, mimetype, category, altTex
   try {
     const row = await withTransaction(async (client) => {
       await requireEditableHotel(client, hotelId);
+      await catalogService.requireActive('image-categories', category, client);
 
       const { rows: countRows } = await client.query(
         `SELECT COUNT(*)::int AS count FROM hotel_images WHERE hotel_id = $1 AND deleted_at IS NULL`,
@@ -179,9 +179,11 @@ export const hotelImageService = {
         throw AppError.conflict(`A hotel can have at most ${config.media.maxImagesPerHotel} images`);
       }
 
+      const category = normalizeImageCategory(candidate.category);
+      await catalogService.requireActive('image-categories', category, client);
       const id = await hotelImageRepository.insert(client, {
         hotel_id: hotelId,
-        category: normalizeImageCategory(candidate.category),
+        category,
         source_url: sourceUrl,
         source_provider: hotel.external_provider,
         origin: 'IMPORTED',
@@ -205,7 +207,10 @@ export const hotelImageService = {
       await requireEditableHotel(client, hotelId);
       const image = await requireImage(client, hotelId, imageId);
       const changes = {};
-      if (category !== undefined && category !== image.category) changes.category = category;
+      if (category !== undefined && category !== image.category) {
+        await catalogService.requireActive('image-categories', category, client);
+        changes.category = category;
+      }
       if (altText !== undefined && altText !== image.alt_text) changes.alt_text = altText;
       if (Object.keys(changes).length > 0) {
         await hotelImageRepository.updateFields(client, imageId, changes);

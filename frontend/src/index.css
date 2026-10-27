@@ -2300,13 +2300,17 @@ body {
 .hotels-filter-sidebar {
   position: sticky;
   top: 80px;
-  /* Keep document scrolling as the single scroll surface. A nested, hidden scrollbar made the
-     large empty results area feel unresponsive when only one hotel matched. */
+  height: calc(100vh - 100px);
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
   align-self: start;
+  border-radius: 14px;
 }
 
 /* ---- Filter Sidebar wrapper — uses project's customer-filter-panel design ---- */
 .hotels-filter-sidebar .customer-filter-panel {
+  box-sizing: border-box;
+  min-height: 100%;
   background: #fff;
   border-radius: 14px;
   border: 1px solid #e2e8f0;

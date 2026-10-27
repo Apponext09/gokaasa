@@ -1,15 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/surfaces.jsx';
 import { Input, Select, Textarea } from '@/components/ui/form-controls.jsx';
 import { FormField } from '@/components/shared/index.jsx';
-import { BED_TYPE_OPTIONS } from '@/features/rooms/roomForm.js';
 
 /** Inline-validated room fields in four sections. The parent owns the form instance. */
-export function RoomDetailsForm({ form, policies, roomCategoryOptions = [], disabled, roomCodeReadOnly = false }) {
+export function RoomDetailsForm({ form, policies, roomCategoryOptions = [], bedTypeOptions = [], allowInactiveBedType = false, disabled, roomCodeReadOnly = false }) {
   const { register, formState } = form;
   const e = formState.errors;
   const field = (name) => ({ id: name, invalid: Boolean(e[name]), disabled, 'aria-describedby': e[name] ? `${name}-error` : undefined });
   const currentCategory = form.watch('category');
   const hasCurrentCategory = roomCategoryOptions.some((option) => option.value === currentCategory);
+  const currentBedType = form.watch('bedType');
+  const hasCurrentBedType = bedTypeOptions.some((option) => option.value === currentBedType);
 
   return (
     <div className="space-y-6">
@@ -70,7 +71,9 @@ export function RoomDetailsForm({ form, policies, roomCategoryOptions = [], disa
         <CardContent className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <FormField id="bedType" label="Bed type" error={e.bedType?.message}>
             <Select {...field('bedType')} {...register('bedType')}>
-              {BED_TYPE_OPTIONS.map((o) => (
+              <option value="">Not specified</option>
+              {allowInactiveBedType && !hasCurrentBedType && currentBedType && <option value={currentBedType}>{currentBedType.replaceAll('_', ' ')}</option>}
+              {bedTypeOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </Select>

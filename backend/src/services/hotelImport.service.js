@@ -1,5 +1,6 @@
 import { withTransaction, pool } from '../db/pool.js';
 import { hotelRepository } from '../repositories/hotel.repository.js';
+import { catalogRepository } from '../repositories/catalog.repository.js';
 import { hotelImportRepository } from '../repositories/hotelImport.repository.js';
 import { auditService } from './audit.service.js';
 import { getActiveProvider, getActiveProviders } from '../providers/index.js';
@@ -198,11 +199,15 @@ export const hotelImportService = {
         const amenityRows = await hotelRepository.findAmenityIdsByCodes(client, normalized.amenityCodes);
         await hotelRepository.replaceAmenities(client, hotelId, amenityRows.map((row) => row.id));
 
+        const activeImageCategories = new Set(
+          (await catalogRepository.list('image-categories', { activeOnly: true }, client)).map((item) => item.code),
+        );
         await hotelRepository.insertImages(
           client,
           hotelId,
           normalized.images.map((image, index) => ({
             ...image,
+            category: activeImageCategories.has(image.category) ? image.category : 'OTHER',
             sourceProvider: claimed.provider,
             isCover: false,
           })),

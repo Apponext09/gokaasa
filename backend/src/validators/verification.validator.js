@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { TRACKED_FIELDS } from '../domain/fieldProvenance.js';
-import { IMAGE_CATEGORIES } from '../services/hotelImage.service.js';
 
 const trackedField = z.enum(TRACKED_FIELDS);
+const imageCategory = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a valid image category');
 
 export const verifyFieldsSchema = z.object({
   fields: z.array(trackedField).min(1, 'Choose at least one field').max(TRACKED_FIELDS.length),
@@ -20,7 +20,7 @@ export const imageParam = z.object({
 
 export const imagePatchSchema = z
   .object({
-    category: z.enum(IMAGE_CATEGORIES).optional(),
+    category: imageCategory.optional(),
     altText: z.string().trim().max(200).nullish().transform((value) => value || null),
   })
   .refine((value) => value.category !== undefined || value.altText !== undefined, 'Provide a category or alt text');
@@ -30,7 +30,7 @@ export const imageOrderSchema = z.object({
 });
 
 export const imageUploadFields = z.object({
-  category: z.enum(IMAGE_CATEGORIES).default('OTHER'),
+  category: imageCategory.default('OTHER'),
   altText: z.string().trim().max(200).optional().transform((value) => value || null),
 });
 
@@ -40,7 +40,7 @@ export const providerImageSchema = z.object({
 
 export const imageFromUrlSchema = z.object({
   sourceUrl: z.url({ message: 'Provide a direct image URL' }).max(2000),
-  category: z.enum(['EXTERIOR', 'LOBBY', 'ROOM', 'BATHROOM', 'RESTAURANT', 'POOL', 'GYM', 'SPA', 'OTHER']).default('OTHER'),
+  category: imageCategory.default('OTHER'),
   altText: z.string().trim().max(300).optional(),
   sourceProvider: z.string().trim().max(60).default('manual'),
   imageType: z.enum(['REAL_PROPERTY', 'ILLUSTRATIVE']).default('REAL_PROPERTY'),

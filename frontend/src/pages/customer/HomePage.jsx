@@ -651,7 +651,7 @@ export function HomePage() {
   const extraStats = buildStats(stats);
 
   return (
-    <div className="customer-home min-h-screen overflow-hidden text-[var(--text-body)]">
+    <div className="customer-home min-h-screen text-[var(--text-body)]">
       {/* Hotel-booking hero adapted from the reference project. */}
       <section className="customer-booking-hero">
         <div className="customer-hero-arch">

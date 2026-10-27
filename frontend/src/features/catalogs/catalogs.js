@@ -1,6 +1,8 @@
 export const MASTER_DEFINITIONS = {
   'property-types': { label: 'Property Types', singular: 'property type', needsCategory: false },
   'room-categories': { label: 'Room Types', singular: 'room type', needsCategory: false },
+  'bed-types': { label: 'Bed Types', singular: 'bed type', needsCategory: false },
+  'image-categories': { label: 'Image Categories', singular: 'image category', needsCategory: false },
   amenities: { label: 'Amenities', singular: 'amenity', needsCategory: true },
 };
 

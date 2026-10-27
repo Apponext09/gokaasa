@@ -54,6 +54,7 @@ export function RoomEditorPage() {
   const [codeError, setCodeError] = useState(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const { items: roomCategories } = useCatalog('room-categories');
+  const { items: bedTypes, loading: bedTypesLoading } = useCatalog('bed-types');
 
   const form = useForm({ resolver: zodResolver(roomFormSchema), defaultValues: EMPTY_ROOM_FORM, mode: 'onTouched' });
   const { handleSubmit, reset, formState } = form;
@@ -112,6 +113,14 @@ export function RoomEditorPage() {
       cancelled = true;
     };
   }, [hotelId, isNew, form]);
+
+  useEffect(() => {
+    if (!isNew || bedTypesLoading) return;
+    const current = form.getValues('bedType');
+    if (current && !bedTypes.some((item) => item.code === current)) {
+      form.setValue('bedType', '', { shouldValidate: true });
+    }
+  }, [bedTypes, bedTypesLoading, form, isNew]);
 
   const save = async (values) => {
     setSaving(true);
@@ -201,7 +210,15 @@ export function RoomEditorPage() {
       {(isNew || tab === 'details') && (
         <TabPanel value="details" current={isNew ? 'details' : tab}>
           <form onSubmit={handleSubmit(save)} noValidate className="space-y-6">
-            <RoomDetailsForm form={form} policies={policies} roomCategoryOptions={toOptions(roomCategories)} disabled={readOnly || saving} roomCodeReadOnly />
+            <RoomDetailsForm
+              form={form}
+              policies={policies}
+              roomCategoryOptions={toOptions(roomCategories)}
+              bedTypeOptions={toOptions(bedTypes)}
+              allowInactiveBedType={!isNew}
+              disabled={readOnly || saving}
+              roomCodeReadOnly
+            />
             <div className="sticky bottom-4 flex justify-end gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-card)]/95 p-3 shadow-sm backdrop-blur">
               {formState.isDirty && <span className="self-center text-xs text-warning-600">Unsaved changes</span>}
               <Button type="submit" loading={saving || codeLoading} disabled={readOnly || codeLoading || Boolean(codeError)}>

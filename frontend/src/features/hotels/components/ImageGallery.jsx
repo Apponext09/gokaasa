@@ -9,18 +9,6 @@ import { EmptyState } from '@/components/shared/index.jsx';
 import { normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
 
-export const IMAGE_CATEGORY_OPTIONS = [
-  { value: 'EXTERIOR', label: 'Exterior' },
-  { value: 'LOBBY', label: 'Lobby' },
-  { value: 'ROOM', label: 'Room' },
-  { value: 'BATHROOM', label: 'Bathroom' },
-  { value: 'RESTAURANT', label: 'Restaurant' },
-  { value: 'POOL', label: 'Pool' },
-  { value: 'GYM', label: 'Gym' },
-  { value: 'SPA', label: 'Spa' },
-  { value: 'OTHER', label: 'Other' },
-];
-
 // Mirrors the server limits. The server enforces them; this only avoids a wasted upload.
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -283,6 +271,9 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
                       className="h-9 max-w-xs"
                       onChange={(event) => run(image.id, () => adapter.setCategory(image, event.target.value), 'Category updated')}
                     >
+                      {!categories.some((option) => option.value === image.category) && image.category && (
+                        <option value={image.category}>{image.category.replaceAll('_', ' ')}</option>
+                      )}
                       {categories.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}

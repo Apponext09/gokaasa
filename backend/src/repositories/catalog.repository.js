@@ -3,6 +3,8 @@ import { pool } from '../db/pool.js';
 const CONFIG = {
   'property-types': { table: 'property_types', hasCategory: false },
   'room-categories': { table: 'room_categories', hasCategory: false },
+  'bed-types': { table: 'bed_types', hasCategory: false },
+  'image-categories': { table: 'image_categories', hasCategory: false },
   amenities: { table: 'amenities', hasCategory: true },
 };
 

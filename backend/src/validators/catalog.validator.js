@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const CATALOG_KINDS = ['property-types', 'room-categories', 'amenities'];
+export const CATALOG_KINDS = ['property-types', 'room-categories', 'bed-types', 'image-categories', 'amenities'];
 export const AMENITY_CATEGORIES = ['CONNECTIVITY', 'DINING', 'WELLNESS', 'LEISURE', 'ROOM', 'SERVICES', 'TRANSPORT', 'ACCESSIBILITY', 'OTHER'];
 
 const code = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Use 2-40 letters, digits and underscores');
