@@ -17,7 +17,7 @@ export function HandpickedHotelsSection() {
     setError(null);
     setHotels(null);
     discoveryApi
-      .handpickedHotels({ limit: 10 })
+      .handpickedHotels({ limit: 24 })
       .then((result) => active && setHotels(result.items))
       .catch((err) => active && setError(normalizeError(err).message));
     return () => {

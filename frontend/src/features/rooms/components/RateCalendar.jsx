@@ -14,9 +14,15 @@ import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 
 const isoDay = (offset = 0) => {
   const d = new Date();
-  d.setUTCDate(d.getUTCDate() + offset);
-  return d.toISOString().slice(0, 10);
+  d.setDate(d.getDate() + offset);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
+
+const DEFAULT_FROM_OFFSET = 0;
+const DEFAULT_TO_OFFSET = 13;
 
 const optionalWhole = (min, max, label) =>
   z.string().trim().refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) >= min && Number(v) <= max), `${label}: ${min} to ${max}`);
@@ -44,8 +50,8 @@ const bulkSchema = z
  * server from settings, blocks and reservations; the form only sends the changes an admin asks for.
  */
 export function RateCalendar({ roomId, plans, disabled, onChanged }) {
-  const [from, setFrom] = useState(isoDay(30));
-  const [to, setTo] = useState(isoDay(43));
+  const [from, setFrom] = useState(isoDay(DEFAULT_FROM_OFFSET));
+  const [to, setTo] = useState(isoDay(DEFAULT_TO_OFFSET));
   const [planId, setPlanId] = useState('');
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -72,7 +78,16 @@ export function RateCalendar({ roomId, plans, disabled, onChanged }) {
 
   const form = useForm({
     resolver: zodResolver(bulkSchema),
-    defaultValues: { from: isoDay(30), to: isoDay(43), ratePlanId: '', price: '', units: '', closure: 'KEEP', minStay: '', maxStay: '' },
+    defaultValues: {
+      from: isoDay(DEFAULT_FROM_OFFSET),
+      to: isoDay(DEFAULT_TO_OFFSET),
+      ratePlanId: '',
+      price: '',
+      units: '',
+      closure: 'KEEP',
+      minStay: '',
+      maxStay: '',
+    },
     mode: 'onTouched',
   });
   const { register, handleSubmit, formState, watch, setValue } = form;
@@ -126,7 +141,7 @@ export function RateCalendar({ roomId, plans, disabled, onChanged }) {
       <Card>
         <CardHeader>
           <CardTitle>Bulk update</CardTitle>
-          <CardDescription>Choose a date range, then change any of: price for a rate plan, rooms for sale, open or closed, and stay length. Fields left empty are not changed.</CardDescription>
+          <CardDescription>Choose a date range, then change rooms for sale, open or closed, and stay length. To change the nightly base price, select the rate plan it applies to. Empty fields are not changed.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(apply)} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -136,16 +151,16 @@ export function RateCalendar({ roomId, plans, disabled, onChanged }) {
             <FormField id="bulk-to" label="To (inclusive)" error={e.to?.message}>
               <Input id="bulk-to" type="date" invalid={!!e.to} disabled={disabled} {...register('to')} />
             </FormField>
-            <FormField id="bulk-plan" label="Rate plan" error={e.ratePlanId?.message}>
+            <FormField id="bulk-plan" label="Rate plan for price" error={e.ratePlanId?.message}>
               <Select id="bulk-plan" invalid={!!e.ratePlanId} disabled={disabled} {...register('ratePlanId')}>
-                <option value="">No price change</option>
+                <option value="">Keep prices unchanged</option>
                 {(plans ?? []).map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </Select>
             </FormField>
-            <FormField id="bulk-price" label="Price per night (₹)" error={e.price?.message} hint="Before tax and fees">
-              <Input id="bulk-price" inputMode="decimal" placeholder="8999" invalid={!!e.price} disabled={disabled} {...register('price')} />
+            <FormField id="bulk-price" label="Base price per night (₹)" error={e.price?.message} hint="Enter once here; the selected plan adds its discount, tax and fee">
+              <Input id="bulk-price" inputMode="decimal" placeholder="e.g. 8999" invalid={!!e.price} disabled={disabled} {...register('price')} />
             </FormField>
             <FormField id="bulk-units" label="Rooms for sale" error={e.units?.message} hint="Leave empty to keep the room's count">
               <Input id="bulk-units" inputMode="numeric" invalid={!!e.units} disabled={disabled} {...register('units')} />
