@@ -163,6 +163,7 @@ export const adminApi = {
 export const roomApi = {
   list: (hotelId, includeArchived = false) =>
     api.get(`/admin/hotels/${hotelId}/room-types`, { params: { includeArchived } }).then((r) => r.data.roomTypes),
+  nextCode: (hotelId) => api.get(`/admin/hotels/${hotelId}/room-types/next-code`).then((r) => r.data.roomCode),
   get: (roomId) => api.get(`/admin/room-types/${roomId}`).then((r) => r.data.roomType),
   create: (hotelId, body) => api.post(`/admin/hotels/${hotelId}/room-types`, body).then((r) => r.data.roomType),
   update: (roomId, body) => api.patch(`/admin/room-types/${roomId}`, body).then((r) => r.data.roomType),

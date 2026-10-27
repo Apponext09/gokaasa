@@ -48,6 +48,8 @@ export function RoomEditorPage() {
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   const [savedAmenities, setSavedAmenities] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [codeLoading, setCodeLoading] = useState(isNew);
+  const [codeError, setCodeError] = useState(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   const form = useForm({ resolver: zodResolver(roomFormSchema), defaultValues: EMPTY_ROOM_FORM, mode: 'onTouched' });
@@ -88,10 +90,30 @@ export function RoomEditorPage() {
     };
   }, [roomId, isNew, apply]);
 
+  useEffect(() => {
+    if (!isNew) return undefined;
+    let cancelled = false;
+    setCodeLoading(true);
+    roomApi
+      .nextCode(hotelId)
+      .then((code) => {
+        if (!cancelled) form.setValue('roomCode', code, { shouldValidate: true });
+      })
+      .catch((error) => {
+        if (!cancelled) setCodeError(normalizeError(error).message);
+      })
+      .finally(() => {
+        if (!cancelled) setCodeLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hotelId, isNew, form]);
+
   const save = async (values) => {
     setSaving(true);
     try {
-      const payload = toRoomPayload(values);
+      const payload = toRoomPayload(values, { includeRoomCode: !isNew });
       if (isNew) {
         const created = await roomApi.create(hotelId, payload);
         toast.success('Room type created. Add its photos, rates and availability next.');
@@ -167,6 +189,7 @@ export function RoomEditorPage() {
       />
 
       {readOnly && <Alert tone="info" title="Archived">This room type is read-only. Its history is kept.</Alert>}
+      {codeError && <Alert tone="error" title="Room code unavailable">{codeError}</Alert>}
 
       {!isNew && (
         <Tabs label="Room sections" value={tab} onChange={setTab} items={TABS} />
@@ -175,10 +198,10 @@ export function RoomEditorPage() {
       {(isNew || tab === 'details') && (
         <TabPanel value="details" current={isNew ? 'details' : tab}>
           <form onSubmit={handleSubmit(save)} noValidate className="space-y-6">
-            <RoomDetailsForm form={form} policies={policies} disabled={readOnly || saving} />
+            <RoomDetailsForm form={form} policies={policies} disabled={readOnly || saving} roomCodeReadOnly />
             <div className="sticky bottom-4 flex justify-end gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-card)]/95 p-3 shadow-sm backdrop-blur">
               {formState.isDirty && <span className="self-center text-xs text-warning-600">Unsaved changes</span>}
-              <Button type="submit" loading={saving} disabled={readOnly}>
+              <Button type="submit" loading={saving || codeLoading} disabled={readOnly || codeLoading || Boolean(codeError)}>
                 {isNew ? 'Create room type' : 'Save room'}
               </Button>
             </div>

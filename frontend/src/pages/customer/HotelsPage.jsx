@@ -62,7 +62,7 @@ export function HotelsPage() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const nameQuery = state.name ?? "";
-  const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
+  const debouncedNameQuery = useDebounce(nameQuery.trim(), 200);
   const nameSearchIsSettling = nameQuery.trim() !== debouncedNameQuery;
   const { status: authStatus } = useAuth();
   const geolocation = useGeolocation({ autoRequest: authStatus !== "loading" });
@@ -99,7 +99,6 @@ export function HotelsPage() {
   ].join("|");
 
   useEffect(() => {
-    if (authStatus === "loading") return undefined;
     const ctrl = new AbortController();
     setStatus("loading");
     setError(null);
@@ -311,6 +310,7 @@ export function HotelsPage() {
                   <span className="hotels-results-count"> ({data?.pagination.total ?? 0} Propert{data?.pagination.total === 1 ? "y" : "ies"} Found)</span>
                 )}
                 {status === "loading" && !data && <span className="hotels-results-count"> (Searching...)</span>}
+                {status === "loading" && data && <span className="hotels-results-count"> (Updating...)</span>}
               </h2>
               <div className="flex items-center gap-2">
                 {!geolocation.coords && (
@@ -330,7 +330,7 @@ export function HotelsPage() {
               </div>
             </div>
 
-            {(status === "loading" || nameSearchIsSettling) && (
+            {status === "loading" && !data && (
               <div className="hotels-cards-stream">
                 {[0, 1, 2, 3].map((i) => <HotelCardSkeleton key={i} />)}
               </div>
@@ -345,7 +345,7 @@ export function HotelsPage() {
               </Alert>
             )}
 
-            {status === "ready" && !nameSearchIsSettling && filteredItems.length === 0 && (
+            {status === "ready" && filteredItems.length === 0 && (
               <div className="hotels-no-results-card">
                 <div className="hotels-empty-icon-wrap"><Search className="h-10 w-10 text-slate-400" /></div>
                 <h3>No Hotels Found{label ? ` in ${label}` : ""}</h3>
@@ -354,8 +354,8 @@ export function HotelsPage() {
               </div>
             )}
 
-            {status === "ready" && !nameSearchIsSettling && filteredItems.length > 0 && (
-              <div className="hotels-cards-stream">
+            {data && status !== "error" && filteredItems.length > 0 && (
+              <div className={cn("hotels-cards-stream", (status === "loading" || nameSearchIsSettling) && "is-updating")} aria-busy={status === "loading" || nameSearchIsSettling}>
                 {filteredItems.map((hotel, index) => (
                   <StaggeredReveal key={hotel.id} index={index}>
                     <HotelCard hotel={hotel} state={cardState} />

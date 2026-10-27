@@ -4,7 +4,7 @@ import { FormField } from '@/components/shared/index.jsx';
 import { BED_TYPE_OPTIONS, ROOM_CATEGORY_OPTIONS } from '@/features/rooms/roomForm.js';
 
 /** Inline-validated room fields in four sections. The parent owns the form instance. */
-export function RoomDetailsForm({ form, policies, disabled }) {
+export function RoomDetailsForm({ form, policies, disabled, roomCodeReadOnly = false }) {
   const { register, formState } = form;
   const e = formState.errors;
   const field = (name) => ({ id: name, invalid: Boolean(e[name]), disabled, 'aria-describedby': e[name] ? `${name}-error` : undefined });
@@ -20,8 +20,8 @@ export function RoomDetailsForm({ form, policies, disabled }) {
           <FormField id="name" label="Room name" error={e.name?.message}>
             <Input {...field('name')} placeholder="Deluxe King Room" {...register('name')} />
           </FormField>
-          <FormField id="roomCode" label="Room code" error={e.roomCode?.message} hint="Letters, digits, hyphens. Example: DKR-01">
-            <Input {...field('roomCode')} className="uppercase" {...register('roomCode')} />
+          <FormField id="roomCode" label="Room code" error={e.roomCode?.message} hint="Generated automatically for this hotel, for example RM_01.">
+            <Input {...field('roomCode')} className="uppercase" readOnly={roomCodeReadOnly} aria-readonly={roomCodeReadOnly} {...register('roomCode')} />
           </FormField>
           <FormField id="category" label="Room type" error={e.category?.message}>
             <Select {...field('category')} {...register('category')}>

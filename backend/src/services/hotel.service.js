@@ -54,6 +54,7 @@ function publishBlockersFor(row, images, amenities) {
       addressLine: row.address_line,
       city: row.city,
       countryCode: row.country_code,
+      locationUrl: row.location_url,
       latitude: row.latitude,
       longitude: row.longitude,
       description: row.description,

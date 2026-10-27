@@ -120,6 +120,35 @@ describe('1-3. room types: create, update, archive', () => {
     assert.equal(room.totalUnits, 4);
   });
 
+  it('generates sequential RM room codes when the code is omitted', async () => {
+    const preview = await request(app)
+      .get(`/api/admin/hotels/${hotelId}/room-types/next-code`)
+      .set(bearer(adminToken));
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.equal(preview.body.roomCode, 'RM_01');
+
+    const created = await request(app)
+      .post(`/api/admin/hotels/${hotelId}/room-types`)
+      .set(bearer(adminToken))
+      .send({
+        name: 'Automatically Coded Room',
+        category: 'STANDARD',
+        bedCount: 1,
+        maxAdults: 2,
+        maxChildren: 0,
+        maxOccupancy: 2,
+        smoking: 'NON_SMOKING',
+        totalUnits: 1,
+      });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    assert.equal(created.body.roomType.roomCode, 'RM_01');
+
+    const next = await request(app)
+      .get(`/api/admin/hotels/${hotelId}/room-types/next-code`)
+      .set(bearer(adminToken));
+    assert.equal(next.body.roomCode, 'RM_02');
+  });
+
   it('rejects a duplicate room code and duplicate name within the same hotel', async () => {
     const code = await request(app).post(`/api/admin/hotels/${hotelId}/room-types`).set(bearer(adminToken)).send({
       name: 'Another Room', roomCode: 'DKR', category: 'STANDARD', bedCount: 1, maxAdults: 2, maxChildren: 0, maxOccupancy: 2, smoking: 'NON_SMOKING', totalUnits: 1,

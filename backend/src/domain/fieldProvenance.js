@@ -16,6 +16,7 @@ export const COLUMN_FOR = {
   state: 'state',
   countryCode: 'country_code',
   postalCode: 'postal_code',
+  locationUrl: 'location_url',
   latitude: 'latitude',
   longitude: 'longitude',
   phone: 'phone',

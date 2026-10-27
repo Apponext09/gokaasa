@@ -104,11 +104,10 @@ export function toRoomFormValues(room) {
   };
 }
 
-export function toRoomPayload(values) {
+export function toRoomPayload(values, { includeRoomCode = true } = {}) {
   const nullable = (v) => (v === '' ? null : v);
-  return {
+  const payload = {
     name: values.name,
-    roomCode: values.roomCode,
     category: values.category,
     description: nullable(values.description),
     roomSizeSqm: values.roomSizeSqm === '' ? null : Number(values.roomSizeSqm),
@@ -123,6 +122,8 @@ export function toRoomPayload(values) {
     cancellationPolicyId: values.cancellationPolicyId === '' ? null : Number(values.cancellationPolicyId),
     status: values.status,
   };
+  if (includeRoomCode) payload.roomCode = values.roomCode;
+  return payload;
 }
 
 /** Rupees (as typed) to integer paise. Rejects anything that is not a plain positive amount. */

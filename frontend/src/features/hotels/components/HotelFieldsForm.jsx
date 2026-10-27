@@ -42,6 +42,9 @@ function renderControl(name, { register, disabled, invalid, ariaDescribedBy }) {
   }
   if (name === 'description') return <Textarea {...common} {...register(name)} />;
   if (name === 'countryCode') return <Input {...common} maxLength={2} className="uppercase" {...register(name)} />;
+  if (name === 'locationUrl') {
+    return <Input {...common} type="url" inputMode="url" placeholder="https://maps.app.goo.gl/..." {...register(name)} />;
+  }
   if (name === 'checkInTime' || name === 'checkOutTime') {
     return <Input {...common} type="time" {...register(name)} />;
   }
@@ -64,7 +67,7 @@ export function HotelFieldsForm({ fields, form, hotel, disabled, onVerify, onAcc
         const value = form.watch(name);
         const hasValue = String(value ?? '').trim() !== '';
         const canVerify = !disabled && hasValue && state?.status && state.status !== 'VERIFIED' && Boolean(onVerify);
-        const span = name === 'description' || name === 'addressLine' ? 'sm:col-span-2' : '';
+        const span = name === 'description' || name === 'addressLine' || name === 'locationUrl' ? 'sm:col-span-2' : '';
         const describedBy = error ? `${name}-error` : state?.hasSuggestion ? `${name}-suggestion` : undefined;
 
         return (

@@ -122,6 +122,18 @@ test('publish blockers list every missing requirement', () => {
   assert.deepEqual(blockers, ['Address', 'Map location', 'Description', 'Star rating', 'At least one image', 'At least one amenity']);
 });
 
+test('a customer-facing location URL satisfies the map-location publish requirement', () => {
+  const blockers = getPublishBlockers(
+    {
+      name: 'A', addressLine: '1 Test Road', city: 'Goa', countryCode: 'IN',
+      locationUrl: 'https://maps.app.goo.gl/example', latitude: null, longitude: null,
+      description: 'A hotel', starRating: 4,
+    },
+    { imageCount: 1, amenityCount: 1, hasCover: true },
+  );
+  assert.deepEqual(blockers, []);
+});
+
 test('hotel status machine rejects skipped steps', () => {
   assert.equal(resolveTransition('DRAFT', 'PUBLISH'), null, 'draft cannot go straight to published');
   assert.equal(resolveTransition('DRAFT', 'SUBMIT_FOR_REVIEW'), 'PENDING_REVIEW');

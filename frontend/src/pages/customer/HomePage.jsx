@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
   BadgeCheck,
@@ -23,13 +23,11 @@ import {
 } from '@/components/ui/carousel.jsx';
 
 import {
-  FullPageSpinner,
   Pagination,
   homePathFor,
 } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
-import { NearbyHotelsSection } from '@/features/home/NearbyHotelsSection.jsx';
 import { useGeolocation } from '@/features/home/useGeolocation.js';
 import { distanceFromCoordinatesKm } from '@/features/hotels/distance.js';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
@@ -48,6 +46,45 @@ import {
 
 import { normalizeError } from '@/services/api.js';
 import { addDays, destinationSearchPath, todayIso, toSearchParams } from '@/features/search/searchParams.js';
+
+const NearbyHotelsSection = lazy(() => import('@/features/home/NearbyHotelsSection.jsx').then((module) => ({
+  default: module.NearbyHotelsSection,
+})));
+
+function DeferredNearbyHotels() {
+  const mountRef = useRef(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (shouldLoad || !mountRef.current) return undefined;
+    if (!('IntersectionObserver' in window)) {
+      setShouldLoad(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        setShouldLoad(true);
+        observer.disconnect();
+      },
+      { rootMargin: '500px 0px' },
+    );
+    observer.observe(mountRef.current);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  return (
+    <div ref={mountRef}>
+      {shouldLoad ? (
+        <Suspense fallback={<div className="min-h-64 animate-pulse rounded-2xl bg-slate-100" aria-label="Loading nearby hotels" />}>
+          <NearbyHotelsSection />
+        </Suspense>
+      ) : (
+        <div className="min-h-64 rounded-2xl bg-slate-50" aria-hidden="true" />
+      )}
+    </div>
+  );
+}
 
 const WHY_GOKAASA = [
   {
@@ -275,13 +312,13 @@ const titleCaseSlug = (slug) => String(slug ?? '')
   .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
   .join(' ');
 
-function HomeHotelListing({ search = null, geolocation }) {
+function HomeHotelListing({ search = null, geolocation, authStatus }) {
   const [hotels, setHotels] = useState([]);
   const [status, setStatus] = useState('loading');
   const [filters, setFilters] = useState({});
   const [sort, setSort] = useState('recommended');
   const [nameQuery, setNameQuery] = useState(search?.name ?? '');
-  const debouncedNameQuery = useDebounce(nameQuery.trim(), 300);
+  const debouncedNameQuery = useDebounce(nameQuery.trim(), 200);
   const [priceBounds, setPriceBounds] = useState(undefined);
   const [resultTotal, setResultTotal] = useState(0);
   const [resultPagination, setResultPagination] = useState(null);
@@ -343,7 +380,7 @@ function HomeHotelListing({ search = null, geolocation }) {
     return () => controller.abort();
     // listingState is intentionally represented by its URL-backed inputs here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, retryKey, searchKey]);
+  }, [page, retryKey, searchKey, authStatus]);
 
   const hotelsWithDistance = useMemo(() => {
     if (!geolocation.coords) return hotels;
@@ -440,6 +477,9 @@ function HomeHotelListing({ search = null, geolocation }) {
                 {status === 'ready' && (
                   <span className="hotels-results-count">({resultTotal} Properties Found)</span>
                 )}
+                {status === 'loading' && hotels.length > 0 && (
+                  <span className="hotels-results-count">(Updating...)</span>
+                )}
               </h3>
               <div className="flex items-center gap-2">
                 {!geolocation.coords && (
@@ -463,7 +503,7 @@ function HomeHotelListing({ search = null, geolocation }) {
               </div>
             </div>
 
-            {status === 'loading' && (
+            {status === 'loading' && hotels.length === 0 && (
               <div className="hotels-cards-stream">
                 {[0, 1, 2, 3].map((i) => <HotelCardSkeleton key={i} />)}
               </div>
@@ -477,9 +517,9 @@ function HomeHotelListing({ search = null, geolocation }) {
               </div>
             )}
 
-            {status === 'ready' && filtered.length > 0 && (
+            {status !== 'error' && filtered.length > 0 && (
               <>
-                <div className="hotels-cards-stream">
+                <div className={cn('hotels-cards-stream', status === 'loading' && 'is-updating')} aria-busy={status === 'loading'}>
                   {filtered.map((hotel) => (
                     <HotelCard key={hotel.id} hotel={hotel} state={listingState} />
                   ))}
@@ -603,10 +643,6 @@ export function HomePage() {
       cancelled = true;
     };
   }, [isStaff]);
-
-  if (status === 'loading') {
-    return <FullPageSpinner label="Loading Gokaasa" />;
-  }
 
   if (isStaff) {
     return <Navigate to={homePathFor(user)} replace />;
@@ -802,11 +838,11 @@ export function HomePage() {
 
       {/* NEARBY HOTELS */}
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
-      <HomeHotelListing key={hotelSearchVersion} search={hotelSearch} geolocation={geolocation} />
+      <HomeHotelListing key={hotelSearchVersion} search={hotelSearch} geolocation={geolocation} authStatus={status} />
 
       <Reveal>
         <div className="customer-section customer-section--compact customer-section--divided home-nearby-wrap">
-          <NearbyHotelsSection />
+          <DeferredNearbyHotels />
         </div>
       </Reveal>
 

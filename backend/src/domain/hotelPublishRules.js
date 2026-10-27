@@ -10,7 +10,8 @@ export function getPublishBlockers(hotel, { imageCount, amenityCount, hasCover =
   if (!hotel.addressLine) blockers.push('Address');
   if (!hotel.city) blockers.push('City');
   if (!hotel.countryCode) blockers.push('Country');
-  if (hotel.latitude == null || hotel.longitude == null) blockers.push('Map location');
+  // Manual hotels provide a customer-facing map URL; older/imported hotels may still provide coordinates.
+  if (!hotel.locationUrl && (hotel.latitude == null || hotel.longitude == null)) blockers.push('Map location');
   if (!hotel.description) blockers.push('Description');
   if (hotel.starRating == null) blockers.push('Star rating');
   if (imageCount === 0) blockers.push('At least one image');

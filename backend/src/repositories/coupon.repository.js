@@ -43,13 +43,13 @@ export const couponRepository = {
   /** Every coupon's hotel/city restrictions in two batched queries, grouped by coupon id -- never N+1. */
   async restrictionsFor(couponIds, client = pool) {
     if (couponIds.length === 0) return { hotelsByCoupon: new Map(), citiesByCoupon: new Map() };
-    const [hotelRows, cityRows] = [
-      await client.query(
+    const [hotelRows, cityRows] = await Promise.all([
+      client.query(
         `SELECT ch.coupon_id, h.id, h.name FROM coupon_hotels ch JOIN hotels h ON h.id = ch.hotel_id WHERE ch.coupon_id = ANY($1::bigint[])`,
         [couponIds],
       ),
-      await client.query(`SELECT coupon_id, city FROM coupon_destinations WHERE coupon_id = ANY($1::bigint[])`, [couponIds]),
-    ];
+      client.query(`SELECT coupon_id, city FROM coupon_destinations WHERE coupon_id = ANY($1::bigint[])`, [couponIds]),
+    ]);
     const hotelsByCoupon = new Map();
     for (const row of hotelRows.rows) (hotelsByCoupon.get(row.coupon_id) ?? hotelsByCoupon.set(row.coupon_id, []).get(row.coupon_id)).push({ id: row.id, name: row.name });
     const citiesByCoupon = new Map();

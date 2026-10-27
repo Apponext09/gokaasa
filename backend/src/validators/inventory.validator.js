@@ -38,7 +38,11 @@ const occupancyRule = (value, ctx) => {
 };
 
 export const roomTypeCreateSchema = z
-  .object({ ...roomFields, status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE') })
+  .object({
+    ...roomFields,
+    roomCode: roomFields.roomCode.optional(),
+    status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
+  })
   .superRefine(occupancyRule);
 
 export const roomTypeUpdateSchema = z

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import {
   Link,
   Outlet,
@@ -19,9 +19,10 @@ import {
   Tag,
   Info,
   Mail,
+  Phone,
 } from 'lucide-react';
 
-import { Logo } from '@/components/shared/index.jsx';
+import { FullPageSpinner, Logo } from '@/components/shared/index.jsx';
 import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -29,6 +30,7 @@ import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
 import { SupportLauncher } from '@/features/support/SupportLauncher.jsx';
 import { cn } from '@/lib/utils.js';
+import { supportPhoneHref, supportPhoneLabel } from '@/config/support.js';
 
 /* =========================================================
    SOCIAL ICONS
@@ -950,6 +952,15 @@ function Footer() {
                 />
                 24/7 Support
               </span>
+
+              <a
+                href={supportPhoneHref()}
+                aria-label={`Call Gokaasa support at ${supportPhoneLabel()}`}
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:border-[#F2C66D]/60 hover:text-[#F2C66D] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F2C66D]"
+              >
+                <Phone size={15} className="text-[#F2C66D]" />
+                {supportPhoneLabel()}
+              </a>
             </div>
 
             {/* Social */}
@@ -1482,7 +1493,9 @@ export function CustomerLayout() {
         id="main"
         className="customer-main flex-1"
       >
-        <Outlet />
+        <Suspense fallback={<FullPageSpinner label="Loading page" />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Footer */}

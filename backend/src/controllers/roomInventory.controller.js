@@ -20,6 +20,10 @@ export const roomInventoryController = {
     return res.json({ roomTypes: rooms });
   },
 
+  async nextRoomCode(req, res) {
+    return res.json({ roomCode: await roomTypeService.nextCode(req.validated.params.id) });
+  },
+
   async createRoomType(req, res) {
     const roomType = await roomTypeService.create(req.validated.params.id, req.validated.body, actorOf(req));
     return res.status(201).json({ roomType });

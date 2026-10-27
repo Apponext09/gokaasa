@@ -1,33 +1,53 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Building2, CalendarCheck, Loader2, Search, User } from 'lucide-react';
 import { adminApi } from '@/services/endpoints.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { cn } from '@/lib/utils.js';
 
 const TYPE_ICON = { hotel: Building2, booking: CalendarCheck, customer: User };
-const TYPE_LABEL = { hotel: 'Hotel', booking: 'Booking', customer: 'Customer' };
+const TYPE_LABEL = { page: 'Page', hotel: 'Hotel', booking: 'Booking', customer: 'Customer' };
 
 /**
- * Ctrl+K / Cmd+K anywhere in the admin panel. One debounced call to the shared search endpoint, which
- * itself just fans out to the hotel/booking/customer list queries those pages already use (same
- * hotel-manager scoping) -- this never queries an arbitrary field, only what those pages already expose.
+ * Ctrl+K / Cmd+K anywhere in the admin panel. Sidebar pages are matched locally while one debounced
+ * request finds hotel, booking and customer records using the same staff scoping as their list pages.
  */
-export function AdminCommandPalette() {
+export function AdminCommandPalette({ navigation = [] }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [items, setItems] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef(null);
+  const rootRef = useRef(null);
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+
+  const navigationItems = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (term.length < 2) return [];
+    return navigation.flatMap((group) => group.items
+      .filter((item) => (!item.adminOnly || isAdmin) && `${item.label} ${group.section ?? ''}`.toLowerCase().includes(term))
+      .map((item) => ({
+        type: 'page',
+        id: item.to,
+        title: item.label,
+        subtitle: group.section ? `${group.section} page` : 'Admin page',
+        href: item.to,
+        icon: item.icon,
+      })));
+  }, [isAdmin, navigation, query]);
+
+  const results = useMemo(() => [...navigationItems, ...(items ?? [])], [items, navigationItems]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setOpen((o) => !o);
+        setOpen(true);
+        requestAnimationFrame(() => inputRef.current?.focus());
       } else if (event.key === 'Escape') {
         setOpen(false);
+        inputRef.current?.blur();
       }
     };
     document.addEventListener('keydown', onKeyDown);
@@ -35,18 +55,12 @@ export function AdminCommandPalette() {
   }, []);
 
   useEffect(() => {
-    if (open) {
-      setQuery('');
-      setItems(null);
-      setActiveIndex(0);
-      // Let the modal mount before focusing.
-      requestAnimationFrame(() => inputRef.current?.focus());
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-    return undefined;
+    if (!open) return undefined;
+    const closeOnOutsideClick = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
   }, [open]);
 
   useEffect(() => {
@@ -72,55 +86,64 @@ export function AdminCommandPalette() {
 
   const go = (item) => {
     setOpen(false);
+    setQuery('');
     navigate(item.href);
   };
 
   const onKeyDownInList = (event) => {
-    if (!items?.length) return;
+    if (!results.length) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((i) => Math.min(i + 1, items.length - 1));
+      setActiveIndex((i) => Math.min(i + 1, results.length - 1));
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       setActiveIndex((i) => Math.max(i - 1, 0));
-    } else if (event.key === 'Enter' && items[activeIndex]) {
+    } else if (event.key === 'Enter' && results[activeIndex]) {
       event.preventDefault();
-      go(items[activeIndex]);
+      go(results[activeIndex]);
     }
   };
 
-  if (!open) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] grid place-items-start justify-center pt-24">
-      <button aria-label="Close search" className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} tabIndex={-1} />
-      <div role="dialog" aria-modal="true" aria-label="Search Gokaasa" className="relative w-full max-w-lg overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface-card)] shadow-2xl shadow-black/20">
-        <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-3">
+  return (
+    <div ref={rootRef} className="relative w-full max-w-md">
+      <div className={cn(
+        'admin-search flex h-10 w-full items-center gap-2 rounded-xl border bg-slate-50 px-3.5 text-sm transition',
+        open ? 'border-brand-400 bg-white ring-2 ring-brand-100' : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-white',
+      )}>
           <Search className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActiveIndex(0);
+              setOpen(true);
+            }}
+            onFocus={() => setOpen(true)}
             onKeyDown={onKeyDownInList}
-            placeholder="Search hotels, bookings, customers…"
+            placeholder="Search pages, hotels, bookings, customers..."
             aria-label="Search Gokaasa"
             className="w-full bg-transparent text-sm text-[var(--text-strong)] placeholder:text-[var(--text-muted)] focus:outline-none"
           />
-          <kbd className="hidden shrink-0 rounded border border-[var(--border-subtle)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] sm:inline">Esc</kbd>
-        </div>
+          <kbd className="hidden shrink-0 rounded border border-[var(--border-subtle)] bg-white px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-muted)] sm:inline">{open ? 'Esc' : 'Ctrl K'}</kbd>
+      </div>
 
-        <div className="max-h-96 overflow-y-auto" role="listbox">
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+0.5rem)] z-[100] max-h-[min(28rem,calc(100vh-6rem))] w-full overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-2xl shadow-slate-950/15" role="listbox">
+          {query.trim().length === 0 && (
+            <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Search any sidebar page, hotel, booking or customer.</p>
+          )}
           {query.trim().length > 0 && query.trim().length < 2 && (
             <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">Type at least 2 characters.</p>
           )}
-          {query.trim().length >= 2 && items === null && (
+          {query.trim().length >= 2 && items === null && results.length === 0 && (
             <p className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-[var(--text-muted)]">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Searching…
             </p>
           )}
-          {items?.length === 0 && <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">No matches.</p>}
-          {items?.map((item, index) => {
-            const Icon = TYPE_ICON[item.type] ?? Search;
+          {items?.length === 0 && results.length === 0 && <p className="px-4 py-6 text-center text-sm text-[var(--text-muted)]">No matches.</p>}
+          {results.map((item, index) => {
+            const Icon = item.icon ?? TYPE_ICON[item.type] ?? Search;
             return (
               <button
                 key={`${item.type}-${item.id}`}
@@ -145,8 +168,7 @@ export function AdminCommandPalette() {
             );
           })}
         </div>
-      </div>
-    </div>,
-    document.body,
+      )}
+    </div>
   );
 }

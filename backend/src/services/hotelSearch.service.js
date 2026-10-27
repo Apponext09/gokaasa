@@ -55,10 +55,9 @@ export const countryName = (code) => {
   }
 };
 
-/** Resolves a destination slug to the exact city names stored on hotels. Unknown slugs match nothing. */
-async function resolveNames(slug, field) {
+/** Resolves a destination slug against one shared place snapshot. Unknown slugs match nothing. */
+function resolveNames(places, slug, field) {
   if (!slug) return null;
-  const places = await destinationRepository.publishedPlaces();
   const names = new Set();
   for (const place of places) {
     const value = place[field];
@@ -187,34 +186,38 @@ export const hotelSearchService = {
     if (checkIn < today) throw AppError.unprocessable('Check-in cannot be in the past', [{ field: 'checkIn', message: 'Pick a date from today onwards' }]);
 
     const nights = nightsBetween(checkIn, checkOut);
-    const cities = await resolveNames(query.destination, 'city');
-    const areas = await resolveNames(query.area, 'area');
-
-    const rows = await hotelSearchRepository.search({
-      cities,
-      areas,
-      name: query.name ?? null,
-      nights,
-      occupancy: occupancy.map((room) => ({ adults: room.adults, childCount: room.childAges.length })),
-      filters: {
-        stars: filters.stars ?? null,
-        guestRatingMin: filters.guestRating ?? null,
-        propertyTypes: filters.propertyTypes ?? null,
-        amenities: filters.amenities ?? null,
-        freeCancellation: filters.freeCancellation ?? false,
-        mealPlans: filters.mealPlans ?? null,
-        // Prices arrive in rupees per room per night; the database compares paise.
-        minPerNight: filters.minPrice == null ? null : filters.minPrice * 100,
-        maxPerNight: filters.maxPrice == null ? null : filters.maxPrice * 100,
-      },
-      sort,
-      limit,
-      offset: (page - 1) * limit,
-      userId,
-    });
+    // Destination and area used to trigger two identical published-place queries. Resolve both from one
+    // snapshot, and fetch card offers alongside the availability query instead of adding them afterwards.
+    const places = query.destination || query.area ? await destinationRepository.publishedPlaces() : [];
+    const cities = resolveNames(places, query.destination, 'city');
+    const areas = resolveNames(places, query.area, 'area');
+    const [rows, offers] = await Promise.all([
+      hotelSearchRepository.search({
+        cities,
+        areas,
+        name: query.name ?? null,
+        nights,
+        occupancy: occupancy.map((room) => ({ adults: room.adults, childCount: room.childAges.length })),
+        filters: {
+          stars: filters.stars ?? null,
+          guestRatingMin: filters.guestRating ?? null,
+          propertyTypes: filters.propertyTypes ?? null,
+          amenities: filters.amenities ?? null,
+          freeCancellation: filters.freeCancellation ?? false,
+          mealPlans: filters.mealPlans ?? null,
+          // Prices arrive in rupees per room per night; the database compares paise.
+          minPerNight: filters.minPrice == null ? null : filters.minPrice * 100,
+          maxPerNight: filters.maxPrice == null ? null : filters.maxPrice * 100,
+        },
+        sort,
+        limit,
+        offset: (page - 1) * limit,
+        userId,
+      }),
+      offersForBadges(),
+    ]);
 
     const total = rows[0]?.total_count ?? 0;
-    const offers = await offersForBadges();
     const items = rows.map((row) => toHotelCard({ ...row, nights: nights.length }, { offers, checkIn, checkOut }));
     const priceBounds = rows[0]?.price_floor == null
       ? null

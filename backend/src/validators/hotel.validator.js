@@ -14,6 +14,12 @@ const phone = z
   .regex(/^\+?[0-9 ()-]{7,20}$/, 'Enter a valid phone number')
   .nullish()
   .transform((value) => value || null);
+const webUrl = (label, max = 1000) => z
+  .url(`${label} must be a valid URL`)
+  .max(max)
+  .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol), `${label} must use http or https`)
+  .nullish()
+  .transform((value) => value || null);
 
 const hotelFields = {
   name: z.string().trim().min(2, 'Hotel name is required').max(200),
@@ -31,11 +37,12 @@ const hotelFields = {
     .toUpperCase()
     .regex(/^[A-Z]{2}$/, 'Use a two-letter country code such as IN'),
   postalCode: optionalText(20),
+  locationUrl: webUrl('Location URL'),
   latitude: z.number().min(-90).max(90).nullish(),
   longitude: z.number().min(-180).max(180).nullish(),
   phone,
   email: z.email().max(254).nullish().transform((value) => value?.toLowerCase() || null),
-  website: z.url().max(500).nullish().transform((value) => value || null),
+  website: webUrl('Website', 500),
   checkInTime: time,
   checkOutTime: time,
 };

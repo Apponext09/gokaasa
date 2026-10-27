@@ -275,10 +275,6 @@ export function HotelDetailsPage() {
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
-    // Wait for the session check so a signed-in customer's wishlist
-    // state is included in the response.
-    if (authStatus === 'loading') return undefined;
-
     const controller = new AbortController();
 
     setHotelState('loading');
@@ -658,12 +654,6 @@ export function HotelDetailsPage() {
 
   const location = formatHotelLocation(hotel);
 
-  const mapsUrl =
-    hotel.latitude != null &&
-    hotel.longitude != null
-      ? `https://www.google.com/maps/search/?api=1&query=${hotel.latitude},${hotel.longitude}`
-      : null;
-
   const backParams = hasStay ? stayParams(state) : new URLSearchParams();
   backParams.set('destination', slugifyPlace(hotel.city));
   const backToResults = `/hotels?${backParams.toString()}`;
@@ -853,14 +843,22 @@ export function HotelDetailsPage() {
               {hotel.name}
             </h1>
 
-            <p className="hotel-details-location flex items-center gap-1.5 text-sm text-[var(--text-muted)]">
-              <MapPin
-                className="h-4 w-4 shrink-0"
-                aria-hidden="true"
-              />
-
-              {location}
-            </p>
+            <div className="hotel-details-location flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--text-muted)]">
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {location}
+              </span>
+              {hotel.locationUrl && (
+                <a
+                  href={hotel.locationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline"
+                >
+                  View on map <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                </a>
+              )}
+            </div>
 
             {/* Safe rating section */}
             {hasRating && (
@@ -1016,13 +1014,6 @@ export function HotelDetailsPage() {
                   <strong className="font-semibold text-[var(--text-strong)]">Cancellation:</strong>{' '}
                   {policies[0]?.summary ?? 'Terms are shown with each available room rate.'}
                 </span>
-                {mapsUrl && (
-                  <a href={mapsUrl} target="_blank" rel="noreferrer noopener" className="hotel-overview-map">
-                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-                    View map
-                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                  </a>
-                )}
               </div>
             </div>
           </div>

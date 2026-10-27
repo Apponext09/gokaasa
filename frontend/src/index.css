@@ -2300,8 +2300,9 @@ body {
 .hotels-filter-sidebar {
   position: sticky;
   top: 80px;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
+  /* Keep document scrolling as the single scroll surface. A nested, hidden scrollbar made the
+     large empty results area feel unresponsive when only one hotel matched. */
+  align-self: start;
 }
 
 /* ---- Filter Sidebar wrapper — uses project's customer-filter-panel design ---- */
@@ -2368,6 +2369,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.hotels-cards-stream.is-updating {
+  opacity: 0.72;
+  transition: opacity 160ms ease;
 }
 
 /* ---- Hotel card — 3-column reference layout ---- */
@@ -2834,33 +2840,18 @@ body {
   line-height: 1.15;
 }
 
-/* Keep the homepage's embedded hotel catalogue compact: cards fill the column and the list scrolls
-   inside the section instead of creating a long area of unused page space. This is deliberately scoped
-   to .home-hotel-listing-section only -- the dedicated /hotels listing page shows every card at full
-   height and lets the page itself scroll, so results are never squeezed into a short inner scrollbox. */
+/* The catalogue follows the document scroll. A fixed-height, overscroll-contained results pane trapped
+   wheel gestures over its empty area whenever only one hotel matched. */
 .home-hotel-listing-section .hotels-results-col {
   min-height: 0;
 }
 
-.home-hotel-listing-section .hotels-page-grid {
-  --home-hotel-stream-height: min(72vh, 760px);
-}
-
 .home-hotel-listing-section .hotels-filter-sidebar {
-  height: calc(var(--home-hotel-stream-height) + 40px);
-  max-height: calc(var(--home-hotel-stream-height) + 40px);
-  overflow: hidden;
   border-radius: 14px;
 }
 
 .home-hotel-listing-section .hotels-filter-sidebar .customer-filter-panel {
-  height: 100%;
-  min-height: 0;
   box-sizing: border-box;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 .home-hotel-listing-section .hotels-filter-sidebar .customer-filter-panel::-webkit-scrollbar {
@@ -2870,12 +2861,9 @@ body {
 }
 
 .home-hotel-listing-section .hotels-cards-stream {
-  height: var(--home-hotel-stream-height);
-  max-height: var(--home-hotel-stream-height);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  height: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .home-hotel-listing-section .hotels-cards-stream::-webkit-scrollbar {
@@ -8164,23 +8152,13 @@ body {
     font-size: 0.72rem;
   }
 
-  /* Phone catalogue mirrors the desktop split: persistent filters on the left,
-     independently scrollable compact results on the right. */
+  /* On phones, give results the full width and open filters in the existing drawer. */
   .home-hotel-listing-section .hotels-page-grid {
-    --home-hotel-stream-height: min(66vh, 34rem);
-    display: grid;
-    grid-template-columns: minmax(7.6rem, 0.38fr) minmax(0, 0.62fr);
-    align-items: start;
-    gap: 0.4rem;
+    display: block;
   }
 
   .home-hotel-listing-section .hotels-filter-sidebar {
-    display: block !important;
-    position: static;
-    height: var(--home-hotel-stream-height);
-    max-height: var(--home-hotel-stream-height);
-    overflow-y: auto;
-    border-radius: 0.6rem;
+    display: none !important;
   }
 
   .home-hotel-listing-section .hotels-filter-sidebar .customer-filter-panel {
@@ -8263,14 +8241,13 @@ body {
   }
 
   .home-hotel-listing-section .hotels-mobile-filter-btn {
-    display: none !important;
+    display: inline-flex !important;
   }
 
   .home-hotel-listing-section .hotels-cards-stream {
-    height: calc(var(--home-hotel-stream-height) - 2.3rem);
-    max-height: calc(var(--home-hotel-stream-height) - 2.3rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    height: auto;
+    max-height: none;
+    overflow: visible;
     gap: 0.4rem;
   }
 
@@ -9167,21 +9144,11 @@ body {
   }
 
   .hotels-page-grid {
-    --hotels-mobile-stream-height: min(68vh, 35rem);
-    display: grid;
-    grid-template-columns: minmax(7.6rem, 0.36fr) minmax(0, 0.64fr);
-    align-items: start;
-    gap: 0.4rem;
+    display: block;
   }
 
   .hotels-page-root .hotels-filter-sidebar {
-    display: block !important;
-    position: static;
-    height: var(--hotels-mobile-stream-height);
-    max-height: var(--hotels-mobile-stream-height);
-    overflow-y: auto;
-    border-radius: 0.6rem;
-    scrollbar-width: none;
+    display: none !important;
   }
 
   .hotels-page-root .hotels-filter-sidebar::-webkit-scrollbar {
@@ -9264,16 +9231,15 @@ body {
 
   .hotels-page-root .hotels-mobile-filter-btn,
   .hotels-page-root .hotels-results-header > div:last-child {
-    display: none !important;
+    display: flex !important;
+  }
+
+  .hotels-page-root .hotels-mobile-filter-btn {
+    display: inline-flex !important;
   }
 
   .hotels-page-root .hotels-cards-stream {
-    height: calc(var(--hotels-mobile-stream-height) - 2.3rem);
-    max-height: calc(var(--hotels-mobile-stream-height) - 2.3rem);
-    overflow-y: auto;
-    overscroll-behavior: contain;
     gap: 0.4rem;
-    scrollbar-width: none;
   }
 
   .hotels-page-root .hotels-cards-stream::-webkit-scrollbar {

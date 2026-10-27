@@ -3,30 +3,38 @@ import { CustomerLayout } from '@/layouts/CustomerLayout.jsx';
 import { AdminLayout } from '@/layouts/AdminLayout.jsx';
 import { RequireAuth } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { HomePage } from '@/pages/customer/HomePage.jsx';
-import { HotelsPage } from '@/pages/customer/HotelsPage.jsx';
-import { DestinationsPage } from '@/pages/customer/DestinationsPage.jsx';
-import { OffersPage } from '@/pages/customer/OffersPage.jsx';
-import { WishlistPage } from '@/pages/customer/WishlistPage.jsx';
-import { NearbyHotelsPage } from '@/pages/customer/NearbyHotelsPage.jsx';
-import { AboutPage } from '@/pages/customer/AboutPage.jsx';
-import { ContactPage } from '@/pages/customer/ContactPage.jsx';
-import { ProfilePage } from '@/pages/customer/ProfilePage.jsx';
-import { NotificationsPage } from '@/pages/customer/NotificationsPage.jsx';
-import { HotelDetailsPage } from '@/pages/customer/HotelDetailsPage.jsx';
-import { GuestDetailsPage } from '@/pages/customer/booking/GuestDetailsPage.jsx';
-import { BookingReviewPage } from '@/pages/customer/booking/BookingReviewPage.jsx';
-import { BookingConfirmationPage } from '@/pages/customer/booking/BookingConfirmationPage.jsx';
-import { MyTripsPage } from '@/pages/customer/booking/MyTripsPage.jsx';
-import { BookingDetailsPage } from '@/pages/customer/booking/BookingDetailsPage.jsx';
-import { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from '@/pages/auth/AuthPages.jsx';
-import { PartnerRegisterPage } from '@/pages/partner/PartnerRegisterPage.jsx';
-import { PartnerOtpPage } from '@/pages/partner/PartnerOtpPage.jsx';
-import { PartnerDocumentsPage } from '@/pages/partner/PartnerDocumentsPage.jsx';
-import { ApplicationStatusPage } from '@/pages/partner/ApplicationStatusPage.jsx';
 import { PresenceTracker } from '@/features/presence/PresenceTracker.jsx';
 import { ScrollToTop } from '@/components/shared/ScrollToTop.jsx';
 import { lazy } from 'react';
+
+const lazyNamed = (loader, name) => lazy(() => loader().then((module) => ({ default: module[name] })));
+
+// Customer routes are split too: opening one page should not download every booking, profile, partner,
+// hotel-detail and map screen up front. CustomerLayout keeps the navigation visible while a chunk loads.
+const HomePage = lazyNamed(() => import('@/pages/customer/HomePage.jsx'), 'HomePage');
+const HotelsPage = lazyNamed(() => import('@/pages/customer/HotelsPage.jsx'), 'HotelsPage');
+const DestinationsPage = lazyNamed(() => import('@/pages/customer/DestinationsPage.jsx'), 'DestinationsPage');
+const OffersPage = lazyNamed(() => import('@/pages/customer/OffersPage.jsx'), 'OffersPage');
+const WishlistPage = lazyNamed(() => import('@/pages/customer/WishlistPage.jsx'), 'WishlistPage');
+const NearbyHotelsPage = lazyNamed(() => import('@/pages/customer/NearbyHotelsPage.jsx'), 'NearbyHotelsPage');
+const AboutPage = lazyNamed(() => import('@/pages/customer/AboutPage.jsx'), 'AboutPage');
+const ContactPage = lazyNamed(() => import('@/pages/customer/ContactPage.jsx'), 'ContactPage');
+const ProfilePage = lazyNamed(() => import('@/pages/customer/ProfilePage.jsx'), 'ProfilePage');
+const NotificationsPage = lazyNamed(() => import('@/pages/customer/NotificationsPage.jsx'), 'NotificationsPage');
+const HotelDetailsPage = lazyNamed(() => import('@/pages/customer/HotelDetailsPage.jsx'), 'HotelDetailsPage');
+const GuestDetailsPage = lazyNamed(() => import('@/pages/customer/booking/GuestDetailsPage.jsx'), 'GuestDetailsPage');
+const BookingReviewPage = lazyNamed(() => import('@/pages/customer/booking/BookingReviewPage.jsx'), 'BookingReviewPage');
+const BookingConfirmationPage = lazyNamed(() => import('@/pages/customer/booking/BookingConfirmationPage.jsx'), 'BookingConfirmationPage');
+const MyTripsPage = lazyNamed(() => import('@/pages/customer/booking/MyTripsPage.jsx'), 'MyTripsPage');
+const BookingDetailsPage = lazyNamed(() => import('@/pages/customer/booking/BookingDetailsPage.jsx'), 'BookingDetailsPage');
+const LoginPage = lazyNamed(() => import('@/pages/auth/AuthPages.jsx'), 'LoginPage');
+const RegisterPage = lazyNamed(() => import('@/pages/auth/AuthPages.jsx'), 'RegisterPage');
+const ForgotPasswordPage = lazyNamed(() => import('@/pages/auth/AuthPages.jsx'), 'ForgotPasswordPage');
+const ResetPasswordPage = lazyNamed(() => import('@/pages/auth/AuthPages.jsx'), 'ResetPasswordPage');
+const PartnerRegisterPage = lazyNamed(() => import('@/pages/partner/PartnerRegisterPage.jsx'), 'PartnerRegisterPage');
+const PartnerOtpPage = lazyNamed(() => import('@/pages/partner/PartnerOtpPage.jsx'), 'PartnerOtpPage');
+const PartnerDocumentsPage = lazyNamed(() => import('@/pages/partner/PartnerDocumentsPage.jsx'), 'PartnerDocumentsPage');
+const ApplicationStatusPage = lazyNamed(() => import('@/pages/partner/ApplicationStatusPage.jsx'), 'ApplicationStatusPage');
 
 // Lazy: none of this admin code is in the customer homepage's initial bundle, and within admin each
 // module loads only when its own route is visited (the dashboard never pulls in Reports/Reviews/etc).

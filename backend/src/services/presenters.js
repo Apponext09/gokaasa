@@ -34,6 +34,7 @@ export function toHotelSummary(row, { includeInternal = false } = {}) {
     city: row.city,
     state: row.state,
     countryCode: row.country_code,
+    locationUrl: row.location_url ?? null,
     latitude: row.latitude,
     longitude: row.longitude,
     roomTypeCount: row.room_type_count ?? 0,

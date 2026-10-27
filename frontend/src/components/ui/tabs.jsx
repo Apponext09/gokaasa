@@ -19,7 +19,7 @@ export function Tabs({ value, onChange, items, label, className }) {
   };
 
   return (
-    <div role="tablist" aria-label={label} className={cn('flex gap-1 overflow-x-auto border-b border-[var(--border-subtle)]', className)}>
+    <div role="tablist" aria-label={label} className={cn('no-scrollbar flex gap-1 overflow-x-auto overflow-y-hidden border-b border-[var(--border-subtle)]', className)}>
       {items.map((item, index) => {
         const selected = item.value === value;
         return (

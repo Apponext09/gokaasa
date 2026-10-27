@@ -338,6 +338,12 @@ adminRouter.get(
   requireHotelAccess(hotelIdFromParam),
   inv.listRoomTypes,
 );
+adminRouter.get(
+  '/hotels/:id/room-types/next-code',
+  validate({ params: idParam }),
+  requireHotelAccess(hotelIdFromParam),
+  inv.nextRoomCode,
+);
 adminRouter.post(
   '/hotels/:id/room-types',
   validate({ params: idParam, body: roomTypeCreateSchema }),

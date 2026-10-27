@@ -205,8 +205,6 @@ export function AdminLayout() {
 
   return (
     <div className="admin-ui h-screen overflow-hidden" style={{ '--admin-sidebar-width': collapsed ? '5rem' : '16.5rem' }}>
-      <AdminCommandPalette />
-
       <aside className={cn('admin-sidebar fixed inset-y-0 left-0 z-30 hidden flex-col gap-6 overflow-hidden border-r border-slate-200 bg-white p-4 transition-[width] duration-200 md:flex', collapsed ? 'w-20' : 'w-[16.5rem]')}>
         <div className={cn('flex h-14 shrink-0 items-center', collapsed ? 'justify-center' : 'justify-between')}>
           <div className={cn('admin-brand min-w-0', collapsed && 'is-collapsed [&_img]:h-9 [&_img]:w-9 [&_img]:object-cover [&_img]:object-left')}>
@@ -244,20 +242,12 @@ export function AdminLayout() {
       )}
 
       <div className="flex h-screen min-w-0 flex-col md:ml-[var(--admin-sidebar-width)]">
-        <header className="admin-topbar flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <header className="admin-topbar relative z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <button
-              type="button"
-              onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
-              className="admin-search flex h-10 w-full max-w-md items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-500 transition hover:border-slate-300 hover:bg-white"
-            >
-              <Search className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">Search bookings, hotels, customers…</span>
-              <kbd className="ml-auto hidden shrink-0 rounded border border-[var(--border-subtle)] bg-[var(--surface-card)] px-1.5 py-0.5 text-[10px] font-medium sm:inline">Ctrl K</kbd>
-            </button>
+            <AdminCommandPalette navigation={NAV} />
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:inline">{isAdmin ? 'Hotel operations' : 'My hotels'}</span>

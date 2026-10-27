@@ -20,6 +20,16 @@ export function whatsAppPhoneDigits() {
   return `${SUPPORT_CONFIG.whatsapp.countryCode}${SUPPORT_CONFIG.whatsapp.localNumber}`.replace(/\D/g, '');
 }
 
+export function supportPhoneHref() {
+  return `tel:+${whatsAppPhoneDigits()}`;
+}
+
+export function supportPhoneLabel() {
+  const { countryCode, localNumber } = SUPPORT_CONFIG.whatsapp;
+  const groupedNumber = localNumber.replace(/^(\d{5})(\d{5})$/, '$1 $2');
+  return `+${countryCode} ${groupedNumber}`;
+}
+
 /** The full wa.me click-to-chat URL with a correctly URL-encoded prefilled message. */
 export function buildWhatsAppUrl(message = SUPPORT_CONFIG.whatsapp.defaultMessage) {
   return `https://wa.me/${whatsAppPhoneDigits()}?text=${encodeURIComponent(message)}`;

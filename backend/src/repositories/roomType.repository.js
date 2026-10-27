@@ -54,6 +54,20 @@ export const roomTypeRepository = {
     return rowCount > 0;
   },
 
+  async lockHotelForCode(hotelId, client) {
+    await client.query(`SELECT id FROM hotels WHERE id = $1 FOR UPDATE`, [hotelId]);
+  },
+
+  async nextGeneratedCode(hotelId, client = pool) {
+    const { rows } = await client.query(
+      `SELECT COALESCE(MAX(substring(room_code FROM '^RM_([0-9]+)$')::integer), 0) + 1 AS next_number
+         FROM room_types
+        WHERE hotel_id = $1`,
+      [hotelId],
+    );
+    return `RM_${String(rows[0].next_number).padStart(2, '0')}`;
+  },
+
   async existsName(hotelId, name, exceptId, client = pool) {
     const { rowCount } = await client.query(
       `SELECT 1 FROM room_types WHERE hotel_id = $1 AND lower(name) = lower($2) AND deleted_at IS NULL AND ($3::bigint IS NULL OR id <> $3)`,

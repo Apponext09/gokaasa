@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Headset, MessageCircle, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { buildWhatsAppUrl } from '@/config/support.js';
-import { BookingAssistant } from '@/features/support/BookingAssistant.jsx';
 import { cn } from '@/lib/utils.js';
+
+const BookingAssistant = lazy(() => import('@/features/support/BookingAssistant.jsx').then((module) => ({
+  default: module.BookingAssistant,
+})));
 
 const LAUNCHER_LABEL = 'Plan your stay';
 const DOCK_QUERY = '(min-width: 768px)';
@@ -101,7 +104,11 @@ export function SupportLauncher() {
           tabIndex={-1}
           className="assistant-panel flex h-full w-full flex-col overflow-hidden bg-[var(--surface-card)] shadow-2xl outline-none rounded-2xl border border-[var(--border-subtle)] md:border-white/70"
         >
-          <BookingAssistant onClose={() => setPanel(null)} open={chatOpen} />
+          {chatOpen && (
+            <Suspense fallback={<div className="grid h-full place-items-center text-sm text-[var(--text-muted)]">Loading concierge...</div>}>
+              <BookingAssistant onClose={() => setPanel(null)} open />
+            </Suspense>
+          )}
         </div>
       </div>
 

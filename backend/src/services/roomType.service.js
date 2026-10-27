@@ -147,10 +147,20 @@ export const roomTypeService = {
     };
   },
 
+  async nextCode(hotelId) {
+    await requireHotel(hotelId);
+    return roomTypeRepository.nextGeneratedCode(hotelId);
+  },
+
   async create(hotelId, input, actor) {
     return withTransaction(async (client) => {
       await requireHotel(hotelId, client);
-      if (await roomTypeRepository.existsCode(hotelId, input.roomCode, null, client)) {
+      let roomCode = input.roomCode;
+      if (!roomCode) {
+        await roomTypeRepository.lockHotelForCode(hotelId, client);
+        roomCode = await roomTypeRepository.nextGeneratedCode(hotelId, client);
+      }
+      if (await roomTypeRepository.existsCode(hotelId, roomCode, null, client)) {
         throw AppError.conflict('Another room in this hotel already uses that room code', { field: 'roomCode' });
       }
       if (await roomTypeRepository.existsName(hotelId, input.name, null, client)) {
@@ -158,13 +168,13 @@ export const roomTypeService = {
       }
       await requirePolicyForHotel(input.cancellationPolicyId, hotelId, client);
 
-      const id = await roomTypeRepository.insert(client, { hotel_id: hotelId, ...toColumns(input) });
+      const id = await roomTypeRepository.insert(client, { hotel_id: hotelId, ...toColumns({ ...input, roomCode }) });
       await auditService.record(client, {
         actor,
         action: 'room_type.created',
         entity: 'room_type',
         entityId: id,
-        newValue: { hotelId, name: input.name, roomCode: input.roomCode },
+        newValue: { hotelId, name: input.name, roomCode },
       });
       return id;
     }).then((id) => this.getDetail(id));
