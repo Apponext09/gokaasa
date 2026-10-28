@@ -231,9 +231,10 @@ export const bookingRepository = {
 
   async bookingRooms(bookingId, client = pool) {
     const { rows } = await client.query(
-      `SELECT room_type_id, room_name, meal_plan, rate_plan_name, quantity, nights, rate_per_night_minor,
+      `SELECT br.room_type_id, br.room_name, br.meal_plan, mp.name AS meal_plan_name, br.rate_plan_name, br.quantity, br.nights, br.rate_per_night_minor,
               subtotal_minor, discount_minor, taxes_minor, fees_minor, total_minor
-         FROM booking_rooms WHERE booking_id = $1 ORDER BY id`,
+         FROM booking_rooms br JOIN meal_plans mp ON mp.code = br.meal_plan
+        WHERE br.booking_id = $1 ORDER BY br.id`,
       [bookingId],
     );
     return rows;

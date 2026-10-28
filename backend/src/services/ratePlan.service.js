@@ -7,6 +7,7 @@ import { auditService } from './audit.service.js';
 import { priceComponents } from '../domain/pricing.js';
 import { AppError } from '../utils/AppError.js';
 import { toRatePlanDto } from './roomType.service.js';
+import { catalogService } from './catalog.service.js';
 
 /** A refundable rate may not point at a non-refundable policy, and a non-refundable rate needs one. */
 async function checkRefundability(client, { hotelId, isRefundable, cancellationPolicyId }) {
@@ -57,6 +58,7 @@ export const ratePlanService = {
       if (await ratePlanRepository.existsCode(roomTypeId, input.code, null, client)) {
         throw AppError.conflict('This room already has a rate plan with that code', { field: 'code' });
       }
+      await catalogService.requireActive('meal-plans', input.mealPlan, client);
       await checkRefundability(client, { hotelId: room.hotel_id, ...input });
 
       const id = await ratePlanRepository.insert(client, {
@@ -99,6 +101,9 @@ export const ratePlanService = {
 
       if (input.code && input.code !== current.code && (await ratePlanRepository.existsCode(current.room_type_id, input.code, planId, client))) {
         throw AppError.conflict('This room already has a rate plan with that code', { field: 'code' });
+      }
+      if (input.mealPlan !== undefined && input.mealPlan !== current.meal_plan) {
+        await catalogService.requireActive('meal-plans', input.mealPlan, client);
       }
 
       const nextRefundable = input.isRefundable ?? current.is_refundable;

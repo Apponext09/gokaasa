@@ -56,7 +56,7 @@ function Row({ label, value }) {
 export function BookingDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSalesExecutive } = useAuth();
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -125,7 +125,7 @@ export function BookingDetailPage() {
           <>
             <Badge tone={BOOKING_STATUS_LABEL[booking.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[booking.status]?.label ?? booking.status}</Badge>
             <Button variant="secondary" size="sm" onClick={downloadInvoice} loading={downloadingInvoice}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Invoice</Button>
-            {canCancel && <Button variant="danger-outline" size="sm" onClick={() => setCancelOpen(true)}>Cancel booking</Button>}
+            {canCancel && !isSalesExecutive && <Button variant="danger-outline" size="sm" onClick={() => setCancelOpen(true)}>Cancel booking</Button>}
           </>
         }
       />
@@ -159,7 +159,7 @@ export function BookingDetailPage() {
             <Row label="Nights" value={booking.stay.nights} />
             <Row label="Rooms" value={booking.stay.rooms} />
             <Row label="Guests" value={`${booking.stay.adults} adults${booking.stay.children ? `, ${booking.stay.children} children` : ''}`} />
-            {booking.rooms.map((room, i) => <Row key={i} label={room.name} value={`${room.ratePlanName} · ${room.mealPlan.replaceAll('_', ' ')}`} />)}
+            {booking.rooms.map((room, i) => <Row key={i} label={room.name} value={`${room.ratePlanName} · ${room.mealPlanName ?? room.mealPlan.replaceAll('_', ' ')}`} />)}
           </CardContent>
         </Card>
 

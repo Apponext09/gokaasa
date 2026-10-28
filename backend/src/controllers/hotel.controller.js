@@ -35,7 +35,7 @@ export const hotelController = {
   },
 
   async getAdmin(req, res) {
-    return res.json({ hotel: await hotelService.getAdmin(req.validated.params.id) });
+    return res.json({ hotel: await hotelService.getAdmin(req.validated.params.id, req.user) });
   },
 
   async createManual(req, res) {

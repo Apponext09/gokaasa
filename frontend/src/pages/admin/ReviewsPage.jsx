@@ -107,7 +107,7 @@ export function ReviewsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="Reviews"
         description={isAdmin ? 'Moderate guest reviews across every hotel.' : 'Guest reviews for your assigned hotels. Moderation is handled by an administrator.'}
@@ -129,13 +129,13 @@ export function ReviewsPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <div className="space-y-3 p-5">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
         ) : data?.items.length === 0 ? (
           <EmptyState icon={MessageSquareText} title={hasFilters ? 'No reviews match these filters' : 'No reviews yet'} description={hasFilters ? 'Try changing or clearing your filters.' : 'Guest reviews will appear here once a stay is reviewed.'} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="admin-records-scroll h-full overflow-auto">
             <table className="w-full min-w-[900px] text-left text-sm">
               <caption className="sr-only">Reviews</caption>
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">

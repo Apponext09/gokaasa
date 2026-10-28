@@ -52,7 +52,7 @@ export function OffersPage() {
   const hasFilters = Boolean(q || isActive);
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="Offers & Coupons"
         description="Discount codes customers can apply at checkout."
@@ -73,7 +73,7 @@ export function OffersPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (

@@ -14,8 +14,9 @@ export function requireHotelAccess(resolveHotelId) {
       if (req.user.roles.includes('ADMIN')) return next();
       const hotelId = await resolveHotelId(req);
       if (hotelId == null) return next(AppError.notFound('Hotel not found'));
+      const onboarding = req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE');
       const { rowCount } = await pool.query(
-        `SELECT 1 FROM hotel_managers WHERE user_id = $1 AND hotel_id = $2`,
+        `SELECT 1 FROM ${onboarding ? 'hotel_onboarding_assignments' : 'hotel_managers'} WHERE user_id = $1 AND hotel_id = $2`,
         [req.user.id, hotelId],
       );
       if (rowCount === 0) return next(AppError.notFound('Hotel not found'));
@@ -23,6 +24,14 @@ export function requireHotelAccess(resolveHotelId) {
     } catch (error) {
       next(error);
     }
+  };
+}
+
+/** Onboarding executives may inspect every hotel to avoid duplicates, but write middleware remains assignment-scoped. */
+export function requireHotelReadAccess(resolveHotelId) {
+  return async (req, res, next) => {
+    if (req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE')) return next();
+    return requireHotelAccess(resolveHotelId)(req, res, next);
   };
 }
 
@@ -42,8 +51,9 @@ export const hotelIdFromBlock = (req) =>
 
 /**
  * Import jobs reach this check before they may have resolved to a hotel yet (PENDING/PROCESSING).
- * A HOTEL_MANAGER may always see their own job; once it has resolved to a hotel, the normal
- * per-hotel assignment rule also applies (covers a manager reviewing someone else's completed job).
+ * Staff may always see their own job; once it has resolved to a hotel, the appropriate per-hotel
+ * assignment also applies (manager assignments for operational staff, onboarding assignments for
+ * onboarding executives). This supports an explicit handover without exposing the job to unassigned staff.
  */
 export async function requireImportJobAccess(req, _res, next) {
   try {
@@ -53,7 +63,18 @@ export async function requireImportJobAccess(req, _res, next) {
     if (!job) return next(AppError.notFound('Import job not found'));
     if (job.created_by === req.user.id) return next();
     if (job.hotel_id != null) {
-      const { rowCount } = await pool.query(`SELECT 1 FROM hotel_managers WHERE user_id = $1 AND hotel_id = $2`, [req.user.id, job.hotel_id]);
+      const canUseManagerAssignment = req.user.roles.some((role) => ['HOTEL_MANAGER', 'HOTEL_OWNER'].includes(role));
+      const canUseOnboardingAssignment = req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE');
+      const { rowCount } = await pool.query(
+        `SELECT 1
+           WHERE ($3::boolean AND EXISTS (
+                    SELECT 1 FROM hotel_managers WHERE user_id = $1 AND hotel_id = $2
+                  ))
+              OR ($4::boolean AND EXISTS (
+                    SELECT 1 FROM hotel_onboarding_assignments WHERE user_id = $1 AND hotel_id = $2
+                  ))`,
+        [req.user.id, job.hotel_id, canUseManagerAssignment, canUseOnboardingAssignment],
+      );
       if (rowCount > 0) return next();
     }
     return next(AppError.notFound('Import job not found'));
@@ -68,8 +89,12 @@ export async function requireImportJobAccess(req, _res, next) {
  * simpler than branching on role, and keeps a record of who actually created the hotel.
  */
 export async function assignManagerIfNeeded(client, { creatorId, hotelId }) {
-  await client.query(
-    `INSERT INTO hotel_managers (user_id, hotel_id, assigned_by) VALUES ($1, $2, $1) ON CONFLICT DO NOTHING`,
-    [creatorId, hotelId],
+  const { rows } = await client.query(
+    `SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = $1`,
+    [creatorId],
   );
+  const table = rows.some((row) => row.code === 'HOTEL_ONBOARDING_EXECUTIVE')
+    ? 'hotel_onboarding_assignments'
+    : 'hotel_managers';
+  await client.query(`INSERT INTO ${table} (user_id, hotel_id, assigned_by) VALUES ($1, $2, $1) ON CONFLICT DO NOTHING`, [creatorId, hotelId]);
 }

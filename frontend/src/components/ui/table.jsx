@@ -2,9 +2,9 @@ import { cn } from '@/lib/utils.js';
 import { Skeleton } from '@/components/ui/surfaces.jsx';
 
 /** Horizontal-scroll wrapper + the <table> element. Pair with TableHeader/TableBody/TableRow/TableHead/TableCell. */
-export function Table({ className, minWidth = '820px', children, ...props }) {
+export function Table({ className, wrapperClassName, minWidth = '820px', children, ...props }) {
   return (
-    <div className="ui-table-wrap overflow-x-auto">
+    <div className={cn('ui-table-wrap overflow-x-auto', wrapperClassName)}>
       <table className={cn('ui-table w-full text-left text-sm', className)} style={{ minWidth }} {...props}>
         {children}
       </table>

@@ -7,6 +7,7 @@ import { formatMoney } from '@/components/shared/index.jsx';
 import { cn } from '@/lib/utils.js';
 
 const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HALF_BOARD: 'Half board', FULL_BOARD: 'Full board' };
+const mealLabel = (code) => MEAL_LABEL[code] ?? String(code ?? 'Room rate').replaceAll('_', ' ').toLowerCase();
 const BED_LABEL = { KING: 'King bed', QUEEN: 'Queen bed', DOUBLE: 'Double bed', TWIN: 'Twin beds', SINGLE: 'Single bed', SOFA_BED: 'Sofa bed', BUNK: 'Bunk beds' };
 const UNAVAILABLE_TEXT = {
   SOLD_OUT: 'Sold out for these dates',
@@ -28,7 +29,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
         <div className="rate-plan-copy min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-[var(--text-strong)]">{plan.name}</p>
-            <Badge tone="brand"><UtensilsCrossed className="h-3 w-3" aria-hidden="true" /> {MEAL_LABEL[plan.mealPlan]}</Badge>
+            <Badge tone="brand"><UtensilsCrossed className="h-3 w-3" aria-hidden="true" /> {plan.mealPlanName ?? mealLabel(plan.mealPlan)}</Badge>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
             {plan.refundable ? (

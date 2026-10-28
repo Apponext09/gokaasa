@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CATALOG_KINDS, catalogCreateSchema, catalogKindParam, catalogUpdateSchema } from '../../src/validators/catalog.validator.js';
-import { roomTypeCreateSchema } from '../../src/validators/inventory.validator.js';
+import { ratePlanCreateSchema, roomTypeCreateSchema } from '../../src/validators/inventory.validator.js';
 import { imagePatchSchema, imageUploadFields } from '../../src/validators/verification.validator.js';
 import { validateAiCriteria } from '../../src/domain/assistantCriteria.js';
 
@@ -17,11 +17,24 @@ test('master updates require an actual change', () => {
   assert.equal(catalogUpdateSchema.parse({ isActive: false }).isActive, false);
 });
 
-test('bed types and image categories are supported catalog kinds', () => {
+test('bed types, image categories and meal plans are supported catalog kinds', () => {
   assert.ok(CATALOG_KINDS.includes('bed-types'));
   assert.ok(CATALOG_KINDS.includes('image-categories'));
+  assert.ok(CATALOG_KINDS.includes('meal-plans'));
   assert.equal(catalogKindParam.parse({ kind: 'bed-types' }).kind, 'bed-types');
   assert.equal(catalogKindParam.parse({ kind: 'image-categories' }).kind, 'image-categories');
+  assert.equal(catalogKindParam.parse({ kind: 'meal-plans' }).kind, 'meal-plans');
+  const mealPlan = catalogCreateSchema.parse({ name: 'All inclusive', includesBreakfast: true, includesLunch: true, includesDinner: true });
+  assert.equal(mealPlan.includesDinner, true);
+});
+
+test('rate-plan validation accepts dynamic meal-plan codes and rejects malformed ones', () => {
+  const plan = {
+    code: 'AI', name: 'All inclusive', mealPlan: 'ALL_INCLUSIVE', isRefundable: true,
+    cancellationPolicyId: 1, discountPercent: 0, taxPercent: 12, feeMinor: 0,
+  };
+  assert.equal(ratePlanCreateSchema.parse(plan).mealPlan, 'ALL_INCLUSIVE');
+  assert.equal(ratePlanCreateSchema.safeParse({ ...plan, mealPlan: 'not valid!' }).success, false);
 });
 
 test('room and image validators accept dynamic master codes while rejecting invalid code shapes', () => {

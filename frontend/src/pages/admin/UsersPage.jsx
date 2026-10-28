@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Users, Wifi, WifiOff } from 'lucide-react';
+import { Plus, Search, Users, Wifi, WifiOff } from 'lucide-react';
 import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -10,6 +10,8 @@ import { normalizeError } from '@/services/api.js';
 import { PresenceDot } from '@/features/users/PresenceDot.jsx';
 import { relativeTimeLabel } from '@/features/users/presenceFormat.js';
 import { useUserPresenceStream } from '@/features/users/useUserPresenceStream.js';
+import { roleLabel } from '@/features/auth/roleLabels.js';
+import { toast } from 'sonner';
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -17,7 +19,10 @@ const ROLE_OPTIONS = [
   { value: 'HOTEL_MANAGER', label: 'Hotel Manager' },
   { value: 'HOTEL_OWNER', label: 'Hotel Owner (Partner)' },
   { value: 'ADMIN', label: 'Administrator' },
+  { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
+  { value: 'HOTEL_ONBOARDING_EXECUTIVE', label: 'Hotel Onboarding Executive' },
 ];
+const EMPTY_STAFF = { firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', role: 'SALES_EXECUTIVE' };
 const STATUS_OPTIONS = [
   { value: '', label: 'Any account status' },
   { value: 'active', label: 'Active' },
@@ -79,6 +84,35 @@ export function UsersPage() {
   const [kpis, setKpis] = useState(null);
   const [streamStatus, setStreamStatus] = useState('reconnecting');
   const [now, setNow] = useState(Date.now());
+  const [showCreate, setShowCreate] = useState(false);
+  const [staff, setStaff] = useState(EMPTY_STAFF);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(null);
+
+  const createStaff = async (event) => {
+    event.preventDefault();
+    if (staff.password !== staff.confirmPassword) {
+      setCreateError('Passwords do not match');
+      return;
+    }
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const user = await adminApi.createStaff({
+        firstName: staff.firstName, lastName: staff.lastName, email: staff.email,
+        phone: staff.phone, password: staff.password, role: staff.role,
+      });
+      setData((current) => current ? { ...current, items: [user, ...current.items].slice(0, 20), pagination: { ...current.pagination, total: current.pagination.total + 1 } } : current);
+      setKpis((current) => current ? { ...current, totalUsers: current.totalUsers + 1 } : current);
+      setStaff(EMPTY_STAFF);
+      setShowCreate(false);
+      toast.success('Staff account created');
+    } catch (err) {
+      setCreateError(normalizeError(err).message);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const update = (changes) => {
     const next = new URLSearchParams(params);
@@ -177,12 +211,40 @@ export function UsersPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="User Management"
         description="Manage users and monitor real-time platform activity."
-        actions={<ConnectionIndicator status={streamStatus} />}
+        actions={<div className="flex items-center gap-3"><ConnectionIndicator status={streamStatus} /><Button size="sm" onClick={() => setShowCreate((value) => !value)}><Plus className="h-4 w-4" /> Add staff</Button></div>}
       />
+
+      {showCreate && (
+        <Card className="p-5">
+          <form onSubmit={createStaff} className="space-y-4">
+            <div>
+              <h2 className="font-semibold text-[var(--text-strong)]">Create staff credentials</h2>
+              <p className="text-sm text-[var(--text-muted)]">The employee will use this email and password on the normal login page.</p>
+            </div>
+            {createError && <Alert tone="error">{createError}</Alert>}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <Input required placeholder="First name" aria-label="First name" value={staff.firstName} onChange={(e) => setStaff((v) => ({ ...v, firstName: e.target.value }))} />
+              <Input required placeholder="Last name" aria-label="Last name" value={staff.lastName} onChange={(e) => setStaff((v) => ({ ...v, lastName: e.target.value }))} />
+              <Input required type="email" placeholder="Work email" aria-label="Work email" value={staff.email} onChange={(e) => setStaff((v) => ({ ...v, email: e.target.value }))} />
+              <Input placeholder="Phone (optional)" aria-label="Phone" value={staff.phone} onChange={(e) => setStaff((v) => ({ ...v, phone: e.target.value }))} />
+              <Input required type="password" minLength={10} placeholder="Password (10+ characters)" aria-label="Password" value={staff.password} onChange={(e) => setStaff((v) => ({ ...v, password: e.target.value }))} />
+              <Input required type="password" minLength={10} placeholder="Confirm password" aria-label="Confirm password" value={staff.confirmPassword} onChange={(e) => setStaff((v) => ({ ...v, confirmPassword: e.target.value }))} />
+              <Select aria-label="Staff role" value={staff.role} onChange={(e) => setStaff((v) => ({ ...v, role: e.target.value }))}>
+                <option value="SALES_EXECUTIVE">Sales Executive</option>
+                <option value="HOTEL_ONBOARDING_EXECUTIVE">Hotel Onboarding Executive</option>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button type="submit" loading={creating}>Create staff account</Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Total Users" value={kpis?.totalUsers} />
@@ -215,13 +277,13 @@ export function UsersPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <div className="space-y-3 p-5">{[0, 1, 2, 3].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
         ) : data?.items.length === 0 ? (
           <EmptyState icon={Users} title={q || role || status || online ? 'No users match these filters' : 'No users yet'} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="admin-records-scroll h-full overflow-auto">
             <table className="w-full min-w-[1080px] text-left text-sm">
               <caption className="sr-only">Users</caption>
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">
@@ -244,7 +306,7 @@ export function UsersPage() {
                       <p className="text-xs text-[var(--text-muted)]">{u.email}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone={r === 'ADMIN' ? 'premium' : r === 'HOTEL_MANAGER' || r === 'HOTEL_OWNER' ? 'brand' : 'neutral'}>{r}</Badge>)}</div>
+                      <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone={r === 'ADMIN' ? 'premium' : r === 'HOTEL_MANAGER' || r === 'HOTEL_OWNER' ? 'brand' : 'neutral'}>{roleLabel(r)}</Badge>)}</div>
                     </td>
                     <td className="px-4 py-3">{u.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Inactive</Badge>}</td>
                     <td className="px-4 py-3"><PresenceDot lastHeartbeatAt={u.session?.lastHeartbeatAt} now={now} /></td>

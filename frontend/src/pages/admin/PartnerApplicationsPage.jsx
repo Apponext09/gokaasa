@@ -46,7 +46,7 @@ export function PartnerApplicationsPage() {
   }, [status, page]);
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader title="Partner Applications" description="Review self-service hotel-partner registrations." />
 
       <div className="flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export function PartnerApplicationsPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <TableSkeleton rows={4} />
         ) : data?.items.length === 0 ? (

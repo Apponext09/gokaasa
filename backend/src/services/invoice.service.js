@@ -72,7 +72,7 @@ function renderInvoicePdf(booking) {
   doc.font('Helvetica').fontSize(9).fillColor(INK);
   for (const room of booking.rooms) {
     doc.text(room.name, 58, y, { width: 150 });
-    doc.text((room.mealPlan ?? '').replace(/_/g, ' '), 210, y, { width: 100 });
+    doc.text(room.mealPlanName ?? (room.mealPlan ?? '').replace(/_/g, ' '), 210, y, { width: 100 });
     doc.text(String(room.quantity), 315, y, { width: 40 });
     doc.text(String(room.nights), 360, y, { width: 40 });
     doc.text(money(room.totalMinor, booking.amounts.currency), 440, y, { width: 95, align: 'right' });

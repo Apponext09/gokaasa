@@ -3,7 +3,7 @@ import { parseOccupancy, OccupancyError, DEFAULT_OCCUPANCY } from '../domain/occ
 import { MAX_STAY_NIGHTS, parseDate, daysBetween } from '../domain/pricing.js';
 
 const SORTS = ['recommended', 'price_asc', 'price_desc', 'guest_rating', 'star_rating'];
-const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
+const mealPlanCode = z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Unknown meal plan');
 const slug = z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Use a valid place name');
 
 const isoDate = z
@@ -41,7 +41,7 @@ export const hotelSearchQuery = z
     propertyTypes: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Unknown property type')),
     amenities: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,40}$/, 'Unknown amenity')),
     freeCancellation: z.enum(['true', 'false']).optional(),
-    mealPlans: csv(z.enum(MEAL_PLANS)),
+    mealPlans: csv(mealPlanCode),
   })
   .superRefine((value, ctx) => {
     if (value.checkOut <= value.checkIn) {

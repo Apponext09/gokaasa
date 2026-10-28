@@ -21,6 +21,7 @@ import { roomApi, hotelApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 import { useCatalog } from '@/features/catalogs/useCatalog.js';
 import { toOptions } from '@/features/catalogs/catalogs.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 
 const TABS = [
   { value: 'details', label: 'Details' },
@@ -34,13 +35,15 @@ const STATUS_LABEL = { ACTIVE: 'Active', INACTIVE: 'Inactive', ARCHIVED: 'Archiv
 
 /** One room type: details, amenities, images, rate plans, and the availability calendar. */
 export function RoomEditorPage() {
+  const { isOnboardingExecutive } = useAuth();
   const { hotelId: hotelParam, roomId } = useParams();
   const hotelId = Number(hotelParam);
   const isNew = !roomId;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const visibleTabs = isOnboardingExecutive ? TABS.filter((item) => item.value !== 'availability') : TABS;
   const requested = searchParams.get('tab');
-  const tab = TABS.some((t) => t.value === requested) ? requested : 'details';
+  const tab = visibleTabs.some((item) => item.value === requested) ? requested : 'details';
   const setTab = (value) => setSearchParams((p) => new URLSearchParams({ ...Object.fromEntries(p), tab: value }), { replace: true });
 
   const [room, setRoom] = useState(null);
@@ -204,7 +207,7 @@ export function RoomEditorPage() {
       {codeError && <Alert tone="error" title="Room code unavailable">{codeError}</Alert>}
 
       {!isNew && (
-        <Tabs label="Room sections" value={tab} onChange={setTab} items={TABS} />
+        <Tabs label="Room sections" value={tab} onChange={setTab} items={visibleTabs} />
       )}
 
       {(isNew || tab === 'details') && (

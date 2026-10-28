@@ -1,7 +1,8 @@
 import { pool } from '../db/pool.js';
 
 const PLAN_COLUMNS = `
-  p.id, p.hotel_id, p.room_type_id, p.code, p.name, p.description, p.meal_plan, p.is_refundable,
+  p.id, p.hotel_id, p.room_type_id, p.code, p.name, p.description, p.meal_plan,
+  (SELECT mp.name FROM meal_plans mp WHERE mp.code = p.meal_plan) AS meal_plan_name, p.is_refundable,
   p.cancellation_policy_id, p.currency, p.discount_percent, p.tax_percent, p.fee_minor, p.status,
   p.created_at, p.updated_at
 `;
@@ -70,12 +71,13 @@ export const ratePlanRepository = {
    */
   async sellablePlansForRoomTypes(roomTypeIds, from, to, client = pool) {
     const { rows } = await client.query(
-      `SELECT p.id, p.room_type_id, p.code, p.name, p.meal_plan, p.is_refundable, p.currency,
+      `SELECT p.id, p.room_type_id, p.code, p.name, p.meal_plan, mp.name AS meal_plan_name, p.is_refundable, p.currency,
               cp.id AS policy_id, cp.code AS policy_code, cp.name AS policy_name, cp.description AS policy_description,
               cp.is_non_refundable AS policy_is_non_refundable, cp.cancellation_deadline_hours AS policy_deadline_hours,
               cp.refund_percent AS policy_refund_percent,
               rp.stay_date::text AS stay_date, rp.base_price_minor, rp.discount_minor, rp.tax_minor, rp.fee_minor, rp.final_price_minor
          FROM rate_plans p
+         JOIN meal_plans mp ON mp.code = p.meal_plan
          JOIN room_types rt ON rt.id = p.room_type_id
          LEFT JOIN cancellation_policies cp ON cp.id = COALESCE(p.cancellation_policy_id, rt.cancellation_policy_id)
          LEFT JOIN rate_prices rp ON rp.rate_plan_id = p.id AND rp.stay_date >= $2 AND rp.stay_date < $3

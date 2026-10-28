@@ -24,8 +24,17 @@ import { catalogService } from './catalog.service.js';
 const EXPORT_CAP = 5000;
 
 
-// Only ADMIN may release or withdraw a hotel. HOTEL_MANAGER can prepare and submit drafts.
-const ADMIN_ONLY_ACTIONS = new Set([HOTEL_ACTION.PUBLISH, HOTEL_ACTION.UNPUBLISH, HOTEL_ACTION.ARCHIVE]);
+// Administrators and onboarding executives own the hotel lifecycle. Onboarding access is still narrowed
+// to assigned/creator-owned hotels by requireHotelAccess before this service is reached.
+const PUBLICATION_ACTIONS = new Set([HOTEL_ACTION.PUBLISH, HOTEL_ACTION.UNPUBLISH, HOTEL_ACTION.ARCHIVE]);
+const ONBOARDING_ACTIONS = new Set([
+  HOTEL_ACTION.SAVE_DRAFT,
+  HOTEL_ACTION.SUBMIT_FOR_REVIEW,
+  HOTEL_ACTION.MARK_READY,
+  HOTEL_ACTION.PUBLISH,
+  HOTEL_ACTION.UNPUBLISH,
+  HOTEL_ACTION.ARCHIVE,
+]);
 
 const ACTION_LABEL = {
   SAVE_DRAFT: 'save draft',
@@ -104,7 +113,8 @@ async function uniqueSlug(client, base) {
 export const hotelService = {
   /** Admin/hotel-manager list with every status visible. A manager sees only its assigned hotels. */
   async listAdmin(query, actor) {
-    const managerUserId = actor?.roles.includes('ADMIN') ? null : actor?.id ?? null;
+    const globalViewer = actor?.roles.some((role) => ['ADMIN', 'HOTEL_ONBOARDING_EXECUTIVE'].includes(role));
+    const managerUserId = globalViewer ? null : actor?.id ?? null;
     const { rows, total } = await hotelRepository.list(query, { managerUserId });
     return toPage(rows.map((row) => toHotelSummary(row, { includeInternal: true })), total, query.page, query.limit);
   },
@@ -122,8 +132,14 @@ export const hotelService = {
     ]);
   },
 
-  async getAdmin(id) {
-    return loadHotelDetail(pool, id, { includeInternal: true });
+  async getAdmin(id, actor) {
+    const hotel = await loadHotelDetail(pool, id, { includeInternal: true });
+    if (!actor?.roles.includes('HOTEL_ONBOARDING_EXECUTIVE')) return { ...hotel, canEdit: true };
+    const { rowCount } = await pool.query(
+      `SELECT 1 FROM hotel_onboarding_assignments WHERE user_id = $1 AND hotel_id = $2`,
+      [actor.id, id],
+    );
+    return { ...hotel, canEdit: rowCount > 0 };
   },
 
   async createManual(input, actor) {
@@ -259,8 +275,11 @@ export const hotelService = {
   },
 
   async transition(id, action, actor, { feedback = null } = {}) {
-    if (ADMIN_ONLY_ACTIONS.has(action) && !actor.roles.includes('ADMIN')) {
-      throw AppError.forbidden('Only administrators can change publication status');
+    if (actor.roles.includes('HOTEL_ONBOARDING_EXECUTIVE') && !ONBOARDING_ACTIONS.has(action)) {
+      throw AppError.forbidden('Onboarding executives can prepare and publish their assigned hotels only');
+    }
+    if (PUBLICATION_ACTIONS.has(action) && !actor.roles.some((role) => ['ADMIN', 'HOTEL_ONBOARDING_EXECUTIVE'].includes(role))) {
+      throw AppError.forbidden('Only administrators and onboarding executives can change publication status');
     }
 
     const detail = await withTransaction(async (client) => {

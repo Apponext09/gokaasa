@@ -228,7 +228,7 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
           <div>
             <CardTitle>Rate calendar</CardTitle>
             <CardDescription>
-              {activePlan ? `${activePlan.name}: ${activePlan.mealPlan.toLowerCase().replaceAll('_', ' ')}` : 'Add a rate plan to see prices.'}
+              {activePlan ? `${activePlan.name}: ${activePlan.mealPlanName ?? activePlan.mealPlan.toLowerCase().replaceAll('_', ' ')}` : 'Add a rate plan to see prices.'}
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-end gap-2">

@@ -58,7 +58,7 @@ export function RefundsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="Refunds"
         description="Every refund across your hotels, and whether it reached the guest."
@@ -76,7 +76,7 @@ export function RefundsPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (

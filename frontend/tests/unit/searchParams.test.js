@@ -65,6 +65,11 @@ test('mealPlans drops a stale breakfast/room-only value from an old shared link 
   assert.deepEqual(mixed.filters.mealPlans, ['HALF_BOARD']);
 });
 
+test('mealPlans preserves a valid dynamic dinner-plan code from the master catalog', () => {
+  const state = parseSearchParams(new URLSearchParams('mealPlans=BREAKFAST_AND_DINNER'));
+  assert.deepEqual(state.filters.mealPlans, ['BREAKFAST_AND_DINNER']);
+});
+
 test('occupancy round-trips and enforces limits', () => {
   assert.equal(formatOccupancy(parseOccupancy('3|2-0.17')), '3|2-0.17');
   assert.equal(parseOccupancy('0'), null);

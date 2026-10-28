@@ -6,6 +6,8 @@ import { AppError } from '../utils/AppError.js';
 import { toPage } from './presenters.js';
 import { config } from '../config/index.js';
 import { localToday, zonedTimeToInstant } from '../domain/businessDate.js';
+import bcrypt from 'bcryptjs';
+import { userRepository } from '../repositories/user.repository.js';
 
 const ONLINE_TIMEOUT_SECONDS = config.presence.onlineTimeoutSeconds;
 const AWAY_TIMEOUT_SECONDS = config.presence.awayTimeoutSeconds;
@@ -47,6 +49,30 @@ function toUserRow(row) {
 }
 
 export const adminUserService = {
+  async createStaff(input, actor) {
+    if (await userRepository.findByEmail(input.email)) throw AppError.conflict('An account with this email already exists');
+    const passwordHash = await bcrypt.hash(input.password, config.auth.bcryptRounds);
+    const userId = await withTransaction(async (client) => {
+      const id = await userRepository.create(client, {
+        email: input.email,
+        passwordHash,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone,
+        roleCode: input.role,
+      });
+      await auditService.record(client, {
+        actor,
+        action: 'user.staff_created',
+        entity: 'user',
+        entityId: id,
+        newValue: { email: input.email, role: input.role },
+      });
+      return id;
+    });
+    return this.detail(userId);
+  },
+
   async list(query) {
     const { rows, total } = await presenceRepository.adminList(query, ONLINE_TIMEOUT_SECONDS);
     return toPage(rows.map(toUserRow), total, query.page, query.limit);

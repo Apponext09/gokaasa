@@ -968,7 +968,7 @@ export function BookingAssistant({ onClose, open = true }) {
             <Card className="space-y-2 p-4 text-sm">
               <Row label={t('rowProperty', lang)} value={state.selectedHotel?.name} />
               <Row label={t('rowRoom', lang)} value={state.selectedRoom.room.name} />
-              <Row label={t('rowRatePlan', lang)} value={`${state.selectedRoom.plan.name} · ${state.selectedRoom.plan.mealPlan?.replaceAll('_', ' ')}`} />
+              <Row label={t('rowRatePlan', lang)} value={`${state.selectedRoom.plan.name} · ${state.selectedRoom.plan.mealPlanName ?? state.selectedRoom.plan.mealPlan?.replaceAll('_', ' ')}`} />
               <Row label={t('rowCheckIn', lang)} value={state.checkIn} />
               <Row label={t('rowCheckOut', lang)} value={state.checkOut} />
               <Row label={t('rowNights', lang)} value={nights} />
@@ -1038,7 +1038,7 @@ function ComparisonTable({ hotels }) {
     { label: 'Price per night', get: (h) => formatMoney(h.bestOffer.pricePerNightMinor) },
     { label: `Total (${hotels[0]?.bestOffer?.nights ?? ''} nights)`, get: (h) => formatMoney(h.bestOffer.finalTotalMinor) },
     { label: 'Free cancellation', get: (h) => (h.bestOffer.freeCancellation ? 'Yes' : 'No') },
-    { label: 'Meal plan', get: (h) => h.bestOffer.mealPlan?.replaceAll('_', ' ') },
+    { label: 'Meal plan', get: (h) => h.bestOffer.mealPlanName ?? h.bestOffer.mealPlan?.replaceAll('_', ' ') },
     { label: 'Amenities', get: (h) => h.amenities?.slice(0, 4).join(', ') || 'Not listed' },
   ];
   return (

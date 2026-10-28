@@ -112,6 +112,7 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
       ratePlanId: row.plan_id,
       ratePlanName: row.plan_name,
       mealPlan: row.meal_plan,
+      mealPlanName: row.meal_plan_name ?? null,
       refundable: row.is_refundable && !row.is_non_refundable,
       freeCancellation,
       cancellationSummary: describePolicy({
@@ -190,6 +191,7 @@ export const hotelSearchService = {
     await Promise.all([
       ...(filters.propertyTypes ?? []).map((code) => catalogService.requireActive('property-types', code)),
       ...(filters.amenities ?? []).map((code) => catalogService.requireActive('amenities', code)),
+      ...(filters.mealPlans ?? []).map((code) => catalogService.requireActive('meal-plans', code)),
     ]);
 
     const nights = nightsBetween(checkIn, checkOut);

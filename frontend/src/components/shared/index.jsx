@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils.js';
 import logo from '@/assets/logo.png';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
-import { homePathFor, resolvePostLoginTarget } from '@/features/auth/routing.js';
+import { canAccessAdminPath, homePathFor, resolvePostLoginTarget } from '@/features/auth/routing.js';
 
 export { homePathFor, resolvePostLoginTarget };
 
@@ -42,7 +42,7 @@ export function FullPageSpinner({ label = 'Loading' }) {
 
 /** Guards a route. Anonymous users go to login and return here afterwards. */
 export function RequireAuth({ children, staff = false }) {
-  const { status, isStaff } = useAuth();
+  const { status, isStaff, user } = useAuth();
   const location = useLocation();
 
   if (status === 'loading') return <FullPageSpinner label="Checking your session" />;
@@ -53,6 +53,9 @@ export function RequireAuth({ children, staff = false }) {
   if (staff && !isStaff) {
     if (import.meta.env.DEV) console.debug('[auth] RequireAuth: authenticated but not staff, redirecting to /', { path: location.pathname });
     return <Navigate to="/" replace />;
+  }
+  if (staff && !canAccessAdminPath(user, location.pathname)) {
+    return <Navigate to={homePathFor(user)} replace />;
   }
   return children ?? <Outlet />;
 }

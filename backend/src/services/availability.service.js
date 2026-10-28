@@ -148,6 +148,7 @@ export const availabilityService = {
             code: plan.code,
             name: plan.name,
             mealPlan: plan.meal_plan,
+            mealPlanName: plan.meal_plan_name ?? null,
             refundable: plan.is_refundable && !(policy?.isNonRefundable ?? false),
             cancellationPolicy: policy,
             currency: plan.currency,

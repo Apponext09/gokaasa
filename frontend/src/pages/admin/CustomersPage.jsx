@@ -58,7 +58,7 @@ export function CustomersPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="Customers"
         description="Guests who have booked at your hotels."
@@ -74,7 +74,7 @@ export function CustomersPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <TableSkeleton rows={3} />
         ) : data?.items.length === 0 ? (

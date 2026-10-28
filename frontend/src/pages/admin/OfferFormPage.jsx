@@ -11,6 +11,7 @@ import { BackLink, EmptyState, FormField, PageHeader, formatDateTime, formatMone
 import { minorToRupees, rupeesToMinor } from '@/features/rooms/roomForm.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -69,6 +70,7 @@ function toBody(form) {
 }
 
 export function OfferFormPage() {
+  const { isSalesExecutive } = useAuth();
   const { id } = useParams();
   const isNew = id === undefined;
   const navigate = useNavigate();
@@ -90,7 +92,7 @@ export function OfferFormPage() {
   }, [imagePreview]);
 
   useEffect(() => {
-    adminApi.listHotels({ limit: 100, sort: 'name_asc' }).then((r) => setHotels(r.items)).catch(() => {});
+    adminApi.hotelLookup().then(setHotels).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -197,7 +199,7 @@ export function OfferFormPage() {
           <>
             <Badge tone={coupon.isActive ? 'success' : 'neutral'}>{coupon.isActive ? 'Active' : 'Inactive'}</Badge>
             <Button variant="secondary" size="sm" onClick={toggleActive}>{coupon.isActive ? 'Deactivate' : 'Activate'}</Button>
-            <Button variant="danger-outline" size="sm" onClick={() => setConfirmDelete(true)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete</Button>
+            {!isSalesExecutive && <Button variant="danger-outline" size="sm" onClick={() => setConfirmDelete(true)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete</Button>}
           </>
         )}
       />

@@ -8,6 +8,7 @@ import { uploadSingleImage } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import {
   requireHotelAccess,
+  requireHotelReadAccess,
   requireImportJobAccess,
   hotelIdFromParam,
   hotelIdFromRoomType,
@@ -81,7 +82,7 @@ import {
   dashboardTrendsQuery,
   hotelPerformanceQuery,
 } from '../validators/adminBooking.validator.js';
-import { adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
+import { adminStaffCreateSchema, adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
 import { commissionConfigController } from '../controllers/commissionConfig.controller.js';
 import { commissionRateSchema } from '../validators/commissionConfig.validator.js';
 import { ledgerController } from '../controllers/ledger.controller.js';
@@ -96,6 +97,8 @@ import {
 } from '../validators/settlement.validator.js';
 import { catalogController } from '../controllers/catalog.controller.js';
 import { catalogCreateSchema, catalogItemParam, catalogKindParam, catalogUpdateSchema } from '../validators/catalog.validator.js';
+import { CONSOLE_ROLES, restrictSpecializedStaff } from '../middleware/adminConsoleAccess.js';
+import { pool } from '../db/pool.js';
 
 /**
  * Everything under /api/admin requires an authenticated staff member. Individual actions narrow this
@@ -118,7 +121,7 @@ export const adminRouter = Router();
 // further down ('/users/stream-ticket'). It must stay above `adminRouter.use(staff)`.
 adminRouter.get('/users/stream', adminUserController.stream);
 
-const staff = [authenticate, authorize('ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER'), requirePartnerApproved];
+const staff = [authenticate, authorize(...CONSOLE_ROLES), requirePartnerApproved, restrictSpecializedStaff];
 adminRouter.use(staff);
 
 adminRouter.get('/dashboard/summary', hotelController.dashboard);
@@ -182,7 +185,7 @@ adminRouter.post(
 adminRouter.get('/hotels', validate({ query: adminHotelListQuery }), hotelController.listAdmin);
 adminRouter.get('/exports/hotels', validate({ query: adminHotelListQuery }), hotelController.exportHotelsCsv);
 adminRouter.post('/hotels', validate({ body: hotelCreateSchema }), hotelController.createManual);
-adminRouter.get('/hotels/:id', validate({ params: idParam }), requireHotelAccess(hotelIdFromParam), hotelController.getAdmin);
+adminRouter.get('/hotels/:id', validate({ params: idParam }), requireHotelReadAccess(hotelIdFromParam), hotelController.getAdmin);
 adminRouter.patch('/hotels/:id', validate({ params: idParam, body: hotelUpdateSchema }), requireHotelAccess(hotelIdFromParam), hotelController.update);
 adminRouter.put(
   '/hotels/:id/amenities',
@@ -219,20 +222,45 @@ adminRouter.delete(
 adminRouter.get('/managers', validate({ query: managerListQuery }), authorize('ADMIN'), managerController.listManagers);
 adminRouter.get('/managers/:userId', validate({ params: managerIdParam }), authorize('ADMIN'), managerController.detail);
 
-// Coupons / offers. ADMIN-only throughout: a platform-wide pricing lever, same policy as settings and audit logs.
-adminRouter.get('/coupons', validate({ query: couponListQuery }), authorize('ADMIN'), couponController.list);
-adminRouter.post('/coupons', validate({ body: couponCreateSchema }), authorize('ADMIN'), couponController.create);
-adminRouter.get('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.detail);
-adminRouter.patch('/coupons/:id', validate({ params: couponIdParam, body: couponUpdateSchema }), authorize('ADMIN'), couponController.update);
-adminRouter.patch('/coupons/:id/status', validate({ params: couponIdParam, body: couponStatusSchema }), authorize('ADMIN'), couponController.setStatus);
+// Hotel onboarding assignments are intentionally separate from operational hotel managers.
+adminRouter.get('/onboarding-executives', authorize('ADMIN'), managerController.listOnboardingExecutives);
+adminRouter.get('/hotels/:id/onboarding-executives', validate({ params: idParam }), authorize('ADMIN'), managerController.listOnboardingForHotel);
+adminRouter.post(
+  '/hotels/:id/onboarding-executives',
+  validate({ params: idParam, body: managerAssignSchema }),
+  authorize('ADMIN'),
+  managerController.assignOnboarding,
+);
+adminRouter.delete(
+  '/hotels/:id/onboarding-executives/:userId',
+  validate({ params: idParam.extend({ userId: idParam.shape.id }) }),
+  authorize('ADMIN'),
+  managerController.unassignOnboarding,
+);
+
+// Coupons / offers. ADMIN and SALES_EXECUTIVE may manage offers; permanent deletion stays ADMIN-only.
+adminRouter.get('/coupons', validate({ query: couponListQuery }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.list);
+adminRouter.post('/coupons', validate({ body: couponCreateSchema }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.create);
+adminRouter.get('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.detail);
+adminRouter.patch('/coupons/:id', validate({ params: couponIdParam, body: couponUpdateSchema }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.update);
+adminRouter.patch('/coupons/:id/status', validate({ params: couponIdParam, body: couponStatusSchema }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.setStatus);
 adminRouter.post(
   '/coupons/:id/image',
   validate({ params: couponIdParam }),
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SALES_EXECUTIVE'),
   uploadSingleImage,
   couponController.uploadImage,
 );
 adminRouter.delete('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.remove);
+
+// Minimal hotel lookup used by Sales when an offer applies to selected properties. It intentionally
+// excludes addresses, contacts, status internals and editing links.
+adminRouter.get('/lookups/hotels', async (_req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, name FROM hotels WHERE deleted_at IS NULL ORDER BY name, id LIMIT 500`,
+  );
+  return res.json({ hotels: rows });
+});
 
 // Verification and provider reconciliation
 adminRouter.post(
@@ -319,7 +347,7 @@ adminRouter.delete(
 adminRouter.get(
   '/hotels/:id/import-history',
   validate({ params: idParam }),
-  requireHotelAccess(hotelIdFromParam),
+  requireHotelReadAccess(hotelIdFromParam),
   hotelWorkspaceController.importHistory,
 );
 
@@ -501,6 +529,7 @@ adminRouter.patch(
 // admins). ADMIN only -- unlike /customers, this can reveal other staff accounts, so it is not opened
 // up to HOTEL_MANAGER even for read access.
 adminRouter.post('/users/stream-ticket', authorize('ADMIN'), adminUserController.issueStreamTicket);
+adminRouter.post('/users/staff', validate({ body: adminStaffCreateSchema }), authorize('ADMIN'), adminUserController.createStaff);
 adminRouter.get('/users/kpis', authorize('ADMIN'), adminUserController.kpis);
 adminRouter.get('/users', validate({ query: adminUserListQuery }), authorize('ADMIN'), adminUserController.list);
 adminRouter.get('/users/:id', validate({ params: adminUserIdParam }), authorize('ADMIN'), adminUserController.detail);

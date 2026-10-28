@@ -48,6 +48,7 @@ export const adminApi = {
   dashboard: () => api.get('/admin/dashboard/summary').then((r) => r.data),
   dashboardTrends: (params) => api.get('/admin/dashboard/trends', { params }).then((r) => r.data),
   listHotels: (params) => api.get('/admin/hotels', { params }).then((r) => r.data),
+  hotelLookup: () => api.get('/admin/lookups/hotels').then((r) => r.data.hotels),
   getHotel: (id) => api.get(`/admin/hotels/${id}`).then((r) => r.data.hotel),
   createHotel: (body) => api.post('/admin/hotels', body).then((r) => r.data.hotel),
   updateHotel: (id, body) => api.patch(`/admin/hotels/${id}`, body).then((r) => r.data.hotel),
@@ -99,6 +100,10 @@ export const adminApi = {
   unassignManager: (id, userId) => api.delete(`/admin/hotels/${id}/managers/${userId}`).then((r) => r.data.managers),
   listManagers: (params) => api.get('/admin/managers', { params }).then((r) => r.data.managers),
   getManager: (userId) => api.get(`/admin/managers/${userId}`).then((r) => r.data.manager),
+  listOnboardingExecutives: () => api.get('/admin/onboarding-executives').then((r) => r.data.executives),
+  listOnboardingForHotel: (id) => api.get(`/admin/hotels/${id}/onboarding-executives`).then((r) => r.data.executives),
+  assignOnboardingExecutive: (id, userId) => api.post(`/admin/hotels/${id}/onboarding-executives`, { userId }).then((r) => r.data.executives),
+  unassignOnboardingExecutive: (id, userId) => api.delete(`/admin/hotels/${id}/onboarding-executives/${userId}`).then((r) => r.data.executives),
 
   // Bookings, payments, refunds (platform-wide, scoped server-side for a hotel manager)
   listBookings: (params) => api.get('/admin/bookings', { params }).then((r) => r.data),
@@ -115,6 +120,7 @@ export const adminApi = {
 
   // User Management: a unified, presence-aware directory across every role. ADMIN only (the backend enforces this).
   listUsers: (params) => api.get('/admin/users', { params }).then((r) => r.data),
+  createStaff: (body) => api.post('/admin/users/staff', body).then((r) => r.data.user),
   getUser: (id) => api.get(`/admin/users/${id}`).then((r) => r.data.user),
   getUserKpis: () => api.get('/admin/users/kpis').then((r) => r.data),
   setUserStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }).then((r) => r.data.user),

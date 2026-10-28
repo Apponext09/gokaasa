@@ -22,12 +22,12 @@ export const SORT_OPTIONS = [
 ];
 
 const SORTS = SORT_OPTIONS.map((o) => o.value);
-const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
 // The customer-facing filter only offers "Dinner Included" (half board / full board, the only plans that
 // include dinner by definition). A URL carrying an older BREAKFAST/ROOM_ONLY value has no UI control to
 // show or clear it, so it is dropped here rather than silently filtering results the visible filter can't explain.
 export const DINNER_INCLUDED_MEAL_PLANS = Object.freeze(['HALF_BOARD', 'FULL_BOARD']);
 const PROPERTY_TYPE_CODE = /^[A-Z][A-Z0-9_]{1,39}$/;
+const MEAL_PLAN_CODE = /^[A-Z][A-Z0-9_]{1,39}$/;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -105,7 +105,9 @@ const COUPON_CODE = /^[A-Z0-9_-]{3,40}$/;
 
 function dinnerOnly(mealPlans) {
   if (!mealPlans) return undefined;
-  const kept = mealPlans.filter((plan) => DINNER_INCLUDED_MEAL_PLANS.includes(plan));
+  // Known non-dinner legacy values are discarded; valid dynamic codes remain because their inclusion
+  // semantics come from the meal-plan catalog rather than a frontend enum.
+  const kept = mealPlans.filter((plan) => !['ROOM_ONLY', 'BREAKFAST'].includes(plan));
   return kept.length ? kept : undefined;
 }
 
@@ -152,7 +154,7 @@ export function parseSearchParams(params) {
       propertyTypes: csvList(get('propertyTypes'), (code) => PROPERTY_TYPE_CODE.test(code)),
       amenities: csvList(get('amenities'), (code) => AMENITY_CODE.test(code)),
       freeCancellation: get('freeCancellation') === 'true',
-      mealPlans: dinnerOnly(csvList(get('mealPlans'), oneOf(MEAL_PLANS))),
+      mealPlans: dinnerOnly(csvList(get('mealPlans'), (value) => MEAL_PLAN_CODE.test(value))),
     },
   };
 }

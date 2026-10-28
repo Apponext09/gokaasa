@@ -49,6 +49,27 @@ describe('GET /api/admin/users -- authorization', () => {
   });
 });
 
+describe('POST /api/admin/users/staff', () => {
+  it('lets an admin create fixed login credentials with a restricted staff role', async () => {
+    const res = await request(app).post('/api/admin/users/staff').set(bearer(adminToken)).send({
+      firstName: 'Sales', lastName: 'Executive', email: 'sales.created@test.gokaasa.com',
+      phone: '9876543210', password: PASSWORD, role: 'SALES_EXECUTIVE',
+    });
+    assert.equal(res.status, 201);
+    assert.deepEqual(res.body.user.roles, ['SALES_EXECUTIVE']);
+    const login = await request(app).post('/api/auth/login').send({ email: 'sales.created@test.gokaasa.com', password: PASSWORD });
+    assert.equal(login.status, 200);
+    assert.deepEqual(login.body.user.roles, ['SALES_EXECUTIVE']);
+  });
+
+  it('does not let a manager create staff credentials', async () => {
+    const res = await request(app).post('/api/admin/users/staff').set(bearer(managerToken)).send({
+      firstName: 'No', lastName: 'Access', email: 'blocked.staff@test.gokaasa.com', password: PASSWORD, role: 'SALES_EXECUTIVE',
+    });
+    assert.equal(res.status, 403);
+  });
+});
+
 describe('GET /api/admin/users -- search, filter, sort', () => {
   it('filters by role', async () => {
     const res = await request(app).get('/api/admin/users').set(bearer(adminToken)).query({ role: 'ADMIN', limit: 50 });

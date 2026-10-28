@@ -932,7 +932,7 @@ export function HotelDetailsPage() {
                 </div>
 
                 <div className="hotel-booking-benefits">
-                  <span>{featuredOption.plan.mealPlan?.replaceAll('_', ' ').toLowerCase() ?? 'Room rate'}</span>
+                  <span>{featuredOption.plan.mealPlanName ?? featuredOption.plan.mealPlan?.replaceAll('_', ' ').toLowerCase() ?? 'Room rate'}</span>
                   <span>{featuredOption.plan.refundable ? 'Refundable option' : 'Non-refundable'}</span>
                   <span>{shortDate(state.checkIn)} → {shortDate(state.checkOut)} · {nights} night{nights === 1 ? '' : 's'}</span>
                 </div>

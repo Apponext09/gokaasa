@@ -10,6 +10,7 @@ import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { PresenceDot } from '@/features/users/PresenceDot.jsx';
 import { relativeTimeLabel } from '@/features/users/presenceFormat.js';
+import { roleLabel } from '@/features/auth/roleLabels.js';
 
 export function UserDetailPage() {
   const { id } = useParams();
@@ -103,7 +104,7 @@ export function UserDetailPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Roles</p><div className="mt-1 flex gap-1">{user.roles.map((r) => <Badge key={r} tone={r === 'ADMIN' ? 'premium' : r === 'HOTEL_MANAGER' || r === 'HOTEL_OWNER' ? 'brand' : 'neutral'}>{r}</Badge>)}</div></Card>
+        <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Roles</p><div className="mt-1 flex gap-1">{user.roles.map((r) => <Badge key={r} tone={r === 'ADMIN' ? 'premium' : r === 'HOTEL_MANAGER' || r === 'HOTEL_OWNER' ? 'brand' : 'neutral'}>{roleLabel(r)}</Badge>)}</div></Card>
         <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Presence</p><div className="mt-1"><PresenceDot lastHeartbeatAt={user.session?.lastHeartbeatAt} now={now} /></div></Card>
         <Card className="p-4"><p className="text-xs text-[var(--text-muted)]">Last activity</p><p className="text-sm font-medium text-[var(--text-strong)]" title={formatDateTime(user.session?.lastHeartbeatAt ?? user.lastLoginAt)}>{relativeTimeLabel(user.session?.lastHeartbeatAt ?? user.lastLoginAt, now)}</p></Card>
       </div>

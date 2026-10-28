@@ -8,6 +8,11 @@ function actorOf(req) {
 }
 
 export const adminUserController = {
+  async createStaff(req, res) {
+    const user = await adminUserService.createStaff(req.validated.body, actorOf(req));
+    return res.status(201).json({ user });
+  },
+
   async list(req, res) {
     return res.json(await adminUserService.list(req.validated.query));
   },

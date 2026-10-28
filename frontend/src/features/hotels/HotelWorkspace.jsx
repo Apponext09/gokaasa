@@ -18,6 +18,7 @@ import { ImportHistory } from '@/features/hotels/components/ImportHistory.jsx';
 import { RoomTypeList } from '@/features/rooms/components/RoomTypeList.jsx';
 import { CancellationPoliciesPanel } from '@/features/rooms/components/CancellationPoliciesPanel.jsx';
 import { ManagersPanel } from '@/features/hotels/components/ManagersPanel.jsx';
+import { OnboardingExecutivesPanel } from '@/features/hotels/components/OnboardingExecutivesPanel.jsx';
 import { adminApi, hotelApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
@@ -103,10 +104,13 @@ function ValidationSummary({ hotel }) {
  * by the API; this component only sequences requests and shows the results.
  */
 export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isOnboardingExecutive } = useAuth();
+  const canPublish = isAdmin || isOnboardingExecutive;
+  const canManageLifecycle = isAdmin || isOnboardingExecutive;
   const [searchParams, setSearchParams] = useSearchParams();
+  const visibleTabs = TABS;
   const requestedTab = searchParams.get('tab');
-  const tab = TABS.some((item) => item.value === requestedTab) ? requestedTab : 'overview';
+  const tab = visibleTabs.some((item) => item.value === requestedTab) ? requestedTab : 'overview';
   const setTab = (value) =>
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
@@ -131,7 +135,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
 
   const amenitiesDirty = selectedAmenities.slice().sort().join(',') !== savedAmenities.slice().sort().join(',');
   const hasUnsaved = formState.isDirty || amenitiesDirty;
-  const readOnly = hotel?.status === 'ARCHIVED';
+  const readOnly = hotel?.status === 'ARCHIVED' || hotel?.canEdit === false;
 
   const applyHotel = useCallback(
     (next) => {
@@ -224,8 +228,8 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   };
 
   const handlePublish = () => {
-    if (!isAdmin) {
-      toast.info('Only administrators can publish hotels');
+    if (!canPublish) {
+      toast.info('You do not have permission to publish hotels');
       return;
     }
     const path = PUBLISH_PATH[hotel.status];
@@ -349,15 +353,10 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         </Card>
 
         {isAdmin && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Hotel managers</CardTitle>
-              <CardDescription>Only assigned managers (and administrators) can manage this hotel.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ManagersPanel hotelId={hotelId} />
-            </CardContent>
-          </Card>
+          <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <Card><CardHeader><CardTitle>Hotel managers</CardTitle><CardDescription>Operational access after onboarding.</CardDescription></CardHeader><CardContent><ManagersPanel hotelId={hotelId} /></CardContent></Card>
+            <Card><CardHeader><CardTitle>Onboarding executives</CardTitle><CardDescription>Executives who may prepare and manage this hotel.</CardDescription></CardHeader><CardContent><OnboardingExecutivesPanel hotelId={hotelId} /></CardContent></Card>
+          </div>
         )}
       </TabPanel>
 
@@ -459,12 +458,12 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
                 <RefreshCw className="h-4 w-4" aria-hidden="true" /> Check provider
               </Button>
             )}
-            {isAdmin && hotel.status === 'PUBLISHED' && (
+            {canManageLifecycle && hotel.status === 'PUBLISHED' && (
               <Button variant="danger-outline" size="sm" onClick={() => setConfirm({ title: `Unpublish ${hotel.name}?`, description: 'Customers will no longer see this hotel. You can publish it again later.', confirmLabel: 'Unpublish', tone: 'danger', actions: ['UNPUBLISH'] })}>
                 <Globe className="h-4 w-4" aria-hidden="true" /> Unpublish
               </Button>
             )}
-            {isAdmin && !readOnly && (
+            {canManageLifecycle && !readOnly && (
               <Button variant="danger-outline" size="sm" onClick={() => setConfirm({ title: `Archive ${hotel.name}?`, description: 'Archived hotels disappear from customer search and become read-only.', confirmLabel: 'Archive hotel', tone: 'danger', actions: ['ARCHIVE'] })}>
                 <Archive className="h-4 w-4" aria-hidden="true" /> Archive
               </Button>
@@ -474,8 +473,8 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
       />
 
       {readOnly && (
-        <Alert tone="info" title="This hotel is archived">
-          <span className="inline-flex items-center gap-1"><Lock className="h-3.5 w-3.5" aria-hidden="true" /> Archived hotels are read-only.</span>
+        <Alert tone="info" title={hotel.canEdit === false ? 'View-only hotel' : 'This hotel is archived'}>
+          <span className="inline-flex items-center gap-1"><Lock className="h-3.5 w-3.5" aria-hidden="true" /> {hotel.canEdit === false ? 'An administrator must assign you before you can edit this hotel.' : 'Archived hotels are read-only.'}</span>
         </Alert>
       )}
 
@@ -491,7 +490,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         label="Hotel sections"
         value={tab}
         onChange={setTab}
-        items={TABS.map((item) => ({
+        items={visibleTabs.map((item) => ({
           ...item,
           badge: item.value === 'images' ? imageCount : item.value === 'amenities' ? selectedAmenities.length : undefined,
         }))}
@@ -531,17 +530,17 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
             >
               Save & continue <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-            {!isAdmin && (
+            {!isAdmin && !isOnboardingExecutive && (
               <Button variant="secondary" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'UNPUBLISHED'].includes(hotel.status)} onClick={handleSubmitForReview}>
                 <Send className="h-4 w-4" aria-hidden="true" /> Submit for review
               </Button>
             )}
             <Button
               variant="primary"
-              disabled={!isAdmin || readOnly || busy !== null || hotel.status === 'PUBLISHED' || (!hasUnsaved && blockers.length > 0)}
+              disabled={!canPublish || readOnly || busy !== null || hotel.status === 'PUBLISHED' || (!hasUnsaved && blockers.length > 0)}
               loading={busy !== null && PUBLISH_PATH[hotel.status]?.includes(busy)}
               onClick={handlePublish}
-              title={!isAdmin ? 'Only administrators can publish' : blockers.length ? `Complete: ${blockers.join(', ')}` : undefined}
+              title={!canPublish ? 'You do not have permission to publish' : blockers.length ? `Complete: ${blockers.join(', ')}` : undefined}
             >
               <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Publish
             </Button>

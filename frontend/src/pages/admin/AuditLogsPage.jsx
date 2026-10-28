@@ -86,7 +86,7 @@ export function AuditLogsPage() {
   const hasFilters = Boolean(filters.q || filters.entity || filters.entityId || filters.action || filters.from || filters.to);
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader title="Audit Logs" description="Every recorded staff action across the platform." />
 
       <Card className="filter-panel grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 xl:grid-cols-7">
@@ -103,13 +103,13 @@ export function AuditLogsPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-14 w-full" />)}</div>
         ) : data?.items.length === 0 ? (
           <EmptyState icon={ScrollText} title={hasFilters ? 'No audit entries match these filters' : 'No audit entries yet'} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="admin-records-scroll h-full overflow-auto">
             <table className="w-full min-w-[920px] text-left text-sm">
               <caption className="sr-only">Audit log</caption>
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-muted)]/60 text-xs uppercase tracking-wide text-[var(--text-muted)]">

@@ -3,6 +3,7 @@ export const MASTER_DEFINITIONS = {
   'room-categories': { label: 'Room Types', singular: 'room type', needsCategory: false },
   'bed-types': { label: 'Bed Types', singular: 'bed type', needsCategory: false },
   'image-categories': { label: 'Image Categories', singular: 'image category', needsCategory: false },
+  'meal-plans': { label: 'Meal Plans', singular: 'meal plan', needsCategory: false, needsMealFlags: true },
   amenities: { label: 'Amenities', singular: 'amenity', needsCategory: true },
 };
 

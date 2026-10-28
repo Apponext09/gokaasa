@@ -27,7 +27,7 @@ export function StaySummary({ quote, className = '' }) {
               <dt className="sr-only">Room</dt>
               <dd className="font-medium text-[var(--text-strong)]">{room.name}</dd>
               <dd className="text-[var(--text-muted)]">
-                {ratePlan.name} · {ratePlan.mealPlan.replace(/_/g, ' ').toLowerCase()}
+                {ratePlan.name} · {ratePlan.mealPlanName ?? ratePlan.mealPlan.replace(/_/g, ' ').toLowerCase()}
               </dd>
             </div>
           </div>

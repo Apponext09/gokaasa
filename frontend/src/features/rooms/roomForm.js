@@ -1,12 +1,5 @@
 import { z } from 'zod';
 
-export const MEAL_PLAN_OPTIONS = [
-  { value: 'ROOM_ONLY', label: 'Room only' },
-  { value: 'BREAKFAST', label: 'Breakfast included' },
-  { value: 'HALF_BOARD', label: 'Half board' },
-  { value: 'FULL_BOARD', label: 'Full board' },
-];
-
 const text = (max) => z.string().trim().max(max, `Use at most ${max} characters`);
 const whole = (min, max, label) =>
   z.string().trim().refine((v) => /^\d+$/.test(v) && Number(v) >= min && Number(v) <= max, `${label} must be a whole number from ${min} to ${max}`);
@@ -121,7 +114,7 @@ export const ratePlanFormSchema = z.object({
   code: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Use letters, digits and underscores'),
   name: z.string().trim().min(2, 'Name is required').max(120),
   description: text(1000),
-  mealPlan: z.enum(['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD']),
+  mealPlan: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a meal plan'),
   isRefundable: z.boolean(),
   cancellationPolicyId: z.string().min(1, 'Choose a cancellation policy'),
   discountPercent: z.string().trim().refine((v) => v !== '' && Number(v) >= 0 && Number(v) <= 100, 'Enter 0 to 100'),

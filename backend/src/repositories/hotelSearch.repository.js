@@ -176,18 +176,19 @@ export const hotelSearchRepository = {
        ),
        plan_totals AS (
          SELECT p.id AS plan_id, ro.room_type_id, ro.hotel_id, ro.available_rooms,
-                p.code AS plan_code, p.name AS plan_name, p.meal_plan, p.is_refundable,
+                p.code AS plan_code, p.name AS plan_name, p.meal_plan, mp.name AS meal_plan_name, p.is_refundable,
                 cp.code AS policy_code, cp.name AS policy_name, cp.is_non_refundable,
                 cp.cancellation_deadline_hours, cp.refund_percent,
                 SUM(rp.base_price_minor) AS base_total, SUM(rp.discount_minor) AS discount_total,
                 SUM(rp.tax_minor) AS tax_total, SUM(rp.fee_minor) AS fee_total, SUM(rp.final_price_minor) AS final_total
            FROM room_ok ro
            JOIN rate_plans p ON p.room_type_id = ro.room_type_id AND p.status = 'ACTIVE' AND p.deleted_at IS NULL
+           JOIN meal_plans mp ON mp.code = p.meal_plan AND mp.is_active
            JOIN rate_prices rp ON rp.rate_plan_id = p.id AND rp.stay_date = ANY($7::date[])
            LEFT JOIN cancellation_policies cp ON cp.id = COALESCE(p.cancellation_policy_id, ro.cancellation_policy_id)
           WHERE ($12::text[] IS NULL OR p.meal_plan = ANY($12::text[]))
             AND ($13::boolean IS NOT TRUE OR (p.is_refundable AND NOT cp.is_non_refundable AND cp.refund_percent = 100))
-          GROUP BY p.id, ro.room_type_id, ro.hotel_id, ro.available_rooms, p.code, p.name, p.meal_plan, p.is_refundable,
+          GROUP BY p.id, ro.room_type_id, ro.hotel_id, ro.available_rooms, p.code, p.name, p.meal_plan, mp.name, p.is_refundable,
                    cp.code, cp.name, cp.is_non_refundable, cp.cancellation_deadline_hours, cp.refund_percent
          HAVING COUNT(rp.stay_date) = $8::int
        ),
@@ -202,7 +203,7 @@ export const hotelSearchRepository = {
                 NULL::numeric AS distance_km, h.latitude, h.longitude,
                 h.property_type, (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
                 hb.room_type_id, rt.name AS room_name, rt.room_code, rt.bed_type, rt.room_size_sqm, rt.view,
-                hb.plan_id, hb.plan_code, hb.plan_name, hb.meal_plan, hb.is_refundable,
+                hb.plan_id, hb.plan_code, hb.plan_name, hb.meal_plan, hb.meal_plan_name, hb.is_refundable,
                 hb.policy_code, hb.policy_name, hb.is_non_refundable, hb.cancellation_deadline_hours, hb.refund_percent,
                 hb.base_total, hb.discount_total, hb.tax_total, hb.fee_total, hb.final_total,
                 hb.available_rooms AS rooms_left,

@@ -32,6 +32,7 @@ import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
 import { AdminCommandPalette } from '@/features/admin/AdminCommandPalette.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { cn } from '@/lib/utils.js';
+import { canAccessAdminPath } from '@/features/auth/routing.js';
 
 const NAV = [
   { section: null, items: [{ to: '/admin/dashboard', label: 'Dashboard', icon: BarChart3 }] },
@@ -73,11 +74,11 @@ const NAV = [
 ];
 
 function SidebarNav({ onNavigate, collapsed }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   return (
     <nav aria-label="Admin" className="admin-sidebar-nav flex flex-col gap-5">
       {NAV.map((group, index) => {
-        const items = group.items.filter((item) => !item.adminOnly || isAdmin);
+        const items = group.items.filter((item) => (!item.adminOnly || isAdmin) && canAccessAdminPath(user, item.to));
         if (items.length === 0) return null;
         return (
           <div key={group.section ?? index} className="flex flex-col gap-1.5">
@@ -161,9 +162,11 @@ function AdminProfileMenu() {
           <Link role="menuitem" to="/admin/profile" onClick={() => setOpen(false)} className={itemClass}>
             <UserRound className="h-4 w-4" aria-hidden="true" /> Profile
           </Link>
-          <Link role="menuitem" to="/admin/settings" onClick={() => setOpen(false)} className={itemClass}>
-            <Settings className="h-4 w-4" aria-hidden="true" /> Settings
-          </Link>
+          {canAccessAdminPath(user, '/admin/settings') && (
+            <Link role="menuitem" to="/admin/settings" onClick={() => setOpen(false)} className={itemClass}>
+              <Settings className="h-4 w-4" aria-hidden="true" /> Settings
+            </Link>
+          )}
           <button role="menuitem" type="button" onClick={handleLogout} className={`w-full border-t border-[var(--border-subtle)] text-left text-danger-600 hover:bg-danger-50 ${itemClass}`}>
             <LogOut className="h-4 w-4" aria-hidden="true" /> Logout
           </button>
@@ -174,7 +177,7 @@ function AdminProfileMenu() {
 }
 
 export function AdminLayout() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -243,13 +246,13 @@ export function AdminLayout() {
         </div>
       )}
 
-      <div className="flex h-screen min-w-0 flex-col md:ml-[var(--admin-sidebar-width)]">
-        <header className="admin-topbar relative z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+      <div className="fixed inset-y-0 left-0 right-0 flex min-w-0 flex-col transition-[left] duration-200 md:left-[var(--admin-sidebar-width)]">
+        <header className="admin-topbar sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
-            <AdminCommandPalette navigation={NAV} />
+            <AdminCommandPalette navigation={NAV.map((group) => ({ ...group, items: group.items.filter((item) => canAccessAdminPath(user, item.to)) }))} />
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:inline">{isAdmin ? 'Hotel operations' : 'My hotels'}</span>
@@ -258,7 +261,7 @@ export function AdminLayout() {
           </div>
         </header>
         <main id="main" className="admin-main min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="admin-content mx-auto w-full max-w-[1440px]">
+          <div className="admin-content mx-auto h-full w-full max-w-[1440px]">
             <Suspense fallback={<FullPageSpinner label="Loading" />}>
               <Outlet />
             </Suspense>

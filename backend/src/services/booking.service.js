@@ -215,6 +215,7 @@ export async function buildBookingDto(client, booking, { includePreview = true }
     rooms: rooms.map((room) => ({
       name: room.room_name,
       mealPlan: room.meal_plan,
+      mealPlanName: room.meal_plan_name ?? null,
       ratePlanName: room.rate_plan_name,
       quantity: room.quantity,
       nights: room.nights,

@@ -20,6 +20,7 @@ import { normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
 
 const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HALF_BOARD: 'Half board', FULL_BOARD: 'Full board' };
+const mealLabel = (code) => MEAL_LABEL[code] ?? String(code ?? 'Room rate').replaceAll('_', ' ').toLowerCase();
 const PROPERTY_LABEL = { HOTEL: 'Hotel', RESORT: 'Resort', VILLA: 'Villa', APARTMENT: 'Apartment', HOSTEL: 'Hostel', GUEST_HOUSE: 'Guest house' };
 
 /** Public hotel page path. Uses the city slug the rest of the site uses, plus the search stay if there is one. */
@@ -123,6 +124,7 @@ export function HotelCard({ hotel, state }) {
       ratePlanId: offer.ratePlanId,
       ratePlanName: offer.ratePlanName,
       mealPlan: offer.mealPlan,
+      mealPlanName: offer.mealPlanName,
       refundable: offer.refundable,
       checkIn: state.checkIn,
       checkOut: state.checkOut,
@@ -281,7 +283,7 @@ export function HotelCard({ hotel, state }) {
           <div className="space-y-1 border-t border-[var(--border-subtle)] pt-3">
             <div className="flex flex-wrap gap-1.5">
               <Badge tone="brand">
-                <UtensilsCrossed className="h-3 w-3" aria-hidden="true" /> {MEAL_LABEL[offer.mealPlan]}
+                <UtensilsCrossed className="h-3 w-3" aria-hidden="true" /> {offer.mealPlanName ?? mealLabel(offer.mealPlan)}
               </Badge>
               {offer.freeCancellation ? (
                 <Badge tone="success">

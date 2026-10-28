@@ -48,7 +48,11 @@ export function HotelsFilterPanel({
 }) {
   const { items: propertyTypeItems } = useCatalog('property-types');
   const { items: amenityItems } = useCatalog('amenities');
+  const { items: mealPlanItems } = useCatalog('meal-plans');
   const propertyTypes = toOptions(propertyTypeItems);
+  const dinnerMealPlans = mealPlanItems.length
+    ? mealPlanItems.filter((item) => item.includesDinner).map((item) => item.code)
+    : [...DINNER_INCLUDED_MEAL_PLANS];
   const floor = 0;
   const ceiling = 1000000;
 
@@ -294,8 +298,8 @@ export function HotelsFilterPanel({
       <Section title="Meal Plan">
         <Checkbox
           label="Dinner Included"
-          checked={DINNER_INCLUDED_MEAL_PLANS.every((p) => filters.mealPlans?.includes(p)) ?? false}
-          onChange={(e) => set({ mealPlans: e.target.checked ? [...DINNER_INCLUDED_MEAL_PLANS] : undefined })}
+          checked={dinnerMealPlans.length > 0 && dinnerMealPlans.every((plan) => filters.mealPlans?.includes(plan))}
+          onChange={(e) => set({ mealPlans: e.target.checked ? dinnerMealPlans : undefined })}
         />
       </Section>
 

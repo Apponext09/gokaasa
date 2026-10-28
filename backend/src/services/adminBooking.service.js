@@ -11,7 +11,7 @@ const rupees = (minor) => (Number(minor) / 100).toFixed(2);
 
 /** Resolves to the manager's assigned hotel ids, or null for ADMIN (no scoping at all). */
 async function hotelScopeFor(actor) {
-  if (actor.roles.includes('ADMIN')) return null;
+  if (actor.roles.includes('ADMIN') || actor.roles.includes('SALES_EXECUTIVE')) return null;
   return hotelRepository.managedHotelIds(actor.id);
 }
 
@@ -77,7 +77,7 @@ export const adminBookingService = {
   async detail(bookingId, actor) {
     const booking = await bookingRepository.findBooking(bookingId);
     if (!booking) throw AppError.notFound('Booking not found');
-    if (!actor.roles.includes('ADMIN')) {
+    if (!actor.roles.some((role) => ['ADMIN', 'SALES_EXECUTIVE'].includes(role))) {
       const hotelIds = await hotelScopeFor(actor);
       if (!hotelIds.includes(booking.hotel_id)) throw AppError.notFound('Booking not found');
     }
@@ -91,7 +91,7 @@ export const adminBookingService = {
   async cancel(bookingId, body, actor) {
     const booking = await bookingRepository.findBooking(bookingId);
     if (!booking) throw AppError.notFound('Booking not found');
-    if (!actor.roles.includes('ADMIN')) {
+    if (!actor.roles.some((role) => ['ADMIN', 'SALES_EXECUTIVE'].includes(role))) {
       const hotelIds = await hotelScopeFor(actor);
       if (!hotelIds.includes(booking.hotel_id)) throw AppError.notFound('Booking not found');
     }

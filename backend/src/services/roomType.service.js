@@ -72,6 +72,7 @@ export function toRatePlanDto(row, policy = null) {
     name: row.name,
     description: row.description,
     mealPlan: row.meal_plan,
+    mealPlanName: row.meal_plan_name ?? null,
     isRefundable: row.is_refundable,
     cancellationPolicyId: row.cancellation_policy_id,
     cancellationPolicy: policy ? toPolicyDto(policy) : null,

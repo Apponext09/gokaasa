@@ -37,7 +37,7 @@ export function ManagersPage() {
   const visibleManagers = filtered?.slice((currentPage - 1) * MANAGERS_PAGE_SIZE, currentPage * MANAGERS_PAGE_SIZE);
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader title="Hotel Managers" description="Every hotel manager account and the hotels each one is assigned to." />
 
       <Card className="filter-panel p-4">
@@ -49,7 +49,7 @@ export function ManagersPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {managers === null && !error ? (
           <TableSkeleton rows={3} />
         ) : filtered?.length === 0 ? (

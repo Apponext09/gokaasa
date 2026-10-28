@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { parseOccupancy } from '../domain/occupancy.js';
 
-const MEAL_PLANS = ['ROOM_ONLY', 'BREAKFAST', 'HALF_BOARD', 'FULL_BOARD'];
 const BLOCK_REASONS = ['MAINTENANCE', 'OWNER_USE', 'OTHER'];
+const mealPlanCode = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a valid meal plan');
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date in YYYY-MM-DD format').refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)), 'Invalid date');
 const idParam = z.string().regex(/^\d+$/, 'Invalid id').transform(Number);
@@ -58,7 +58,7 @@ const ratePlanFields = {
   code: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Use letters, digits and underscores, starting with a letter'),
   name: z.string().trim().min(2).max(120),
   description: optionalText(1000),
-  mealPlan: z.enum(MEAL_PLANS),
+  mealPlan: mealPlanCode,
   isRefundable: z.boolean(),
   cancellationPolicyId: z.number().int().positive().nullish(),
   discountPercent: percent,

@@ -82,7 +82,7 @@ export function HotelListPage() {
   const hasFilters = FILTER_KEYS.some((key) => key !== 'sort' && key !== 'page' && filters[key]);
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="Hotels"
         description="Every hotel in Gokaasa, including drafts awaiting verification."
@@ -152,7 +152,7 @@ export function HotelListPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <TableSkeleton rows={4} />
         ) : data?.items.length === 0 ? (

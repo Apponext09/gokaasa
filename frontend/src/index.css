@@ -3456,6 +3456,19 @@ body {
   animation: adminPageIn 240ms ease-out both;
 }
 
+/* Admin list screens keep their controls in place and scroll only the record rows. */
+.admin-records-card .ui-table-wrap,
+.admin-records-scroll {
+  height: 100%;
+  overflow: auto;
+}
+
+.admin-records-card thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
 @keyframes adminPageIn {
   from {
     opacity: 0;

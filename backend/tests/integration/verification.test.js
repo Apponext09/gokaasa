@@ -19,6 +19,9 @@ let app;
 let adminToken;
 let managerToken;
 let customerToken;
+let onboardingToken;
+let unassignedOnboardingToken;
+let onboardingUserId;
 let hotelId;
 let jobId;
 
@@ -58,9 +61,13 @@ before(async () => {
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
   await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
   await createUserWithRole({ email: 'guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
+  onboardingUserId = await createUserWithRole({ email: 'onboarding@example.com', password: PASSWORD, roleCode: 'HOTEL_ONBOARDING_EXECUTIVE' });
+  await createUserWithRole({ email: 'unassigned.onboarding@example.com', password: PASSWORD, roleCode: 'HOTEL_ONBOARDING_EXECUTIVE' });
   adminToken = await loginAs('admin@example.com');
   managerToken = await loginAs('manager@example.com');
   customerToken = await loginAs('guest@example.com');
+  onboardingToken = await loginAs('onboarding@example.com');
+  unassignedOnboardingToken = await loginAs('unassigned.onboarding@example.com');
 
   const res = await request(app)
     .post('/api/admin/hotel-import/import')
@@ -71,6 +78,11 @@ before(async () => {
   hotelId = job.hotelId;
   // Hotel managers are now scoped per hotel; assign this test's manager so it can reach the import review.
   await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) SELECT id, $2 FROM users WHERE email = $1`, ['manager@example.com', hotelId]);
+  const assignment = await request(app)
+    .post(`/api/admin/hotels/${hotelId}/onboarding-executives`)
+    .set(bearer(adminToken))
+    .send({ userId: onboardingUserId });
+  assert.equal(assignment.status, 201);
 });
 
 after(async () => {
@@ -319,17 +331,19 @@ describe('8-10. upload security', () => {
 
 describe('11-12. publishing', () => {
   it('does not let a hotel manager publish', async () => {
-    await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(adminToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
-    await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(adminToken)).send({ action: 'MARK_READY' });
+    const submitted = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
+    assert.equal(submitted.status, 200);
+    const ready = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'MARK_READY' });
+    assert.equal(ready.status, 200);
     const res = await transition('PUBLISH', managerToken);
     assert.equal(res.status, 403);
   });
 
-  it('publishes a valid hotel for an admin and shows it in the public and admin catalogues', async () => {
+  it('lets the assigned onboarding executive publish without an admin review and shows the hotel publicly', async () => {
     const detail = await hotel();
     assert.ok(detail.images.some((image) => image.isCover), 'a cover must be selected first');
 
-    const res = await transition('PUBLISH');
+    const res = await transition('PUBLISH', onboardingToken);
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.hotel.status, 'PUBLISHED');
 
@@ -338,6 +352,31 @@ describe('11-12. publishing', () => {
 
     const catalogue = await request(app).get('/api/admin/hotels?status=PUBLISHED').set(bearer(adminToken));
     assert.ok(catalogue.body.items.some((item) => item.id === hotelId));
+  });
+
+  it('lets the assigned onboarding executive unpublish and republish its hotel', async () => {
+    const unpublished = await transition('UNPUBLISH', onboardingToken);
+    assert.equal(unpublished.status, 200);
+    assert.equal(unpublished.body.hotel.status, 'UNPUBLISHED');
+
+    const republished = await transition('PUBLISH', onboardingToken);
+    assert.equal(republished.status, 200);
+    assert.equal(republished.body.hotel.status, 'PUBLISHED');
+  });
+
+  it('lets an onboarding executive archive a hotel it creates', async () => {
+    const created = await request(app)
+      .post('/api/admin/hotels')
+      .set(bearer(onboardingToken))
+      .send({ name: 'Onboarding Archive Test', city: 'Pune', countryCode: 'IN' });
+    assert.equal(created.status, 201);
+
+    const archived = await request(app)
+      .post(`/api/admin/hotels/${created.body.hotel.id}/status`)
+      .set(bearer(onboardingToken))
+      .send({ action: 'ARCHIVE' });
+    assert.equal(archived.status, 200);
+    assert.equal(archived.body.hotel.status, 'ARCHIVED');
   });
 
   it('refuses to discard a published hotel', async () => {
@@ -409,6 +448,17 @@ describe('discard and review', () => {
     assert.equal(res.body.external.externalId, MOCK_HOTEL_EXTERNAL_ID);
     assert.equal(res.body.external.record.images.length, 3);
     assert.equal(res.body.hotel.id, hotelId);
+  });
+
+  it('lets an assigned onboarding executive review an import job created by another user', async () => {
+    const res = await request(app).get(`/api/admin/hotel-import/jobs/${jobId}/review`).set(bearer(onboardingToken));
+    assert.equal(res.status, 200);
+    assert.equal(res.body.hotel.id, hotelId);
+  });
+
+  it('does not reveal that import job to an unassigned onboarding executive', async () => {
+    const res = await request(app).get(`/api/admin/hotel-import/jobs/${jobId}/review`).set(bearer(unassignedOnboardingToken));
+    assert.equal(res.status, 404);
   });
 
   it('denies the review endpoint to customers', async () => {

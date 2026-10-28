@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, ShieldCheck, Undo2 } from 'lucide-react';
@@ -10,17 +10,18 @@ import { Modal } from '@/components/ui/dialog.jsx';
 import { EmptyState, FormField, formatMoney } from '@/components/shared/index.jsx';
 import {
   EMPTY_RATE_PLAN_FORM,
-  MEAL_PLAN_OPTIONS,
   minorToRupees,
   ratePlanFormSchema,
   toRatePlanPayload,
 } from '@/features/rooms/roomForm.js';
 import { roomApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
+import { useCatalog } from '@/features/catalogs/useCatalog.js';
+import { toOptions } from '@/features/catalogs/catalogs.js';
 
 /** Form values for a plan, or blank values for a new one. */
-function valuesFor(plan) {
-  if (!plan) return EMPTY_RATE_PLAN_FORM;
+function valuesFor(plan, defaultMealPlan = 'ROOM_ONLY') {
+  if (!plan) return { ...EMPTY_RATE_PLAN_FORM, mealPlan: defaultMealPlan };
   return {
     code: plan.code,
     name: plan.name,
@@ -35,15 +36,15 @@ function valuesFor(plan) {
   };
 }
 
-function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved }) {
+function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved, mealPlanOptions }) {
   // The dialog stays mounted between edits, so the form is reset from the selected plan each time it opens.
-  const form = useForm({ resolver: zodResolver(ratePlanFormSchema), defaultValues: valuesFor(plan), mode: 'onTouched' });
+  const form = useForm({ resolver: zodResolver(ratePlanFormSchema), defaultValues: valuesFor(plan, mealPlanOptions[0]?.value), mode: 'onTouched' });
   const { register, handleSubmit, formState, reset } = form;
   const e = formState.errors;
 
   useEffect(() => {
-    if (open) reset(valuesFor(plan));
-  }, [open, plan, reset]);
+    if (open) reset(valuesFor(plan, mealPlanOptions[0]?.value));
+  }, [open, mealPlanOptions, plan, reset]);
 
   const onSubmit = async (values) => {
     try {
@@ -69,7 +70,7 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved }) {
           </FormField>
           <FormField id="rp-meal" label="Meal plan" error={e.mealPlan?.message}>
             <Select id="rp-meal" invalid={!!e.mealPlan} {...register('mealPlan')}>
-              {MEAL_PLAN_OPTIONS.map((o) => (
+              {mealPlanOptions.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </Select>
@@ -115,6 +116,9 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved }) {
 
 /** Rate plans for one room type. Prices are set per date in the calendar; a plan defines what is included. */
 export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
+  const { items: mealPlans } = useCatalog('meal-plans');
+  const mealPlanOptions = useMemo(() => toOptions(mealPlans), [mealPlans]);
+  const mealPlanLabels = useMemo(() => new Map(mealPlanOptions.map((option) => [option.value, option.label])), [mealPlanOptions]);
   const [plans, setPlans] = useState(null);
   const [editing, setEditing] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -158,7 +162,7 @@ export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
                 <p className="font-medium text-[var(--text-strong)]">{plan.name}</p>
                 <span className="font-mono text-xs text-[var(--text-muted)]">{plan.code}</span>
                 <Badge tone={plan.status === 'ACTIVE' ? 'success' : 'warning'}>{plan.status === 'ACTIVE' ? 'Active' : 'Inactive'}</Badge>
-                <Badge tone="brand">{MEAL_PLAN_OPTIONS.find((o) => o.value === plan.mealPlan)?.label}</Badge>
+                <Badge tone="brand">{plan.mealPlanName ?? mealPlanLabels.get(plan.mealPlan) ?? plan.mealPlan.replaceAll('_', ' ').toLowerCase()}</Badge>
                 {plan.isRefundable ? (
                   <Badge tone="neutral"><ShieldCheck className="h-3 w-3" aria-hidden="true" /> Refundable</Badge>
                 ) : (
@@ -186,6 +190,7 @@ export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
         policies={policies}
         plan={editing}
         onSaved={saved}
+        mealPlanOptions={mealPlanOptions}
       />
     </Card>
   );

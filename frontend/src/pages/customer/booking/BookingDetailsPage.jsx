@@ -99,7 +99,7 @@ export function BookingDetailsPage() {
           </div>
           <dl className="space-y-3 p-5 text-sm">
             <Field label="Dates" value={`${formatStayDate(booking.stay.checkIn)} → ${formatStayDate(booking.stay.checkOut)} (${booking.stay.nights} night${booking.stay.nights === 1 ? '' : 's'})`} />
-            <Field label="Rooms" value={booking.rooms.map((room) => `${room.quantity} × ${room.name} (${room.mealPlan.replace(/_/g, ' ').toLowerCase()})`).join(', ')} />
+            <Field label="Rooms" value={booking.rooms.map((room) => `${room.quantity} × ${room.name} (${room.mealPlanName ?? room.mealPlan.replace(/_/g, ' ').toLowerCase()})`).join(', ')} />
             <Field label="Rate" value={booking.rooms[0]?.ratePlanName} />
             <Field label="Guests" value={`${occupancyLabel(occupancyFromGuests(booking.guests))}`} />
           </dl>

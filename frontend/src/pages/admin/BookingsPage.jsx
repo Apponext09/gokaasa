@@ -77,7 +77,7 @@ export function BookingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="admin-table-page flex h-full min-h-0 flex-col gap-6">
       <PageHeader
         title="Bookings"
         description="Every booking across your hotels, with its current payment and booking status."
@@ -99,15 +99,15 @@ export function BookingsPage() {
 
       {error && <Alert tone="error">{error}</Alert>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card min-h-0 flex-1 overflow-hidden">
         {data === null && !error ? (
           <TableSkeleton rows={4} />
         ) : data?.items.length === 0 ? (
           <EmptyState icon={CalendarCheck} title={hasFilters ? 'No bookings match these filters' : 'No bookings yet'} description={hasFilters ? 'Try changing or clearing your filters.' : 'Bookings will appear here once guests start booking.'} />
         ) : (
-          <Table minWidth="820px">
+          <Table minWidth="820px" wrapperClassName="h-full overflow-auto">
             <caption className="sr-only">Bookings</caption>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10">
               <tr>
                 <TableHead>Booking</TableHead>
                 <TableHead>Customer</TableHead>

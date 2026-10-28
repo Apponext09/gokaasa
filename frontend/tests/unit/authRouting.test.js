@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isApprovedStaff, homePathFor, resolvePostLoginTarget } from '../../src/features/auth/routing.js';
+import { canAccessAdminPath, isApprovedStaff, homePathFor, resolvePostLoginTarget } from '../../src/features/auth/routing.js';
 
 test('isApprovedStaff: ADMIN and HOTEL_MANAGER are always approved staff, regardless of partnerStatus', () => {
   assert.equal(isApprovedStaff({ roles: ['ADMIN'] }), true);
@@ -27,6 +27,25 @@ test('homePathFor: canonical destination per role', () => {
   assert.equal(homePathFor({ roles: ['HOTEL_OWNER'], partnerStatus: 'APPROVED' }), '/admin/dashboard');
   assert.equal(homePathFor({ roles: ['HOTEL_OWNER'], partnerStatus: 'PENDING_REVIEW' }), '/partner/status');
   assert.equal(homePathFor({ roles: ['CUSTOMER'] }), '/');
+  assert.equal(homePathFor({ roles: ['SALES_EXECUTIVE'] }), '/admin/bookings');
+  assert.equal(homePathFor({ roles: ['HOTEL_ONBOARDING_EXECUTIVE'] }), '/admin/hotels');
+});
+
+test('specialized staff can open only their assigned console areas', () => {
+  const sales = { roles: ['SALES_EXECUTIVE'] };
+  assert.equal(canAccessAdminPath(sales, '/admin/bookings/42'), true);
+  assert.equal(canAccessAdminPath(sales, '/admin/offers/new'), true);
+  assert.equal(canAccessAdminPath(sales, '/admin/hotels'), false);
+  assert.equal(canAccessAdminPath(sales, '/admin/users'), false);
+
+  const onboarding = { roles: ['HOTEL_ONBOARDING_EXECUTIVE'] };
+  assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/onboarding/7/review'), true);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35'), true);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms'), true);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms/new'), true);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms/8'), true);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/bookings'), false);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/settings'), false);
 });
 
 // Regression coverage for the intermittent-admin-redirect bug: LoginPage used to prefer
