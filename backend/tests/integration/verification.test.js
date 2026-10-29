@@ -31,6 +31,8 @@ const pngBytes = (size = 512) =>
   Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(size)]);
 const webpBytes = (size = 512) =>
   Buffer.concat([Buffer.from('RIFF'), Buffer.from([0, 0, 0, 0]), Buffer.from('WEBP'), Buffer.alloc(size)]);
+const avifBytes = (size = 512) =>
+  Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from('ftyp'), Buffer.from('avifmif1avifmif1'), Buffer.alloc(size)]);
 
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 
@@ -326,6 +328,22 @@ describe('8-10. upload security', () => {
 
     await request(app).delete(`/api/admin/hotels/${hotelId}/images/${uploaded.id}`).set(bearer(adminToken));
     assert.equal(existsSync(diskPath), false);
+  });
+
+  it('accepts a valid AVIF upload alongside JPEG/PNG/WebP', async () => {
+    const res = await upload(avifBytes(), { filename: 'photo.avif', mimetype: 'image/avif' });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.image.mimeType, 'image/avif');
+    assert.match(res.body.image.url, /^\/media\/hotels\/\d+\/[0-9a-f-]{36}\.avif$/);
+
+    const served = await request(app).get(res.body.image.url);
+    assert.equal(served.status, 200);
+    assert.ok(existsSync(path.join(MEDIA_DIR, res.body.image.url.replace('/media/', ''))));
+  });
+
+  it('rejects a malformed AVIF file whose bytes do not actually contain a ftyp/avif signature', async () => {
+    const res = await upload(Buffer.concat([Buffer.from('not-a-real-avif-file'), Buffer.alloc(512)]), { filename: 'fake.avif', mimetype: 'image/avif' });
+    assert.equal(res.status, 415);
   });
 });
 

@@ -106,3 +106,10 @@ test('destination cards link directly to dated hotel results with default occupa
   assert.equal(params.get('checkOut'), '2026-10-27');
   assert.equal(params.get('occ'), '2');
 });
+
+test('destination cards optionally preselect an area within the destination', () => {
+  const path = destinationSearchPath('Mumbai', new Date('2026-10-24T08:00:00Z'), { area: 'Bandra West' });
+  const params = new URLSearchParams(path.split('?')[1]);
+  assert.equal(params.get('destination'), 'mumbai');
+  assert.equal(params.get('area'), 'bandra-west');
+});

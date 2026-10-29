@@ -38,7 +38,7 @@ async function storeAndInsertImage(hotelId, { buffer, mimetype, category, altTex
   if (!buffer?.length) throw AppError.badRequest('No image data was received');
 
   const detected = detectImageType(buffer);
-  if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+  if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG, WebP or AVIF image');
   if (mimetype && detected.mime !== mimetype) {
     throw AppError.unsupportedMediaType('The file contents do not match its declared type');
   }
@@ -230,7 +230,7 @@ export const hotelImageService = {
   async replace(hotelId, imageId, file, actor) {
     if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
     const detected = detectImageType(file.buffer);
-    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG, WebP or AVIF image');
     if (file.mimetype && detected.mime !== file.mimetype) {
       throw AppError.unsupportedMediaType('The file contents do not match its declared type');
     }

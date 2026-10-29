@@ -267,7 +267,7 @@ export function RoomEditorPage() {
                   disabled={readOnly}
                   maxImages={15}
                   onChanged={refresh}
-                  uploadHint="JPEG, PNG or WebP, up to 5 MB each."
+                  uploadHint="JPEG, PNG, WebP or AVIF, up to 5 MB each."
                   adapter={{
                     name: 'room',
                     upload: (file, onProgress) => roomApi.uploadImage(roomId, file, onProgress),

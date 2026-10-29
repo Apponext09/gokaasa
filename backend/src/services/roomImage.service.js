@@ -38,7 +38,7 @@ export const roomImageService = {
   async upload(roomTypeId, file, actor) {
     if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
     const detected = detectImageType(file.buffer);
-    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG, WebP or AVIF image');
     if (detected.mime !== file.mimetype) throw AppError.unsupportedMediaType('The file contents do not match its declared type');
 
     const contentHash = createHash('sha256').update(file.buffer).digest('hex');
@@ -91,7 +91,7 @@ export const roomImageService = {
   async replace(roomTypeId, imageId, file, actor) {
     if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
     const detected = detectImageType(file.buffer);
-    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
+    if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG, WebP or AVIF image');
     if (detected.mime !== file.mimetype) throw AppError.unsupportedMediaType('The file contents do not match its declared type');
 
     const contentHash = createHash('sha256').update(file.buffer).digest('hex');

@@ -33,8 +33,6 @@ const optionalWhole = (min, max, label) =>
 
 const bulkSchema = z
   .object({
-    from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a start date'),
-    to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose an end date'),
     ratePlanId: z.string(),
     price: z.string().trim().refine((v) => v === '' || rupeesToMinor(v) !== null, 'Enter a price such as 8999 or 8999.50'),
     units: optionalWhole(0, 500, 'Rooms'),
@@ -42,7 +40,6 @@ const bulkSchema = z
     minStay: optionalWhole(1, 365, 'Minimum nights'),
     maxStay: optionalWhole(1, 365, 'Maximum nights'),
   })
-  .refine((v) => v.to >= v.from, { path: ['to'], message: 'End date must be on or after the start date' })
   .refine((v) => v.price === '' || v.ratePlanId !== '', { path: ['ratePlanId'], message: 'Choose a rate plan to price' })
   .refine((v) => v.minStay === '' || v.maxStay === '' || Number(v.maxStay) >= Number(v.minStay), {
     path: ['maxStay'],
@@ -83,8 +80,6 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
   const form = useForm({
     resolver: zodResolver(bulkSchema),
     defaultValues: {
-      from: isoDay(DEFAULT_FROM_OFFSET),
-      to: isoDay(DEFAULT_TO_OFFSET),
       ratePlanId: plans?.[0] ? String(plans[0].id) : '',
       price: '',
       units: room?.totalUnits != null ? String(room.totalUnits) : '',
@@ -96,8 +91,6 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
   });
   const { register, handleSubmit, formState, watch, setValue } = form;
   const e = formState.errors;
-  const bulkFrom = watch('from');
-  const bulkTo = watch('to');
 
   const planById = useMemo(() => Object.fromEntries((plans ?? []).map((p) => [p.id, p])), [plans]);
   const activePlan = planById[Number(activePlanId)];
@@ -135,7 +128,7 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
   const apply = async (values) => {
     setApplying(true);
     try {
-      const body = { from: values.from, to: values.to };
+      const body = { from, to };
       if (values.ratePlanId) body.ratePlanId = Number(values.ratePlanId);
       if (values.price !== '') body.basePriceMinor = rupeesToMinor(values.price);
       if (values.units !== '') body.units = Number(values.units);
@@ -175,23 +168,21 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
       <Card>
         <CardHeader>
           <CardTitle>Bulk update</CardTitle>
-          <CardDescription>Choose a date range, then change rooms for sale, open or closed, and stay length. To change the nightly base price, select the rate plan it applies to. Empty fields are not changed.</CardDescription>
+          <CardDescription>
+            Applies to the date range selected below in Rate calendar ({displayDate(from)} → {displayDate(to)}). Change rooms for
+            sale, open or closed, and stay length. To change the nightly base price, select the rate plan it applies to. Empty
+            fields are not changed.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {!hasAnyPricedDay && data && (
             <div className="mb-4">
               <Alert tone="warning">
-                <strong>No room rates applied yet:</strong> Guests cannot find or book this room in search results until you set a base price and click <strong>Apply to {displayDate(bulkFrom)} → {displayDate(bulkTo)}</strong> below.
+                <strong>No room rates applied yet:</strong> Guests cannot find or book this room in search results until you set a base price and click <strong>Apply to {displayDate(from)} → {displayDate(to)}</strong> below.
               </Alert>
             </div>
           )}
-          <form onSubmit={handleSubmit(apply)} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <FormField id="bulk-from" label="From" error={e.from?.message}>
-              <Input id="bulk-from" type="date" invalid={!!e.from} disabled={disabled} {...register('from')} />
-            </FormField>
-            <FormField id="bulk-to" label="To (inclusive)" error={e.to?.message}>
-              <Input id="bulk-to" type="date" invalid={!!e.to} disabled={disabled} {...register('to')} />
-            </FormField>
+          <form onSubmit={handleSubmit(apply)} noValidate className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <FormField id="bulk-plan" label="Rate plan for price" error={e.ratePlanId?.message}>
               <Select id="bulk-plan" invalid={!!e.ratePlanId} disabled={disabled} {...register('ratePlanId')}>
                 <option value="">Keep prices unchanged</option>
@@ -219,8 +210,8 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
             <FormField id="bulk-max" label="Maximum nights" error={e.maxStay?.message}>
               <Input id="bulk-max" inputMode="numeric" invalid={!!e.maxStay} disabled={disabled} {...register('maxStay')} />
             </FormField>
-            <div className="flex items-end gap-2 sm:col-span-2 xl:col-span-4">
-              <Button type="submit" loading={applying} disabled={disabled}>Apply to {displayDate(bulkFrom)} → {displayDate(bulkTo)}</Button>
+            <div className="flex items-end gap-2 sm:col-span-2 xl:col-span-3">
+              <Button type="submit" loading={applying} disabled={disabled}>Apply to {displayDate(from)} → {displayDate(to)}</Button>
               <Button type="button" variant="secondary" disabled={disabled || applying} onClick={() => setValue('closure', 'KEEP')}>Reset</Button>
             </div>
           </form>

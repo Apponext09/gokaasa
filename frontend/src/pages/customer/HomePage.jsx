@@ -26,8 +26,13 @@ import {
   Pagination,
   homePathFor,
 } from '@/components/shared/index.jsx';
+import { Reveal } from '@/components/shared/Reveal.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
-import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
+import { HeroSection } from '@/features/home/HeroSection.jsx';
+import { QuickAccessNav } from '@/features/nav/QuickAccessNav.jsx';
+import { DestinationCard } from '@/features/home/DestinationCard.jsx';
+import { QuickFilterChips } from '@/features/home/QuickFilterChips.jsx';
+import { ALL_AREAS, CITIES } from '@/features/home/destinations.config.js';
 import { useGeolocation } from '@/features/home/useGeolocation.js';
 import { distanceFromCoordinatesKm } from '@/features/hotels/distance.js';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
@@ -108,13 +113,6 @@ const WHY_GOKAASA = [
     title: 'Support that stays',
     text: 'Help from booking through check-in.',
   },
-];
-
-const WHY_ICON_TONES = [
-  'bg-blue-100 text-blue-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-amber-100 text-amber-700',
-  'bg-violet-100 text-violet-700',
 ];
 
 const TESTIMONIALS = [
@@ -227,69 +225,6 @@ function SectionHeading({ id, eyebrow, title, subtitle, action }) {
       </div>
 
       {action}
-    </div>
-  );
-}
-
-function Reveal({
-  children,
-  className = '',
-  delay = 0,
-  direction = 'up',
-}) {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const element = ref.current;
-
-    if (!element) return undefined;
-
-    const reduceMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches;
-
-    if (reduceMotion || !('IntersectionObserver' in window)) {
-      setVisible(true);
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.unobserve(element);
-        }
-      },
-      {
-        threshold: 0.12,
-        rootMargin: '0px 0px -35px 0px',
-      },
-    );
-
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, []);
-
-  const hiddenTransform = {
-    up: 'translate-y-8',
-    down: '-translate-y-8',
-    left: 'translate-x-8',
-    right: '-translate-x-8',
-    zoom: 'scale-[0.96]',
-  };
-
-  return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={`transform-gpu transition-[opacity,transform] duration-700 ease-out ${visible
-          ? 'translate-x-0 translate-y-0 scale-100 opacity-100'
-          : `${hiddenTransform[direction] || hiddenTransform.up} opacity-0`
-        } ${className}`}
-    >
-      {children}
     </div>
   );
 }
@@ -568,6 +503,7 @@ export function HomePage() {
   const geolocation = useGeolocation({ autoRequest: status !== 'loading' && customerView });
 
   const [popular, setPopular] = useState(null);
+  const [areaDestinations, setAreaDestinations] = useState(null);
   const [stayTypes, setStayTypes] = useState(null);
   const [stats, setStats] = useState(null);
   const [offers, setOffers] = useState(null);
@@ -637,6 +573,24 @@ export function HomePage() {
       })
       .catch(() => { });
 
+    // Mumbai/Navi Mumbai areas are only ever shown when the backend actually has hotels there --
+    // each configured area is checked against the real search-suggest endpoint, never assumed.
+    Promise.all(
+      ALL_AREAS.map((area) =>
+        discoveryApi
+          .suggestDestinations(area.label)
+          .then((items) => items.find((item) => item.type === 'AREA' && item.destination === area.citySlug))
+          .catch(() => null),
+      ),
+    ).then((matches) => {
+      if (cancelled) return;
+      setAreaDestinations(
+        ALL_AREAS
+          .map((area, index) => (matches[index]?.hotelCount > 0 ? { ...area, ...matches[index] } : null))
+          .filter(Boolean),
+      );
+    });
+
     offerApi
       .list()
       .then((items) => {
@@ -662,62 +616,31 @@ export function HomePage() {
   }
 
   const extraStats = buildStats(stats);
+  const cityFeatureCards = CITIES.map((city) => {
+    const match = popular?.find((place) => place.destination === city.citySlug);
+    return {
+      ...city,
+      label: match?.label ?? city.name,
+      imageUrl: match?.imageUrl,
+      hotelCount: match?.hotelCount ?? 0,
+    };
+  });
 
   return (
     <div className="customer-home min-h-screen text-[var(--text-body)]">
-      {/* Hotel-booking hero adapted from the reference project. */}
-      <section className="customer-booking-hero">
-        <div className="customer-hero-arch">
-          <div className="customer-hero-slides" aria-hidden="true">
-            {heroSlides.map((slide, index) => (
-              <img
-                key={slide.src}
-                src={slide.src}
-                alt=""
-                fetchPriority={index === 0 ? 'high' : 'auto'}
-                decoding="async"
-                className={`customer-hero-slide ${index === heroIndex ? 'is-active' : ''}`}
-              />
-            ))}
-          </div>
-
-          <div className="customer-hero-overlay" aria-hidden="true" />
-
-          <div className="customer-hero-content">
-            <h1>Book Hotels and Homestays</h1>
-            <p>Great stays, clear prices, and an easier way to book.</p>
-          </div>
-
-          {heroSlides.length > 1 && (
-            <div className="customer-hero-dots" role="group" aria-label="Choose hero image">
-              {heroSlides.map((slide, index) => (
-                <button
-                  key={slide.src}
-                  type="button"
-                  aria-label={`Show ${slide.label}`}
-                  aria-current={index === heroIndex ? 'true' : undefined}
-                  onClick={() => setHeroIndex(index)}
-                  className={index === heroIndex ? 'is-active' : ''}
-                />
-              ))}
-            </div>
-          )}
-
-        </div>
-
-        <div className="customer-search-shell">
-          <SearchWidget
-            variant="hero"
-            onSearch={(nextSearch) => {
-              setHotelSearch(nextSearch);
-              setHotelSearchVersion((version) => version + 1);
-              window.setTimeout(() => {
-                document.getElementById('home-hotel-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }, 0);
-            }}
-          />
-        </div>
-      </section>
+      <HeroSection
+        heroSlides={heroSlides}
+        heroIndex={heroIndex}
+        setHeroIndex={setHeroIndex}
+        onSearch={(nextSearch) => {
+          setHotelSearch(nextSearch);
+          setHotelSearchVersion((version) => version + 1);
+          window.setTimeout(() => {
+            document.getElementById('home-hotel-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 0);
+        }}
+      />
+      <QuickAccessNav />
 
       {/* EXCLUSIVE OFFERS */}
       {offers && offers.length > 0 && (
@@ -808,46 +731,57 @@ export function HomePage() {
         </div>
       </section>}
 
-      {popular?.length > 0 && (
-        <section
-          aria-labelledby="destinations-heading"
-          className="customer-section"
-        >
+      {areaDestinations?.length > 0 && (
+        <section aria-labelledby="explore-areas-heading" className="customer-section">
           <Reveal>
             <SectionHeading
-              title="Popular destinations"
+              title="Explore Stays Around You"
+              subtitle="Discover memorable stays across Mumbai and Navi Mumbai."
             />
           </Reveal>
 
           <div className="popular-dest-cards-grid">
-            {popular.map((place, index) => (
-              <Reveal key={place.destination} delay={index * 65} direction="zoom" className="h-full">
-                <Link
-                  to={destinationSearchPath(place.destination)}
-                  className="pop-dest-card-item group"
-                >
-                  <div className="pop-card-img-wrap">
-                    <SafeImage
-                      src={place.imageUrl}
-                      alt={`${place.label} hotels`}
-                      className="h-full w-full object-cover"
-                      fallbackLabel={`${place.label} destination image`}
-                      showFallbackContent={false}
-                    />
-                    <span className="pop-card-overlay" aria-hidden="true" />
-                    <div className="pop-card-content">
-                      <h3 className="pop-card-city">{place.label}</h3>
-                      <p className="pop-card-desc card-explore-count">
-                        Explore {place.hotelCount} hotel{place.hotelCount === 1 ? '' : 's'}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
+            {areaDestinations.map((area, index) => (
+              <Reveal key={area.id} delay={index * 65} direction="zoom" className="h-full">
+                <DestinationCard
+                  label={area.label}
+                  citySlug={area.citySlug}
+                  area={area.area}
+                  hotelCount={area.hotelCount}
+                  className="h-full"
+                />
               </Reveal>
             ))}
           </div>
         </section>
       )}
+
+      <section aria-labelledby="famous-destinations-heading" className="customer-section">
+        <Reveal>
+          <SectionHeading
+            title="Find Your Next Favourite Place"
+            subtitle="From vibrant city escapes to relaxing waterfront stays, explore the best of Mumbai and Navi Mumbai."
+          />
+        </Reveal>
+
+        <div className="famous-dest-cards-grid">
+          {cityFeatureCards.map((city, index) => (
+            <Reveal key={city.id} delay={index * 65} direction="zoom" className="h-full">
+              <DestinationCard
+                variant="feature"
+                label={city.label}
+                description={city.tagline}
+                imageUrl={city.imageUrl}
+                citySlug={city.citySlug}
+                hotelCount={city.hotelCount}
+                className="h-full"
+              />
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      <QuickFilterChips className="mx-auto mb-2 w-[min(71.25rem,calc(100%-3rem))]" />
 
       {/* NEARBY HOTELS */}
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
@@ -982,7 +916,7 @@ export function HomePage() {
             {WHY_GOKAASA.map(({ icon: Icon, title, text }, index) => (
               <Reveal key={title} delay={index * 70}>
                 <div className="home-confidence-item">
-                  <div className={cn('home-confidence-icon', WHY_ICON_TONES[index % WHY_ICON_TONES.length])}>
+                  <div className="home-confidence-icon">
                     <Icon aria-hidden="true" />
                   </div>
                   <div>

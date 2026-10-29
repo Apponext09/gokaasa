@@ -28,6 +28,9 @@ let policies;
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 const pngBytes = (size = 300) => Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(size, 1)]);
 const jpegBytes = (size = 300) => Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(size, 2)]);
+/** Minimal ISO-BMFF ftyp box with an 'avif' major brand -- enough for byte-signature detection. */
+const avifBytes = (size = 300) =>
+  Buffer.concat([Buffer.from([0, 0, 0, 0x20]), Buffer.from('ftyp'), Buffer.from('avifmif1avifmif1'), Buffer.alloc(size, 3)]);
 
 async function loginAs(email) {
   return (await request(app).post('/api/auth/login').send({ email, password: PASSWORD })).body.accessToken;
@@ -210,6 +213,24 @@ describe('4. room images', () => {
     const served = await request(app).get(a.body.image.url);
     assert.equal(served.status, 200);
     assert.ok(existsSync(path.join(MEDIA_DIR, a.body.image.url.replace('/media/', ''))));
+  });
+
+  it('accepts a valid AVIF upload alongside the existing formats', async () => {
+    const res = await request(app).post(`/api/admin/room-types/${roomId}/images`).set(bearer(adminToken)).attach('image', avifBytes(), { filename: 'c.avif', contentType: 'image/avif' });
+    assert.equal(res.status, 201, JSON.stringify(res.body));
+    assert.equal(res.body.image.mimeType, 'image/avif');
+    assert.match(res.body.image.url, /^\/media\/rooms\/\d+\/[0-9a-f-]{36}\.avif$/);
+    const served = await request(app).get(res.body.image.url);
+    assert.equal(served.status, 200);
+    await request(app).delete(`/api/admin/room-types/${roomId}/images/${res.body.image.id}`).set(bearer(adminToken));
+  });
+
+  it('rejects a file claiming to be AVIF without a real ftyp/avif signature', async () => {
+    const res = await request(app)
+      .post(`/api/admin/room-types/${roomId}/images`)
+      .set(bearer(adminToken))
+      .attach('image', Buffer.concat([Buffer.from('not-an-avif-file'), Buffer.alloc(300)]), { filename: 'fake.avif', contentType: 'image/avif' });
+    assert.equal(res.status, 415);
   });
 
   it('reorders and sets the cover explicitly', async () => {

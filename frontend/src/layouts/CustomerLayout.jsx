@@ -1047,7 +1047,7 @@ function Footer() {
 
               <li>
                 <Link
-                  to="/about#partner"
+                  to="/partner/register"
                   className={linkClass}
                 >
                   Partner With Us

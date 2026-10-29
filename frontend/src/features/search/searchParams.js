@@ -202,6 +202,7 @@ export function destinationSearchPath(destination, now = new Date(), extras = {}
   });
   const destinationSlug = slugifyPlace(destination);
   if (destinationSlug) params.set('destination', destinationSlug);
+  if (extras.area) params.set('area', slugifyPlace(extras.area));
   if (extras.propertyTypes?.length) params.set('propertyTypes', extras.propertyTypes.join(','));
   return `/hotels?${params}`;
 }

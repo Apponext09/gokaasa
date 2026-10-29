@@ -19,7 +19,7 @@ const upload = multer({
   fileFilter(_req, file, callback) {
     const extension = path.extname(file.originalname ?? '').toLowerCase();
     if (!ALLOWED_MIME.has(file.mimetype) || !ALLOWED_EXT.has(extension)) {
-      return callback(AppError.unsupportedMediaType('Only JPEG, PNG and WebP images are accepted'));
+      return callback(AppError.unsupportedMediaType('Only JPEG, PNG, WebP and AVIF images are accepted'));
     }
     return callback(null, true);
   },

@@ -1387,6 +1387,19 @@ body {
   }
 }
 
+.famous-dest-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 767px) {
+  .famous-dest-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
 /* Property types use the reference project's travel-collection pattern. */
 .collections-tabs-bar {
   display: flex;
@@ -1656,6 +1669,89 @@ body {
   text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
 }
 
+/* Hero two-column split: text+quote left, floating promo cards right (lg+ only). Mobile/tablet keep
+   the original single centered column with the promos hidden, per the "simplify on mobile" rule. */
+.customer-hero-split {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.customer-hero-promos {
+  display: none;
+}
+
+.customer-hero-quote {
+  margin: 0.75rem auto 0;
+  max-width: 32rem;
+  color: rgb(255 255 255 / 92%);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-style: italic;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 28%);
+  animation: heroQuote 600ms ease-out;
+}
+
+.customer-near-me-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.customer-near-me-btn:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 55%);
+  background: rgb(255 255 255 / 20%);
+}
+
+.customer-near-me-btn:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+@media (min-width: 1024px) {
+  .customer-hero-arch {
+    text-align: left;
+  }
+
+  .customer-hero-split {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2.5rem;
+  }
+
+  .customer-hero-split .customer-hero-content {
+    margin-inline: 0;
+    max-width: 32rem;
+  }
+
+  .customer-hero-quote {
+    margin-inline: 0;
+  }
+
+  .customer-hero-promos {
+    display: flex;
+    flex: 0 0 16rem;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .customer-hero-promo-card {
+    min-height: 6rem;
+  }
+}
+
 .customer-search-shell {
   position: relative;
   z-index: 10;
@@ -1666,6 +1762,62 @@ body {
   border-radius: 1.25rem;
   background: #fff;
   box-shadow: 0 16px 38px rgb(15 23 42 / 12%), 0 3px 10px rgb(15 23 42 / 5%);
+}
+
+.customer-quick-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  width: min(71.25rem, calc(100% - 3rem));
+  margin: 1.5rem auto 0;
+}
+
+.customer-quick-nav-item {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  font-size: 0.82rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.customer-quick-nav-item:hover {
+  border-color: var(--color-brand-300);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgb(15 23 42 / 10%);
+}
+
+.customer-quick-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.customer-quick-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-card);
+  color: var(--text-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.customer-quick-filter-chip:hover {
+  border-color: var(--color-accent-500);
+  color: var(--text-strong);
 }
 
 .customer-search-widget {
@@ -6582,12 +6734,10 @@ body {
 .home-confidence-panel {
   position: relative;
   overflow: hidden;
-  border-color: #d9e6f5;
-  background:
-    radial-gradient(circle at 100% 0%, rgb(191 219 254 / 45%), transparent 13rem),
-    linear-gradient(145deg, #ffffff 0%, #f4f8ff 100%);
-  color: var(--text-body);
-  box-shadow: 0 12px 30px rgb(15 23 42 / 8%);
+  border-color: transparent;
+  background: linear-gradient(135deg, #071e4a 0%, #0a2d70 50%, #083795 100%);
+  color: rgb(255 255 255 / 88%);
+  box-shadow: 0 12px 30px rgb(15 23 42 / 18%);
 }
 
 .home-assurance-heading {
@@ -6618,17 +6768,16 @@ body {
   height: 0.9rem;
 }
 
-.home-assurance-heading--inverse .customer-section-title,
-.home-assurance-heading--inverse > p:last-child {
-  color: var(--text-strong);
+.home-assurance-heading--inverse .customer-section-title {
+  color: #fff;
 }
 
 .home-assurance-heading--inverse > p:last-child {
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 75%);
 }
 
 .home-assurance-heading--inverse .home-assurance-eyebrow {
-  color: #0b55be;
+  color: #e9bf64;
 }
 
 .home-faq-list {
@@ -6714,18 +6863,18 @@ body {
   min-height: 4.25rem;
   align-items: center;
   gap: 0.75rem;
-  border: 1px solid #e0eaf6;
+  border: 1px solid rgb(255 255 255 / 12%);
   border-radius: 0.75rem;
-  background: rgb(255 255 255 / 78%);
+  background: rgb(255 255 255 / 7%);
   padding: 0.7rem 0.75rem;
-  box-shadow: 0 3px 10px rgb(15 23 42 / 3%);
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: none;
+  transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
 }
 
 .home-confidence-item:hover {
   transform: translateY(-1px);
-  border-color: #b9d2f2;
-  box-shadow: 0 7px 18px rgb(15 23 42 / 7%);
+  border-color: rgb(255 255 255 / 25%);
+  background: rgb(255 255 255 / 11%);
 }
 
 .home-confidence-icon {
@@ -6736,7 +6885,9 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 0.7rem;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 60%);
+  background: rgb(255 255 255 / 10%);
+  color: var(--color-accent-300);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
 }
 
 .home-confidence-icon svg {
@@ -6745,7 +6896,7 @@ body {
 }
 
 .home-confidence-item h3 {
-  color: var(--text-strong);
+  color: #fff;
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.3;
@@ -6753,7 +6904,7 @@ body {
 
 .home-confidence-item p {
   margin-top: 0.12rem;
-  color: var(--text-muted);
+  color: rgb(255 255 255 / 68%);
   font-size: 0.68rem;
   line-height: 1.4;
 }

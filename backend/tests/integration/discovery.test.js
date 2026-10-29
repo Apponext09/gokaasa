@@ -320,6 +320,34 @@ describe('8-11. sorting, pagination, hotel details and availability', () => {
   });
 });
 
+describe('19. publication status is independent of date-specific availability', () => {
+  // Every fixture hotel only has rate/inventory rows around D0 (30 days out) -- none have rows for
+  // TODAY. That gap is exactly the scenario this section guards: a hotel's rate calendar running out
+  // (or never having covered a given date) must affect bookability for that date, never the hotel's
+  // publication/discoverability.
+  it('keeps a published hotel\'s own detail page reachable for dates outside its configured rate calendar', async () => {
+    const res = await request(app).get('/api/hotels/sea-breeze-mumbai');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.hotel.name, 'Sea Breeze');
+  });
+
+  it('still lists a published hotel in general (non-dated) discovery when it has no inventory for today', async () => {
+    const res = await request(app).get('/api/hotels/handpicked?limit=24');
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.ok(res.body.items.some((item) => item.id === ids.seaBreeze), 'a published hotel with no rows for today must still be discoverable');
+  });
+
+  it('excludes the same hotel only from a date-specific search for dates it has no bookable room on, without touching its publication', async () => {
+    const res = await search(`checkIn=${TODAY}&checkOut=${addDays(TODAY, 2)}&destination=mumbai`);
+    assert.equal(res.status, 200);
+    assert.equal(idsOf(res).includes(ids.seaBreeze), false, 'no rate_prices/room_inventory rows exist for these dates, so it is correctly absent from a dated search');
+
+    // The same hotel, same (still PUBLISHED) status, is fully bookable again for the dates it does have rows for.
+    const bookable = await search(stayParams);
+    assert.ok(idsOf(bookable).includes(ids.seaBreeze));
+  });
+});
+
 describe('12-14. wishlist and authentication', () => {
   it('refuses wishlist access to guests', async () => {
     const list = await request(app).get('/api/wishlist');

@@ -11,10 +11,10 @@ import { cn } from '@/lib/utils.js';
 
 // Mirrors the server limits. The server enforces them; this only avoids a wasted upload.
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
 export function validateImageFile(file) {
-  if (!ACCEPTED_TYPES.includes(file.type)) return 'Only JPEG, PNG and WebP images can be uploaded';
+  if (!ACCEPTED_TYPES.includes(file.type)) return 'Only JPEG, PNG, WebP and AVIF images can be uploaded';
   if (file.size > MAX_UPLOAD_BYTES) return 'Images must be 5 MB or smaller';
   return null;
 }
@@ -188,7 +188,7 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
         <div className="text-sm">
           <p className="font-medium text-[var(--text-strong)]">Upload photos</p>
           <p className="text-[var(--text-muted)]">
-            {uploadHint ?? 'JPEG, PNG or WebP, up to 5 MB each.'} {images.length} of {maxImages} used.
+            {uploadHint ?? 'JPEG, PNG, WebP or AVIF, up to 5 MB each.'} {images.length} of {maxImages} used.
           </p>
         </div>
         <div>
@@ -197,7 +197,7 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
             id={`image-upload-${adapter.name ?? 'gallery'}`}
             type="file"
             multiple
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/avif"
             className="sr-only"
             disabled={disabled || uploading || full}
             onChange={(event) => event.target.files && handleFiles(event.target.files)}
@@ -208,7 +208,7 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
           <input
             ref={replaceInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/jpeg,image/png,image/webp,image/avif"
             className="sr-only"
             disabled={disabled}
             onChange={(event) => event.target.files?.[0] && handleReplaceFile(event.target.files[0])}
