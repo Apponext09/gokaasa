@@ -2,8 +2,8 @@ import { Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { Card } from '@/components/ui/surfaces.jsx';
 import { PageHeader } from '@/components/shared/index.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
 
-/** Read-only, same as the customer-facing profile page: there is no profile-edit endpoint yet. */
 export function AdminProfilePage() {
   const { user } = useAuth();
 
@@ -34,7 +34,8 @@ export function AdminProfilePage() {
           </div>
         </div>
       </Card>
-      <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet -- contact an administrator if you need a change.</p>
+      <StaffEmailChangePanel />
+      <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet.</p>
     </div>
   );
 }

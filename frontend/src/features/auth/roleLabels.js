@@ -5,6 +5,7 @@ const ROLE_LABELS = {
   HOTEL_OWNER: 'Hotel Owner',
   SALES_EXECUTIVE: 'Sales Executive',
   HOTEL_ONBOARDING_EXECUTIVE: 'Hotel Onboarding Executive',
+  HOTEL_REVIEW_EXECUTIVE: 'Hotel Review Executive',
 };
 
 export function roleLabel(role) {

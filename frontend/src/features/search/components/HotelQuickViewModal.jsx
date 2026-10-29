@@ -12,6 +12,7 @@ import { discoveryApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
 import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
+import { formatTime12Hour } from '@/features/hotels/hotelTime.js';
 
 const TABS = [
   { value: 'overview', label: 'Overview & Photos' },
@@ -236,7 +237,7 @@ export function HotelQuickViewModal({
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-slate-50 p-4">
                   <Clock3 className="h-6 w-6 shrink-0 text-sky-600" aria-hidden="true" />
-                  <div><p className="font-semibold text-[var(--text-strong)]">Check-in {details.checkInTime ?? 'as listed'}</p><p className="text-xs text-[var(--text-muted)]">Check-out {details.checkOutTime ?? 'as listed'}</p></div>
+                  <div><p className="font-semibold text-[var(--text-strong)]">Check-in {details.checkInTime ? formatTime12Hour(details.checkInTime) : 'as listed'}</p><p className="text-xs text-[var(--text-muted)]">Check-out {details.checkOutTime ? formatTime12Hour(details.checkOutTime) : 'as listed'}</p></div>
                 </div>
               </div>
 
@@ -310,8 +311,8 @@ export function HotelQuickViewModal({
               <div className="rounded-xl border border-[var(--border-subtle)] p-5">
                 <Clock3 className="h-5 w-5 text-brand-600" aria-hidden="true" />
                 <h3 className="mt-3 font-semibold text-[var(--text-strong)]">Check-in and check-out</h3>
-                <p className="mt-2 text-sm text-[var(--text-muted)]">Check-in: {details.checkInTime ?? 'Confirm with property'}</p>
-                <p className="text-sm text-[var(--text-muted)]">Check-out: {details.checkOutTime ?? 'Confirm with property'}</p>
+                <p className="mt-2 text-sm text-[var(--text-muted)]">Check-in: {details.checkInTime ? formatTime12Hour(details.checkInTime) : 'Confirm with property'}</p>
+                <p className="text-sm text-[var(--text-muted)]">Check-out: {details.checkOutTime ? formatTime12Hour(details.checkOutTime) : 'Confirm with property'}</p>
               </div>
               <div className="rounded-xl border border-[var(--border-subtle)] p-5">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" aria-hidden="true" />

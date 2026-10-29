@@ -32,4 +32,18 @@ describe('transactional email templates', () => {
     assert.match(admin.text, /authoritative confirmed state/);
     for (const message of [customer, hotel, admin]) assert.match(message.text, /GK-2026-123456/);
   });
+
+  it('renders staff email-change verification and old-address security notices', () => {
+    const verification = renderEmail('emailChangeCode', {
+      code: '123456', ttlMinutes: 10, supportEmail: 'support@example.com',
+    });
+    assert.match(verification.subject, /Verify your new/);
+    assert.match(verification.text, /Verification code: 123456/);
+
+    const notice = renderEmail('emailChanged', {
+      newEmail: 'admin@company.example', supportEmail: 'support@example.com',
+    });
+    assert.match(notice.subject, /email was changed/);
+    assert.match(notice.text, /admin@company\.example/);
+  });
 });

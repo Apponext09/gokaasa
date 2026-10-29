@@ -16,16 +16,15 @@ import { AppError } from '../utils/AppError.js';
 import { slugify } from '../utils/slug.js';
 import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
 import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
-import { notificationService } from '../notifications/notificationService.js';
 import { toCsv } from '../utils/csv.js';
 import { emailNotificationService } from './emailNotification.service.js';
 import { catalogService } from './catalog.service.js';
+import { hotelReviewService } from './hotelReview.service.js';
 
 const EXPORT_CAP = 5000;
 
 
-// Administrators and onboarding executives own the hotel lifecycle. Onboarding access is still narrowed
-// to assigned/creator-owned hotels by requireHotelAccess before this service is reached.
+// Administrators and onboarding executives own the hotel lifecycle across the hotel catalogue.
 const PUBLICATION_ACTIONS = new Set([HOTEL_ACTION.PUBLISH, HOTEL_ACTION.UNPUBLISH, HOTEL_ACTION.ARCHIVE]);
 const ONBOARDING_ACTIONS = new Set([
   HOTEL_ACTION.SAVE_DRAFT,
@@ -134,12 +133,7 @@ export const hotelService = {
 
   async getAdmin(id, actor) {
     const hotel = await loadHotelDetail(pool, id, { includeInternal: true });
-    if (!actor?.roles.includes('HOTEL_ONBOARDING_EXECUTIVE')) return { ...hotel, canEdit: true };
-    const { rowCount } = await pool.query(
-      `SELECT 1 FROM hotel_onboarding_assignments WHERE user_id = $1 AND hotel_id = $2`,
-      [actor.id, id],
-    );
-    return { ...hotel, canEdit: rowCount > 0 };
+    return { ...hotel, canEdit: true };
   },
 
   async createManual(input, actor) {
@@ -258,7 +252,6 @@ export const hotelService = {
       if (unknown.length > 0) {
         throw AppError.unprocessable('Some amenities are not recognised', unknown.map((code) => ({ field: 'codes', message: `Unknown amenity ${code}` })));
       }
-
       const before = (await hotelRepository.listAmenities(hotel.id, client)).map((amenity) => amenity.code);
       await hotelRepository.replaceAmenities(client, hotel.id, found.map((row) => row.id));
       await hotelRepository.update(client, hotel.id, { updated_by: actor.id });
@@ -275,8 +268,11 @@ export const hotelService = {
   },
 
   async transition(id, action, actor, { feedback = null } = {}) {
+    if (action === HOTEL_ACTION.MARK_READY && !actor.roles.includes('ADMIN')) {
+      throw AppError.forbidden('Only an approved internal review can mark a hotel ready to publish');
+    }
     if (actor.roles.includes('HOTEL_ONBOARDING_EXECUTIVE') && !ONBOARDING_ACTIONS.has(action)) {
-      throw AppError.forbidden('Onboarding executives can prepare and publish their assigned hotels only');
+      throw AppError.forbidden('Onboarding executives can prepare and publish hotels only');
     }
     if (PUBLICATION_ACTIONS.has(action) && !actor.roles.some((role) => ['ADMIN', 'HOTEL_ONBOARDING_EXECUTIVE'].includes(role))) {
       throw AppError.forbidden('Only administrators and onboarding executives can change publication status');
@@ -304,6 +300,14 @@ export const hotelService = {
         }
       }
 
+      if (action === HOTEL_ACTION.SUBMIT_FOR_REVIEW) {
+        await hotelReviewService.submit(client, hotel.id, actor);
+      } else if (action === HOTEL_ACTION.MARK_READY) {
+        await hotelReviewService.adminApprovePending(client, hotel.id, actor, feedback);
+      } else if (action === HOTEL_ACTION.PUBLISH) {
+        await hotelReviewService.markPublished(client, hotel.id, actor);
+      }
+
       const now = new Date();
       await hotelRepository.setStatus(client, hotel.id, nextStatus, {
         publishedAt: nextStatus === 'PUBLISHED' ? now : null,
@@ -326,9 +330,7 @@ export const hotelService = {
       }
       return updated;
     });
-    if (action === 'SUBMIT_FOR_REVIEW') {
-      notificationService.sendHotelSubmittedForReview(detail).catch(() => {});
-    } else if (action === 'MARK_READY') {
+    if (action === 'MARK_READY') {
       await emailNotificationService.processEvent(`property.approved:${detail.id}:${new Date(detail.updatedAt).toISOString()}`);
     } else if (action === 'SAVE_DRAFT') {
       await emailNotificationService.processEvent(`property.rejected:${detail.id}:${new Date(detail.updatedAt).toISOString()}`);

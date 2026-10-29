@@ -7,7 +7,7 @@ import { sellableUnits } from '../domain/inventory.js';
 import { addDays, daysBetween, nightsBetween, priceComponents, MAX_CALENDAR_DAYS } from '../domain/pricing.js';
 import { AppError } from '../utils/AppError.js';
 
-const DEFAULT_HOLD_MINUTES = 15;
+const DEFAULT_HOLD_MINUTES = 5;
 
 /** Keyed lookup of nightly facts: `${roomTypeId}|${date}` -> facts with sellable count. */
 export async function loadNightly(client, roomTypeIds, nights) {

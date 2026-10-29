@@ -81,8 +81,8 @@ test('refund rounding never invents money', () => {
 });
 
 test('policy descriptions are generated from the structured fields', () => {
-  assert.match(describePolicy(FREE), /Free cancellation if cancelled at least 1 day\(s\) before check-in/);
-  assert.match(describePolicy(PARTIAL), /50% refund if cancelled at least 2 day\(s\)/);
+  assert.match(describePolicy(FREE), /Free cancellation if cancelled at least 1 day before check-in/);
+  assert.match(describePolicy(PARTIAL), /50% refund if cancelled at least 2 days/);
   assert.match(describePolicy(NON_REFUNDABLE), /Non-refundable/);
 });
 

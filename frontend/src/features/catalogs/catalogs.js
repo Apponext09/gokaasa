@@ -5,6 +5,7 @@ export const MASTER_DEFINITIONS = {
   'image-categories': { label: 'Image Categories', singular: 'image category', needsCategory: false },
   'meal-plans': { label: 'Meal Plans', singular: 'meal plan', needsCategory: false, needsMealFlags: true },
   amenities: { label: 'Amenities', singular: 'amenity', needsCategory: true },
+  'background-images': { label: 'Background Images', singular: 'background image', custom: true },
 };
 
 export const AMENITY_CATEGORIES = [

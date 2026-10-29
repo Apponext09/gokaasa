@@ -2,8 +2,9 @@ import { pool } from '../db/pool.js';
 import { AppError } from '../utils/AppError.js';
 
 /**
- * Per-hotel authorization for HOTEL_MANAGER. ADMIN always bypasses this (same rule as every other
- * admin action). A HOTEL_MANAGER must have a row in `hotel_managers` for the hotel the route touches,
+ * Per-hotel authorization for HOTEL_MANAGER. ADMIN and HOTEL_ONBOARDING_EXECUTIVE always bypass
+ * this because both roles manage the hotel onboarding lifecycle across the catalogue. A
+ * HOTEL_MANAGER must have a row in `hotel_managers` for the hotel the route touches,
  * resolved via `resolveHotelId(req)` since most admin routes are keyed by a room/plan/image/block id,
  * not the hotel id itself. A hotel a manager cannot access looks exactly like one that does not exist,
  * the same "hide, don't reveal" pattern already used for booking/payment/hold ownership checks.
@@ -11,12 +12,11 @@ import { AppError } from '../utils/AppError.js';
 export function requireHotelAccess(resolveHotelId) {
   return async (req, _res, next) => {
     try {
-      if (req.user.roles.includes('ADMIN')) return next();
+      if (req.user.roles.some((role) => ['ADMIN', 'HOTEL_ONBOARDING_EXECUTIVE'].includes(role))) return next();
       const hotelId = await resolveHotelId(req);
       if (hotelId == null) return next(AppError.notFound('Hotel not found'));
-      const onboarding = req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE');
       const { rowCount } = await pool.query(
-        `SELECT 1 FROM ${onboarding ? 'hotel_onboarding_assignments' : 'hotel_managers'} WHERE user_id = $1 AND hotel_id = $2`,
+        `SELECT 1 FROM hotel_managers WHERE user_id = $1 AND hotel_id = $2`,
         [req.user.id, hotelId],
       );
       if (rowCount === 0) return next(AppError.notFound('Hotel not found'));
@@ -30,7 +30,7 @@ export function requireHotelAccess(resolveHotelId) {
 /** Onboarding executives may inspect every hotel to avoid duplicates, but write middleware remains assignment-scoped. */
 export function requireHotelReadAccess(resolveHotelId) {
   return async (req, res, next) => {
-    if (req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE')) return next();
+    if (req.user.roles.some((role) => ['HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'].includes(role))) return next();
     return requireHotelAccess(resolveHotelId)(req, res, next);
   };
 }
@@ -63,6 +63,9 @@ export async function requireImportJobAccess(req, _res, next) {
     if (!job) return next(AppError.notFound('Import job not found'));
     if (job.created_by === req.user.id) return next();
     if (job.hotel_id != null) {
+      // Review executives may inspect the source/logs behind a submitted hotel. Their specialized
+      // route allow-list permits GET detail only and continues to block import/discard mutations.
+      if (req.user.roles.includes('HOTEL_REVIEW_EXECUTIVE')) return next();
       const canUseManagerAssignment = req.user.roles.some((role) => ['HOTEL_MANAGER', 'HOTEL_OWNER'].includes(role));
       const canUseOnboardingAssignment = req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE');
       const { rowCount } = await pool.query(

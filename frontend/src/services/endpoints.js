@@ -9,6 +9,11 @@ export const authApi = {
   me: () => api.get('/auth/me').then((r) => r.data.user),
   forgotPassword: (body) => api.post('/auth/forgot-password', body).then((r) => r.data),
   resetPassword: (body) => api.post('/auth/reset-password', body).then((r) => r.data),
+  pendingEmailChange: () => api.get('/auth/email-change').then((r) => r.data.pending),
+  requestEmailChange: (body) => api.post('/auth/email-change/request', body).then((r) => r.data),
+  resendEmailChange: () => api.post('/auth/email-change/resend').then((r) => r.data),
+  verifyEmailChange: (body) => api.post('/auth/email-change/verify', body).then((r) => r.data),
+  cancelEmailChange: () => api.delete('/auth/email-change'),
 };
 
 /** Self-service hotel-partner registration, OTP verification and document upload. */
@@ -94,6 +99,19 @@ export const adminApi = {
   discardImport: (id) => api.post(`/admin/hotel-import/jobs/${id}/discard`).then((r) => r.data.job),
   providers: () => api.get('/admin/hotel-import/providers').then((r) => r.data),
 
+  // Internal hotel quality review (separate from guest reviews)
+  listHotelReviews: (params) => api.get('/admin/hotel-reviews', { params }).then((r) => r.data),
+  hotelReview: (id) => api.get(`/admin/hotels/${id}/review`).then((r) => r.data),
+  hotelReviewers: () => api.get('/admin/hotel-reviewers').then((r) => r.data.reviewers),
+  assignHotelReviewer: (id, reviewerId) => api.post(`/admin/hotels/${id}/review/assign`, { reviewerId }).then((r) => r.data.review),
+  addHotelReviewIssue: (id, body) => api.post(`/admin/hotels/${id}/review/issues`, body).then((r) => r.data.review),
+  fixHotelReviewIssue: (id, issueId) => api.post(`/admin/hotels/${id}/review/issues/${issueId}/fix`).then((r) => r.data.review),
+  verifyHotelReviewIssue: (id, issueId) => api.post(`/admin/hotels/${id}/review/issues/${issueId}/verify`).then((r) => r.data.review),
+  reopenHotelReviewIssue: (id, issueId) => api.post(`/admin/hotels/${id}/review/issues/${issueId}/reopen`).then((r) => r.data.review),
+  requestHotelChanges: (id, summary) => api.post(`/admin/hotels/${id}/review/request-changes`, { summary }).then((r) => r.data.review),
+  approveHotelReview: (id, summary) => api.post(`/admin/hotels/${id}/review/approve`, { summary }).then((r) => r.data.review),
+  approveAndPublishHotel: (id, summary) => api.post(`/admin/hotels/${id}/review/approve-and-publish`, { summary }).then((r) => r.data.review),
+
   // Hotel manager assignment
   listManagersForHotel: (id) => api.get(`/admin/hotels/${id}/managers`).then((r) => r.data.managers),
   assignManager: (id, userId) => api.post(`/admin/hotels/${id}/managers`, { userId }).then((r) => r.data.managers),
@@ -163,6 +181,17 @@ export const adminApi = {
   },
   setCouponStatus: (id, isActive) => api.patch(`/admin/coupons/${id}/status`, { isActive }).then((r) => r.data.coupon),
   deleteCoupon: (id) => api.delete(`/admin/coupons/${id}`),
+
+  listHomepageBackgrounds: () => api.get('/admin/homepage-background-images').then((r) => r.data.images),
+  uploadHomepageBackground: (slot, file, altText, onProgress) => {
+    const form = new FormData();
+    form.append('image', file);
+    form.append('altText', altText ?? '');
+    return api.put(`/admin/homepage-background-images/${slot}`, form, {
+      onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
+    }).then((r) => r.data.image);
+  },
+  deleteHomepageBackground: (slot) => api.delete(`/admin/homepage-background-images/${slot}`),
 
   // Partner (HOTEL_OWNER) application review queue (ADMIN only; the backend enforces this)
   listPartnerApplications: (params) => api.get('/admin/partners', { params }).then((r) => r.data),
@@ -237,6 +266,7 @@ export const discoveryApi = {
   featuredHotels: () => api.get('/hotels', { params: { limit: 6 } }).then((r) => r.data.items),
   nearbyHotels: (params, { signal } = {}) => api.get('/hotels/nearby', { params, signal }).then((r) => r.data),
   handpickedHotels: (params) => api.get('/hotels/handpicked', { params }).then((r) => r.data),
+  homepageBackgrounds: () => api.get('/homepage/background-images').then((r) => r.data.images),
   subscribeNewsletter: (email) => api.post('/newsletter/subscribe', { email }).then((r) => r.data),
   hotel: (ref, { signal } = {}) => api.get(`/hotels/${encodeURIComponent(ref)}`, { signal }).then((r) => r.data.hotel),
   availability: (ref, params, { signal } = {}) => api.get(`/hotels/${encodeURIComponent(ref)}/availability`, { params, signal }).then((r) => r.data),

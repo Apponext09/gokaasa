@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { authApi, partnerApi } from '@/services/endpoints.js';
 import { refreshAccessToken, SESSION_EXPIRED_EVENT, tokenStore } from '@/services/api.js';
 import { isApprovedStaff } from './routing.js';
+import { setStaffCustomerView } from './viewMode.js';
 
 const AuthContext = createContext(null);
 
@@ -25,6 +26,7 @@ export function AuthProvider({ children }) {
 
   const clearSession = useCallback(() => {
     tokenStore.clear();
+    setStaffCustomerView(false);
     setUser(null);
     setStatus('anonymous');
     if (import.meta.env.DEV) console.debug('[auth] session cleared');
@@ -89,6 +91,7 @@ export function AuthProvider({ children }) {
       isAdmin: Boolean(user?.roles?.includes('ADMIN')),
       isSalesExecutive: Boolean(user?.roles?.includes('SALES_EXECUTIVE')),
       isOnboardingExecutive: Boolean(user?.roles?.includes('HOTEL_ONBOARDING_EXECUTIVE')),
+      isReviewExecutive: Boolean(user?.roles?.includes('HOTEL_REVIEW_EXECUTIVE')),
       hasRole: (role) => Boolean(user?.roles?.includes(role)),
       login,
       register,

@@ -5,5 +5,6 @@
  */
 export function notificationPath(notification) {
   if (notification.entityType === 'booking' && notification.entityId) return `/my-trips/${notification.entityId}`;
+  if (notification.entityType === 'hotel' && notification.entityId) return `/admin/hotels/${notification.entityId}?tab=review`;
   return null;
 }

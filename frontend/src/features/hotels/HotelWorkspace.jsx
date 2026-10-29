@@ -15,15 +15,16 @@ import { HotelFieldsForm } from '@/features/hotels/components/HotelFieldsForm.js
 import { ImageGallery } from '@/features/hotels/components/ImageGallery.jsx';
 import { AmenityPicker } from '@/features/hotels/components/AmenityPicker.jsx';
 import { ImportHistory } from '@/features/hotels/components/ImportHistory.jsx';
+import { HotelReviewPanel } from '@/features/hotels/components/HotelReviewPanel.jsx';
 import { RoomTypeList } from '@/features/rooms/components/RoomTypeList.jsx';
 import { CancellationPoliciesPanel } from '@/features/rooms/components/CancellationPoliciesPanel.jsx';
 import { ManagersPanel } from '@/features/hotels/components/ManagersPanel.jsx';
-import { OnboardingExecutivesPanel } from '@/features/hotels/components/OnboardingExecutivesPanel.jsx';
 import { adminApi, hotelApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
 import { useCatalog } from '@/features/catalogs/useCatalog.js';
 import { toOptions } from '@/features/catalogs/catalogs.js';
+import { hotelWorkspaceAccess } from '@/features/hotels/hotelWorkspaceAccess.js';
 
 const FORM_ID = 'hotel-workspace-form';
 
@@ -46,15 +47,14 @@ const TABS = [
   { value: 'amenities', label: 'Amenities' },
   { value: 'rooms', label: 'Rooms' },
   { value: 'policies', label: 'Policies' },
+  { value: 'review', label: 'Internal review' },
   { value: 'history', label: 'Import history' },
 ];
-const NEXT_TAB = { overview: 'location', location: 'images', images: 'amenities', amenities: 'rooms', rooms: 'policies', policies: 'history', history: 'history' };
+const NEXT_TAB = { overview: 'location', location: 'images', images: 'amenities', amenities: 'rooms', rooms: 'policies', policies: 'review', review: 'history', history: 'history' };
 
 // Publishing an unpublished hotel walks the server's state machine one step at a time. Each step is
 // audited, and the server rejects any step that is not allowed from the current state.
 const PUBLISH_PATH = {
-  DRAFT: ['SUBMIT_FOR_REVIEW', 'MARK_READY', 'PUBLISH'],
-  PENDING_REVIEW: ['MARK_READY', 'PUBLISH'],
   READY_TO_PUBLISH: ['PUBLISH'],
   UNPUBLISHED: ['PUBLISH'],
 };
@@ -104,7 +104,7 @@ function ValidationSummary({ hotel }) {
  * by the API; this component only sequences requests and shows the results.
  */
 export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null }) {
-  const { isAdmin, isOnboardingExecutive } = useAuth();
+  const { isAdmin, isOnboardingExecutive, isReviewExecutive } = useAuth();
   const canPublish = isAdmin || isOnboardingExecutive;
   const canManageLifecycle = isAdmin || isOnboardingExecutive;
   const [searchParams, setSearchParams] = useSearchParams();
@@ -135,7 +135,12 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
 
   const amenitiesDirty = selectedAmenities.slice().sort().join(',') !== savedAmenities.slice().sort().join(',');
   const hasUnsaved = formState.isDirty || amenitiesDirty;
-  const readOnly = hotel?.status === 'ARCHIVED' || hotel?.canEdit === false;
+  const { readOnly, reviewOnly } = hotelWorkspaceAccess({
+    status: hotel?.status,
+    canEdit: hotel?.canEdit,
+    isAdmin,
+    isReviewExecutive,
+  });
 
   const applyHotel = useCallback(
     (next) => {
@@ -220,7 +225,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   };
 
   const handleSubmitForReview = () => {
-    if (!['DRAFT', 'UNPUBLISHED'].includes(hotel.status)) {
+    if (!['DRAFT', 'CHANGES_REQUESTED'].includes(hotel.status)) {
       toast.info(`This hotel is already ${hotel.status.toLowerCase().replaceAll('_', ' ')}`);
       return;
     }
@@ -234,7 +239,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
     }
     const path = PUBLISH_PATH[hotel.status];
     if (!path) {
-      toast.info('This hotel is already live');
+      toast.info('This hotel must pass internal review before it can be published');
       return;
     }
     // With unsaved edits the server's blockers may be stale, so the save runs first and the server decides.
@@ -353,10 +358,10 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         </Card>
 
         {isAdmin && (
-          <div className="mt-6 grid gap-6 xl:grid-cols-2">
-            <Card><CardHeader><CardTitle>Hotel managers</CardTitle><CardDescription>Operational access after onboarding.</CardDescription></CardHeader><CardContent><ManagersPanel hotelId={hotelId} /></CardContent></Card>
-            <Card><CardHeader><CardTitle>Onboarding executives</CardTitle><CardDescription>Executives who may prepare and manage this hotel.</CardDescription></CardHeader><CardContent><OnboardingExecutivesPanel hotelId={hotelId} /></CardContent></Card>
-          </div>
+          <Card className="mt-6">
+            <CardHeader><CardTitle>Hotel managers</CardTitle><CardDescription>Operational access after onboarding.</CardDescription></CardHeader>
+            <CardContent><ManagersPanel hotelId={hotelId} /></CardContent>
+          </Card>
         )}
       </TabPanel>
 
@@ -404,32 +409,34 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
       <TabPanel value="amenities" current={tab}>
         <Card>
           <CardHeader>
-            <CardTitle>Amenities</CardTitle>
-            <CardDescription>Select what guests can use. Changes are saved with the draft.</CardDescription>
+            <CardTitle>Hotel amenities</CardTitle>
+            <CardDescription>Select the amenities offered by this hotel. Room types use the same master list and keep their own selections.</CardDescription>
           </CardHeader>
           <CardContent>
             <AmenityPicker
               catalog={catalog}
               selected={selectedAmenities}
               disabled={readOnly}
-              onToggle={(code, checked) =>
-                setSelectedAmenities((current) => (checked ? [...new Set([...current, code])] : current.filter((item) => item !== code)))
-              }
+              onSelectionChange={setSelectedAmenities}
             />
           </CardContent>
         </Card>
       </TabPanel>
 
       <TabPanel value="rooms" current={tab}>
-        <RoomTypeList hotelId={hotelId} manageBasePath={`/admin/hotels/${hotelId}/rooms`} />
+        <RoomTypeList hotelId={hotelId} manageBasePath={`/admin/hotels/${hotelId}/rooms`} readOnly={readOnly} />
       </TabPanel>
 
       <TabPanel value="policies" current={tab}>
         <CancellationPoliciesPanel hotelId={hotelId} disabled={readOnly} />
       </TabPanel>
 
+      <TabPanel value="review" current={tab}>
+        <HotelReviewPanel hotelId={hotelId} onStatusChanged={refreshKeepingDraft} />
+      </TabPanel>
+
       <TabPanel value="history" current={tab}>
-        <ImportHistory hotelId={hotelId} />
+        <ImportHistory hotelId={hotelId} readOnly={reviewOnly} />
       </TabPanel>
     </div>
   );
@@ -472,9 +479,15 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         }
       />
 
+      {isAdmin && hotel.status === 'PENDING_REVIEW' && (
+        <Alert tone="info" title="Admin review mode">
+          You can edit and save hotel details, add review comments, and use Internal review to approve or publish this hotel.
+        </Alert>
+      )}
+
       {readOnly && (
-        <Alert tone="info" title={hotel.canEdit === false ? 'View-only hotel' : 'This hotel is archived'}>
-          <span className="inline-flex items-center gap-1"><Lock className="h-3.5 w-3.5" aria-hidden="true" /> {hotel.canEdit === false ? 'An administrator must assign you before you can edit this hotel.' : 'Archived hotels are read-only.'}</span>
+        <Alert tone="info" title={reviewOnly ? 'Review mode' : hotel.status === 'PENDING_REVIEW' ? 'Waiting for reviewer' : hotel.canEdit === false ? 'View-only hotel' : 'This hotel is archived'}>
+          <span className="inline-flex items-center gap-1"><Lock className="h-3.5 w-3.5" aria-hidden="true" /> {reviewOnly ? 'Hotel details are read-only. Use Internal review to add comments or make a decision.' : hotel.status === 'PENDING_REVIEW' ? 'Hotel details are locked until the reviewer approves them or requests changes.' : hotel.canEdit === false ? 'An administrator must assign you before you can edit this hotel.' : 'Archived hotels are read-only.'}</span>
         </Alert>
       )}
 
@@ -499,7 +512,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
       <form id={FORM_ID} noValidate onSubmit={handleSubmit((values) => persist(values))} className={cn(sidePanel && 'grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]')}>
         {sidePanel && <aside className="space-y-6 xl:sticky xl:top-20 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1">{sidePanel(hotel, { addProviderImage, addingUrl })}</aside>}
         <div className="min-w-0">
-          <fieldset disabled={readOnly} className="min-w-0 space-y-6">
+          <fieldset disabled={readOnly && tab !== 'review'} className="min-w-0 space-y-6">
             {body}
           </fieldset>
         </div>
@@ -517,10 +530,10 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {extraActions}
-            <Button type="submit" form={FORM_ID} variant="secondary" loading={busy === 'save'} disabled={readOnly || busy !== null}>
+            {!reviewOnly && <Button type="submit" form={FORM_ID} variant="secondary" loading={busy === 'save'} disabled={readOnly || busy !== null}>
               <Save className="h-4 w-4" aria-hidden="true" /> Save draft
-            </Button>
-            <Button
+            </Button>}
+            {!reviewOnly && <Button
               type="button"
               variant="ghost"
               disabled={readOnly || busy !== null || !NEXT_TAB[tab] || NEXT_TAB[tab] === tab}
@@ -529,21 +542,21 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
               }}
             >
               Save & continue <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            {!isAdmin && !isOnboardingExecutive && (
-              <Button variant="secondary" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'UNPUBLISHED'].includes(hotel.status)} onClick={handleSubmitForReview}>
+            </Button>}
+            {!reviewOnly && (
+              <Button variant="secondary" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'CHANGES_REQUESTED'].includes(hotel.status)} onClick={handleSubmitForReview}>
                 <Send className="h-4 w-4" aria-hidden="true" /> Submit for review
               </Button>
             )}
-            <Button
+            {!reviewOnly && <Button
               variant="primary"
-              disabled={!canPublish || readOnly || busy !== null || hotel.status === 'PUBLISHED' || (!hasUnsaved && blockers.length > 0)}
+              disabled={!canPublish || readOnly || busy !== null || !PUBLISH_PATH[hotel.status] || (!hasUnsaved && blockers.length > 0)}
               loading={busy !== null && PUBLISH_PATH[hotel.status]?.includes(busy)}
               onClick={handlePublish}
               title={!canPublish ? 'You do not have permission to publish' : blockers.length ? `Complete: ${blockers.join(', ')}` : undefined}
             >
               <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Publish
-            </Button>
+            </Button>}
           </div>
         </div>
       </div>

@@ -127,7 +127,7 @@ export function CatalogManager({ kind }) {
         <form
           onSubmit={create}
           className={`grid gap-4 md:items-end ${definition.needsCategory || definition.needsMealFlags
-            ? 'md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)_minmax(180px,0.7fr)_auto]'
+            ? 'md:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(150px,0.7fr)_minmax(150px,0.7fr)_auto]'
             : 'md:grid-cols-[minmax(220px,1fr)_minmax(220px,1fr)_auto]'}`}
         >
           <label className="space-y-1.5 text-sm font-medium text-[var(--text-strong)]">Name<Input placeholder={`Enter ${definition.singular} name`} value={name} required minLength={2} maxLength={80} onChange={(event) => setName(event.target.value)} /></label>

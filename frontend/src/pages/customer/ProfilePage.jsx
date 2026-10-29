@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { bookingApi } from '@/services/endpoints.js';
 
@@ -81,6 +82,7 @@ export function ProfilePage() {
   }, []);
 
   const [nextStay, ...rest] = upcoming ?? [];
+  const isNonCustomer = user?.roles?.some((role) => role !== 'CUSTOMER');
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 px-4 py-10 sm:px-6">
@@ -148,6 +150,8 @@ export function ProfilePage() {
         </Card>
         <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet -- contact support if you need a change.</p>
       </section>
+
+      {isNonCustomer && <StaffEmailChangePanel />}
     </div>
   );
 }

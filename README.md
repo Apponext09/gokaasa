@@ -11,8 +11,10 @@ Phase 1 (foundation) and the Phase 2 onboarding backbone are implemented. Custom
 
 1. Create a PostgreSQL database with `ENCODING 'UTF8'`.
 2. `cd backend && cp .env.example .env`, then set `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD`, `JWT_SECRET` (32+ chars), and optionally `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
-3. `npm install && npm run migrate && npm run seed && npm run dev`
-4. `cd frontend && npm install && npm run dev` and open http://localhost:5173.
+3. Install backend and frontend dependencies, then run `cd backend && npm run migrate && npm run seed` once.
+4. From the project root, run `npm run dev`. This keeps the API and frontend running together without an additional root dependency. Open http://localhost:5173.
+
+For individual services, use `npm run dev:backend` or `npm run dev:frontend` from the project root.
 
 Without provider credentials, search uses the OpenStreetMap source (no key needed) and the labelled mock source. Google Places activates only when `GOOGLE_MAPS_API_KEY` is set.
 

@@ -5,6 +5,7 @@ import {
   Bell,
   Building2,
   CalendarCheck,
+  ClipboardCheck,
   Database,
   ChevronDown,
   ChevronsLeft,
@@ -29,6 +30,7 @@ import { Logo } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { FullPageSpinner } from '@/components/shared/index.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
+import { StaffViewToggle } from '@/components/shared/StaffViewToggle.jsx';
 import { AdminCommandPalette } from '@/features/admin/AdminCommandPalette.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { cn } from '@/lib/utils.js';
@@ -41,6 +43,7 @@ const NAV = [
     items: [
       { to: '/admin/hotels', label: 'All Hotels', icon: Building2, end: true },
       { to: '/admin/hotels/onboarding', label: 'Add Hotel', icon: Search },
+      { to: '/admin/hotel-reviews', label: 'Hotel Reviews', icon: ClipboardCheck },
       { to: '/admin/managers', label: 'Managers', icon: UserCog },
       { to: '/admin/partners', label: 'Partner Applications', icon: UserCog, adminOnly: true },
     ],
@@ -177,7 +180,7 @@ function AdminProfileMenu() {
 }
 
 export function AdminLayout() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isReviewExecutive, user } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -255,7 +258,8 @@ export function AdminLayout() {
             <AdminCommandPalette navigation={NAV.map((group) => ({ ...group, items: group.items.filter((item) => canAccessAdminPath(user, item.to)) }))} />
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:inline">{isAdmin ? 'Hotel operations' : 'My hotels'}</span>
+            <StaffViewToggle className="hidden sm:inline-flex" />
+            <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:inline">{isAdmin ? 'Hotel operations' : isReviewExecutive ? 'Hotel review' : 'My hotels'}</span>
             <NotificationBell />
             <AdminProfileMenu />
           </div>

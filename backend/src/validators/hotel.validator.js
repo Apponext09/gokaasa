@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const HOTEL_STATUSES = ['DRAFT', 'PENDING_REVIEW', 'READY_TO_PUBLISH', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'];
+export const HOTEL_STATUSES = ['DRAFT', 'PENDING_REVIEW', 'CHANGES_REQUESTED', 'READY_TO_PUBLISH', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'];
 export const HOTEL_ACTIONS = ['SAVE_DRAFT', 'SUBMIT_FOR_REVIEW', 'MARK_READY', 'PUBLISH', 'UNPUBLISH', 'ARCHIVE'];
 export const SORT_KEYS = ['updated_desc', 'name_asc', 'rating_desc', 'star_desc', 'created_desc'];
 

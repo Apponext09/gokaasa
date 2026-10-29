@@ -333,17 +333,31 @@ describe('11-12. publishing', () => {
   it('does not let a hotel manager publish', async () => {
     const submitted = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
     assert.equal(submitted.status, 200);
-    const ready = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'MARK_READY' });
+    const blocked = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'MARK_READY' });
+    assert.equal(blocked.status, 403);
+    const ready = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(adminToken)).send({ action: 'MARK_READY' });
     assert.equal(ready.status, 200);
     const res = await transition('PUBLISH', managerToken);
     assert.equal(res.status, 403);
   });
 
-  it('lets the assigned onboarding executive publish without an admin review and shows the hotel publicly', async () => {
+  it('lets an onboarding executive manage hotel content without a per-hotel assignment', async () => {
+    const detail = await request(app).get(`/api/admin/hotels/${hotelId}`).set(bearer(unassignedOnboardingToken));
+    assert.equal(detail.status, 200);
+    assert.equal(detail.body.hotel.canEdit, true);
+
+    const rooms = await request(app).get(`/api/admin/hotels/${hotelId}/room-types`).set(bearer(unassignedOnboardingToken));
+    assert.equal(rooms.status, 200);
+
+    const policies = await request(app).get(`/api/admin/hotels/${hotelId}/cancellation-policies`).set(bearer(unassignedOnboardingToken));
+    assert.equal(policies.status, 200);
+  });
+
+  it('lets an onboarding executive publish after review approval and shows the hotel publicly', async () => {
     const detail = await hotel();
     assert.ok(detail.images.some((image) => image.isCover), 'a cover must be selected first');
 
-    const res = await transition('PUBLISH', onboardingToken);
+    const res = await transition('PUBLISH', unassignedOnboardingToken);
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.hotel.status, 'PUBLISHED');
 
@@ -354,12 +368,12 @@ describe('11-12. publishing', () => {
     assert.ok(catalogue.body.items.some((item) => item.id === hotelId));
   });
 
-  it('lets the assigned onboarding executive unpublish and republish its hotel', async () => {
-    const unpublished = await transition('UNPUBLISH', onboardingToken);
+  it('lets an onboarding executive unpublish and republish a hotel', async () => {
+    const unpublished = await transition('UNPUBLISH', unassignedOnboardingToken);
     assert.equal(unpublished.status, 200);
     assert.equal(unpublished.body.hotel.status, 'UNPUBLISHED');
 
-    const republished = await transition('PUBLISH', onboardingToken);
+    const republished = await transition('PUBLISH', unassignedOnboardingToken);
     assert.equal(republished.status, 200);
     assert.equal(republished.body.hotel.status, 'PUBLISHED');
   });

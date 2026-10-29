@@ -87,7 +87,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
           </span>
           {bare && stayNights > 0 && (
             <span className="text-xs text-[var(--text-muted)]">
-              {stayNights} Night{stayNights === 1 ? '' : 's'} Stay
+              {stayNights}-night stay
             </span>
           )}
         </span>

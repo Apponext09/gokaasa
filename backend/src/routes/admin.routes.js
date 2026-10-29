@@ -99,6 +99,16 @@ import { catalogController } from '../controllers/catalog.controller.js';
 import { catalogCreateSchema, catalogItemParam, catalogKindParam, catalogUpdateSchema } from '../validators/catalog.validator.js';
 import { CONSOLE_ROLES, restrictSpecializedStaff } from '../middleware/adminConsoleAccess.js';
 import { pool } from '../db/pool.js';
+import { homepageBackgroundController } from '../controllers/homepageBackground.controller.js';
+import { hotelReviewController } from '../controllers/hotelReview.controller.js';
+import {
+  hotelReviewAssignSchema,
+  hotelReviewDecisionSchema,
+  hotelReviewIssueParam,
+  hotelReviewIssueSchema,
+  hotelReviewListQuery,
+} from '../validators/hotelReview.validator.js';
+import { z } from 'zod';
 
 /**
  * Everything under /api/admin requires an authenticated staff member. Individual actions narrow this
@@ -130,10 +140,37 @@ adminRouter.get('/reports/hotel-performance', validate({ query: hotelPerformance
 adminRouter.get('/dashboard/alerts', hotelController.dashboardAlerts);
 adminRouter.get('/search', validate({ query: adminSearchQuery }), adminSearchController.search);
 
+// Internal hotel quality review. This is separate from guest ratings/reviews under /reviews.
+adminRouter.get('/hotel-reviews', validate({ query: hotelReviewListQuery }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.list);
+adminRouter.get('/hotel-reviewers', authorize('ADMIN'), hotelReviewController.reviewers);
+adminRouter.get('/hotels/:id/review', validate({ params: idParam }), authorize('ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'), requireHotelReadAccess(hotelIdFromParam), hotelReviewController.detail);
+adminRouter.post('/hotels/:id/review/assign', validate({ params: idParam, body: hotelReviewAssignSchema }), authorize('ADMIN'), hotelReviewController.assign);
+adminRouter.post('/hotels/:id/review/issues', validate({ params: idParam, body: hotelReviewIssueSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.addIssue);
+adminRouter.post('/hotels/:id/review/issues/:issueId/fix', validate({ params: hotelReviewIssueParam }), authorize('ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'HOTEL_ONBOARDING_EXECUTIVE'), hotelReviewController.fixIssue);
+adminRouter.post('/hotels/:id/review/issues/:issueId/verify', validate({ params: hotelReviewIssueParam }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.verifyIssue);
+adminRouter.post('/hotels/:id/review/issues/:issueId/reopen', validate({ params: hotelReviewIssueParam }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.reopenIssue);
+adminRouter.post('/hotels/:id/review/request-changes', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.requestChanges);
+adminRouter.post('/hotels/:id/review/approve', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.approve);
+adminRouter.post('/hotels/:id/review/approve-and-publish', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN'), hotelReviewController.approveAndPublish);
+
 // Platform master data. Reads and writes are ADMIN-only because every hotel and room uses these values.
 adminRouter.get('/catalogs/:kind', validate({ params: catalogKindParam }), authorize('ADMIN'), catalogController.adminList);
 adminRouter.post('/catalogs/:kind', validate({ params: catalogKindParam, body: catalogCreateSchema }), authorize('ADMIN'), catalogController.create);
 adminRouter.patch('/catalogs/:kind/:code', validate({ params: catalogItemParam, body: catalogUpdateSchema }), authorize('ADMIN'), catalogController.update);
+adminRouter.get('/homepage-background-images', authorize('ADMIN'), homepageBackgroundController.list);
+adminRouter.put(
+  '/homepage-background-images/:slot',
+  validate({ params: z.object({ slot: z.coerce.number().int().min(1).max(4) }) }),
+  authorize('ADMIN'),
+  uploadSingleImage,
+  homepageBackgroundController.replace,
+);
+adminRouter.delete(
+  '/homepage-background-images/:slot',
+  validate({ params: z.object({ slot: z.coerce.number().int().min(1).max(4) }) }),
+  authorize('ADMIN'),
+  homepageBackgroundController.remove,
+);
 
 adminRouter.get('/settings', settingsController.get);
 adminRouter.patch('/settings', validate({ body: settingsUpdateSchema }), authorize('ADMIN'), settingsController.update);
@@ -370,7 +407,7 @@ adminRouter.get('/hotel-import/providers', hotelController.providers);
 adminRouter.get(
   '/hotels/:id/room-types',
   validate({ params: idParam, query: roomTypeListQuery }),
-  requireHotelAccess(hotelIdFromParam),
+  requireHotelReadAccess(hotelIdFromParam),
   inv.listRoomTypes,
 );
 adminRouter.get(
@@ -385,7 +422,7 @@ adminRouter.post(
   requireHotelAccess(hotelIdFromParam),
   inv.createRoomType,
 );
-adminRouter.get('/room-types/:id', validate({ params: roomParam }), requireHotelAccess(hotelIdFromRoomType), inv.getRoomType);
+adminRouter.get('/room-types/:id', validate({ params: roomParam }), requireHotelReadAccess(hotelIdFromRoomType), inv.getRoomType);
 adminRouter.patch(
   '/room-types/:id',
   validate({ params: roomParam, body: roomTypeUpdateSchema }),
@@ -436,7 +473,7 @@ adminRouter.put(
 adminRouter.get(
   '/hotels/:id/cancellation-policies',
   validate({ params: idParam }),
-  requireHotelAccess(hotelIdFromParam),
+  requireHotelReadAccess(hotelIdFromParam),
   inv.listPolicies,
 );
 adminRouter.post(
@@ -459,7 +496,7 @@ adminRouter.post(
 );
 
 // Rate plans
-adminRouter.get('/room-types/:id/rate-plans', validate({ params: roomParam }), requireHotelAccess(hotelIdFromRoomType), inv.listRatePlans);
+adminRouter.get('/room-types/:id/rate-plans', validate({ params: roomParam }), requireHotelReadAccess(hotelIdFromRoomType), inv.listRatePlans);
 adminRouter.post(
   '/room-types/:id/rate-plans',
   validate({ params: roomParam, body: ratePlanCreateSchema }),
@@ -477,7 +514,7 @@ adminRouter.patch(
 adminRouter.get(
   '/room-types/:id/calendar',
   validate({ params: roomParam, query: calendarQuery }),
-  requireHotelAccess(hotelIdFromRoomType),
+  requireHotelReadAccess(hotelIdFromRoomType),
   inv.calendar,
 );
 adminRouter.post(
@@ -488,7 +525,7 @@ adminRouter.post(
 );
 
 // Maintenance and owner blocks
-adminRouter.get('/room-types/:id/blocks', validate({ params: roomParam }), requireHotelAccess(hotelIdFromRoomType), inv.listBlocks);
+adminRouter.get('/room-types/:id/blocks', validate({ params: roomParam }), requireHotelReadAccess(hotelIdFromRoomType), inv.listBlocks);
 adminRouter.post(
   '/room-types/:id/blocks',
   validate({ params: roomParam, body: blockCreateSchema }),

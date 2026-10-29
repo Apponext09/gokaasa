@@ -10,6 +10,7 @@ test('master values accept generated-code inputs and amenity categories', () => 
   assert.equal(catalogCreateSchema.parse({ name: 'Private Jacuzzi', category: 'WELLNESS' }).category, 'WELLNESS');
   assert.equal(catalogCreateSchema.safeParse({ name: 'X' }).success, false);
   assert.equal(catalogCreateSchema.safeParse({ name: 'Jacuzzi', category: 'MADE_UP' }).success, false);
+  assert.deepEqual(catalogCreateSchema.parse({ name: 'Smart TV', category: 'ROOM' }), { name: 'Smart TV', category: 'ROOM', sortOrder: 0 });
 });
 
 test('master updates require an actual change', () => {

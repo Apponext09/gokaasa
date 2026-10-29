@@ -51,7 +51,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
             <span className="text-sm text-[var(--text-muted)]"> / night</span>
           </p>
           <p className="text-xs text-[var(--text-muted)]">
-            {nights} night{nights === 1 ? '' : 's'}{rooms > 1 ? ` · ${rooms} rooms` : ''} · <span className="font-medium text-[var(--text-body)]">{formatMoney(plan.finalAmount)}</span> total
+            {nights} Night{nights === 1 ? '' : 's'}{rooms > 1 ? ` · ${rooms} Rooms` : ''} · <span className="font-medium text-[var(--text-body)]">{formatMoney(plan.finalAmount)}</span> total
           </p>
           <Button size="sm" variant={selected ? 'secondary' : 'primary'} disabled={disabled} onClick={() => onSelect(plan)}>
             {selected ? <><Check className="h-4 w-4" aria-hidden="true" /> Selected</> : 'Select'}
@@ -64,7 +64,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
       </button>
       {open && (
         <dl className="mt-2 grid max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
-          <dt className="text-[var(--text-muted)]">Room charge ({nights} night{nights === 1 ? '' : 's'})</dt>
+          <dt className="text-[var(--text-muted)]">Room charge ({nights} Night{nights === 1 ? '' : 's'})</dt>
           <dd className="text-right">{formatMoney(plan.subtotal)}</dd>
           {plan.discount > 0 && (
             <>
@@ -124,7 +124,7 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
             </ul>
             {room.amenities?.length > 0 && (
               <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
-                {room.amenities.slice(0, 6).map((a) => (
+                {room.amenities.map((a) => (
                   <li key={a.code} className="flex items-center gap-1"><Check className="h-3 w-3 text-success-600" aria-hidden="true" /> {a.name}</li>
                 ))}
               </ul>

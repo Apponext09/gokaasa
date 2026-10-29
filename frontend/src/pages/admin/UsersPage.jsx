@@ -21,6 +21,7 @@ const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Administrator' },
   { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
   { value: 'HOTEL_ONBOARDING_EXECUTIVE', label: 'Hotel Onboarding Executive' },
+  { value: 'HOTEL_REVIEW_EXECUTIVE', label: 'Hotel Review Executive' },
 ];
 const EMPTY_STAFF = { firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', role: 'SALES_EXECUTIVE' };
 const STATUS_OPTIONS = [
@@ -236,6 +237,7 @@ export function UsersPage() {
               <Select aria-label="Staff role" value={staff.role} onChange={(e) => setStaff((v) => ({ ...v, role: e.target.value }))}>
                 <option value="SALES_EXECUTIVE">Sales Executive</option>
                 <option value="HOTEL_ONBOARDING_EXECUTIVE">Hotel Onboarding Executive</option>
+                <option value="HOTEL_REVIEW_EXECUTIVE">Hotel Review Executive</option>
               </Select>
             </div>
             <div className="flex justify-end gap-2">

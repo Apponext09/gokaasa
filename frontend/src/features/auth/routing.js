@@ -4,7 +4,7 @@
  * Re-exported from AuthContext.jsx and components/shared/index.jsx so every existing import keeps working.
  */
 
-const ADMIN_ROLES = ['ADMIN', 'HOTEL_MANAGER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE'];
+const ADMIN_ROLES = ['ADMIN', 'HOTEL_MANAGER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
 
 /**
  * A HOTEL_OWNER reuses the same /admin/* surface as ADMIN/HOTEL_MANAGER, but only once their partner
@@ -19,6 +19,7 @@ export function isApprovedStaff(user) {
 export function homePathFor(user) {
   if (user?.roles?.includes('SALES_EXECUTIVE')) return '/admin/bookings';
   if (user?.roles?.includes('HOTEL_ONBOARDING_EXECUTIVE')) return '/admin/hotels';
+  if (user?.roles?.includes('HOTEL_REVIEW_EXECUTIVE')) return '/admin/hotel-reviews';
   if (isApprovedStaff(user)) return '/admin/dashboard';
   if (user?.roles?.includes('HOTEL_OWNER')) return '/partner/status';
   return '/';
@@ -26,12 +27,14 @@ export function homePathFor(user) {
 
 const SALES_PATH = /^\/admin\/(?:bookings(?:\/\d+)?|payments|refunds|invoices|offers(?:\/new|\/\d+)?|profile|notifications)$/;
 const ONBOARDING_PATH = /^\/admin\/(?:hotels(?:\/new|\/onboarding(?:\/\d+\/review)?|\/\d+(?:\/rooms(?:\/new|\/\d+)?)?)?|profile|notifications)$/;
+const REVIEW_PATH = /^\/admin\/(?:hotel-reviews|hotels\/\d+|profile|notifications)$/;
 
 export function canAccessAdminPath(user, pathname) {
   if (user?.roles?.includes('ADMIN') || user?.roles?.includes('HOTEL_MANAGER')) return true;
   if (user?.roles?.includes('HOTEL_OWNER') && user.partnerStatus === 'APPROVED') return true;
   if (user?.roles?.includes('SALES_EXECUTIVE')) return SALES_PATH.test(pathname);
   if (user?.roles?.includes('HOTEL_ONBOARDING_EXECUTIVE')) return ONBOARDING_PATH.test(pathname);
+  if (user?.roles?.includes('HOTEL_REVIEW_EXECUTIVE')) return REVIEW_PATH.test(pathname);
   return false;
 }
 

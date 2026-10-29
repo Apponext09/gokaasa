@@ -12,6 +12,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
     // Same-origin in development, so the httpOnly refresh cookie works without CORS workarounds.
     proxy: {
       '/api': { target: API_TARGET, changeOrigin: false },

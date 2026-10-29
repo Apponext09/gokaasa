@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils.js';
 import { OfferCard } from '@/features/offers/OfferCard.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { isStaffCustomerView } from '@/features/auth/viewMode.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { useDebounce } from '@/hooks/useDebounce.js';
 
@@ -114,11 +115,6 @@ const WHY_ICON_TONES = [
   'bg-emerald-100 text-emerald-700',
   'bg-amber-100 text-amber-700',
   'bg-violet-100 text-violet-700',
-];
-
-const HOME_HERO_SLIDES = [
-  { src: '/destinations/navi-mumbai.jpg', label: 'Navi Mumbai skyline' },
-  { src: '/destinations/ahilyanagar.jpg', label: 'Ahilyanagar heritage landscape' },
 ];
 
 const TESTIMONIALS = [
@@ -568,7 +564,8 @@ function HomeHotelListing({ search = null, geolocation, authStatus }) {
 
 export function HomePage() {
   const { status, user, isStaff } = useAuth();
-  const geolocation = useGeolocation({ autoRequest: status !== 'loading' && !isStaff });
+  const customerView = !isStaff || isStaffCustomerView();
+  const geolocation = useGeolocation({ autoRequest: status !== 'loading' && customerView });
 
   const [popular, setPopular] = useState(null);
   const [stayTypes, setStayTypes] = useState(null);
@@ -576,6 +573,7 @@ export function HomePage() {
   const [offers, setOffers] = useState(null);
   const [error, setError] = useState(null);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [homepageBackgrounds, setHomepageBackgrounds] = useState(null);
   const [hotelSearch, setHotelSearch] = useState(null);
   const [hotelSearchVersion, setHotelSearchVersion] = useState(0);
   const [openHomeFaq, setOpenHomeFaq] = useState(0);
@@ -587,17 +585,26 @@ export function HomePage() {
     canonicalPath: '/',
   });
 
+  const heroSlides = useMemo(
+    () => (homepageBackgrounds ?? []).map((image) => ({
+      src: image.url,
+      label: image.altText || `Homepage background ${image.slot}`,
+    })),
+    [homepageBackgrounds],
+  );
+
   useEffect(() => {
-    if (HOME_HERO_SLIDES.length <= 1) return undefined;
+    setHeroIndex(0);
+    if (heroSlides.length <= 1) return undefined;
     const interval = window.setInterval(() => {
-      setHeroIndex((current) => (current + 1) % HOME_HERO_SLIDES.length);
+      setHeroIndex((current) => (current + 1) % heroSlides.length);
     }, 6000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [heroSlides.length]);
 
   useEffect(() => {
-    if (isStaff) return undefined;
+    if (!customerView) return undefined;
 
     let cancelled = false;
 
@@ -639,12 +646,18 @@ export function HomePage() {
       })
       .catch(() => { });
 
+    discoveryApi.homepageBackgrounds().then((images) => {
+      if (!cancelled) setHomepageBackgrounds(images);
+    }).catch(() => {
+      if (!cancelled) setHomepageBackgrounds([]);
+    });
+
     return () => {
       cancelled = true;
     };
-  }, [isStaff]);
+  }, [customerView]);
 
-  if (isStaff) {
+  if (isStaff && !customerView) {
     return <Navigate to={homePathFor(user)} replace />;
   }
 
@@ -656,7 +669,7 @@ export function HomePage() {
       <section className="customer-booking-hero">
         <div className="customer-hero-arch">
           <div className="customer-hero-slides" aria-hidden="true">
-            {HOME_HERO_SLIDES.map((slide, index) => (
+            {heroSlides.map((slide, index) => (
               <img
                 key={slide.src}
                 src={slide.src}
@@ -675,9 +688,9 @@ export function HomePage() {
             <p>Great stays, clear prices, and an easier way to book.</p>
           </div>
 
-          {HOME_HERO_SLIDES.length > 1 && (
+          {heroSlides.length > 1 && (
             <div className="customer-hero-dots" role="group" aria-label="Choose hero image">
-              {HOME_HERO_SLIDES.map((slide, index) => (
+              {heroSlides.map((slide, index) => (
                 <button
                   key={slide.src}
                   type="button"

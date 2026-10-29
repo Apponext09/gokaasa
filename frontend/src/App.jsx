@@ -41,6 +41,7 @@ const ApplicationStatusPage = lazyNamed(() => import('@/pages/partner/Applicatio
 const DashboardPage = lazy(() => import('@/pages/admin/DashboardPage.jsx').then((m) => ({ default: m.DashboardPage })));
 const HotelListPage = lazy(() => import('@/pages/admin/HotelListPage.jsx').then((m) => ({ default: m.HotelListPage })));
 const HotelOnboardingPage = lazy(() => import('@/pages/admin/HotelOnboardingPage.jsx').then((m) => ({ default: m.HotelOnboardingPage })));
+const HotelReviewsPage = lazy(() => import('@/pages/admin/HotelReviewsPage.jsx').then((m) => ({ default: m.HotelReviewsPage })));
 const HotelEditorPage = lazy(() => import('@/pages/admin/HotelEditorPage.jsx').then((m) => ({ default: m.HotelEditorPage })));
 const ImportReviewPage = lazy(() => import('@/pages/admin/ImportReviewPage.jsx').then((m) => ({ default: m.ImportReviewPage })));
 const RoomsPage = lazy(() => import('@/pages/admin/RoomsPage.jsx').then((m) => ({ default: m.RoomsPage })));
@@ -142,6 +143,7 @@ export function App() {
         <Route path="hotels" element={<HotelListPage />} />
         {/* Static segments must be declared before ":id" so "onboarding" and "new" are not read as ids. */}
         <Route path="hotels/onboarding" element={<HotelOnboardingPage />} />
+        <Route path="hotel-reviews" element={<HotelReviewsPage />} />
         <Route path="hotels/onboarding/:importId/review" element={<ImportReviewPage />} />
         <Route path="hotels/new" element={<HotelEditorPage />} />
         <Route path="hotels/:id" element={<HotelEditorPage />} />

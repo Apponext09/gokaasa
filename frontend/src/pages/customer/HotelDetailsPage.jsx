@@ -30,6 +30,7 @@ import { HotelCard } from '@/features/search/components/HotelCard.jsx';
 import { PublicGallery } from '@/features/hotels/components/PublicGallery.jsx';
 import { AmenityGroups } from '@/features/hotels/components/AmenityGroups.jsx';
 import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
+import { formatTime12Hour } from '@/features/hotels/hotelTime.js';
 
 import {
   RoomCard,
@@ -653,6 +654,13 @@ export function HotelDetailsPage() {
     hotel.cancellationPolicies ?? [];
 
   const location = formatHotelLocation(hotel);
+  const mapLatitude = toNumberOrNull(hotel.latitude);
+  const mapLongitude = toNumberOrNull(hotel.longitude);
+  const mapQuery = mapLatitude !== null && mapLongitude !== null
+    ? `${mapLatitude},${mapLongitude}`
+    : `${hotel.name}, ${location}`;
+  const mapUrl = hotel.locationUrl
+    || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
 
   const backParams = hasStay ? stayParams(state) : new URLSearchParams();
   backParams.set('destination', slugifyPlace(hotel.city));
@@ -846,16 +854,14 @@ export function HotelDetailsPage() {
                 <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
                 {location}
               </span>
-              {hotel.locationUrl && (
-                <a
-                  href={hotel.locationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline"
-                >
-                  View on map <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                </a>
-              )}
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline"
+              >
+                View on map <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              </a>
             </div>
 
             {/* Safe rating section */}
@@ -927,14 +933,16 @@ export function HotelDetailsPage() {
                   <h2>{featuredOption.room.name}</h2>
                   <p className="hotel-booking-capacity">
                     Fits up to {featuredOption.room.maxAdults} adult{featuredOption.room.maxAdults === 1 ? '' : 's'}
-                    {featuredOption.room.maxChildren > 0 ? ` and ${featuredOption.room.maxChildren} children` : ''}
+                    {featuredOption.room.maxChildren > 0
+                      ? ` and ${featuredOption.room.maxChildren} ${featuredOption.room.maxChildren === 1 ? 'child' : 'children'}`
+                      : ''}
                   </p>
                 </div>
 
                 <div className="hotel-booking-benefits">
                   <span>{featuredOption.plan.mealPlanName ?? featuredOption.plan.mealPlan?.replaceAll('_', ' ').toLowerCase() ?? 'Room rate'}</span>
                   <span>{featuredOption.plan.refundable ? 'Refundable option' : 'Non-refundable'}</span>
-                  <span>{shortDate(state.checkIn)} → {shortDate(state.checkOut)} · {nights} night{nights === 1 ? '' : 's'}</span>
+                  <span>{shortDate(state.checkIn)} → {shortDate(state.checkOut)} · {nights} Night{nights === 1 ? '' : 's'}</span>
                 </div>
 
                 <div className="hotel-booking-price">
@@ -1020,11 +1028,11 @@ export function HotelDetailsPage() {
             {hotel.checkInTime && (
               <div>
                 <dt className="text-[var(--text-muted)]">
-                  Check-in from
+                  Check-in
                 </dt>
 
                 <dd className="font-medium text-[var(--text-strong)]">
-                  {hotel.checkInTime.slice(0, 5)}
+                  {formatTime12Hour(hotel.checkInTime)}
                 </dd>
               </div>
             )}
@@ -1032,11 +1040,11 @@ export function HotelDetailsPage() {
             {hotel.checkOutTime && (
               <div>
                 <dt className="text-[var(--text-muted)]">
-                  Check-out by
+                  Check-out
                 </dt>
 
                 <dd className="font-medium text-[var(--text-strong)]">
-                  {hotel.checkOutTime.slice(0, 5)}
+                  {formatTime12Hour(hotel.checkOutTime)}
                 </dd>
               </div>
             )}
@@ -1065,7 +1073,7 @@ export function HotelDetailsPage() {
             id="amenities-heading"
             className="text-lg font-semibold text-[var(--text-strong)]"
           >
-            Amenities
+            Hotel amenities
           </h2>
 
           <AmenityGroups
@@ -1102,7 +1110,7 @@ export function HotelDetailsPage() {
                   {' → '}
                   {shortDate(state.checkOut)}
                   {' · '}
-                  {nights} night
+                  {nights} Night
                   {nights === 1 ? '' : 's'}
                   {' · '}
 

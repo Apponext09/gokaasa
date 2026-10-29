@@ -191,6 +191,82 @@ describe('password reset', () => {
   });
 });
 
+describe('staff email change', () => {
+  beforeEach(() => {
+    sentMail.length = 0;
+  });
+
+  it('rejects CUSTOMER accounts at the authorization boundary', async () => {
+    await createUserWithRole({ email: 'email-change.customer@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
+    const login = await request(app).post('/api/auth/login').send({ email: 'email-change.customer@example.com', password: PASSWORD });
+    const res = await request(app)
+      .post('/api/auth/email-change/request')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .send({ newEmail: 'customer.new@example.com', currentPassword: PASSWORD });
+    assert.equal(res.status, 403);
+    assert.equal(sentMail.length, 0);
+  });
+
+  it('verifies a staff email, revokes sessions and records an audit trail', async () => {
+    const oldEmail = 'email-change.admin@example.com';
+    const newEmail = 'email-change.admin@company.example';
+    const userId = await createUserWithRole({ email: oldEmail, password: PASSWORD, roleCode: 'ADMIN' });
+    const login = await request(app).post('/api/auth/login').send({ email: oldEmail, password: PASSWORD });
+    const token = login.body.accessToken;
+    const oldCookie = cookieFrom(login);
+
+    const wrongPassword = await request(app)
+      .post('/api/auth/email-change/request')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newEmail, currentPassword: 'wrong-password' });
+    assert.equal(wrongPassword.status, 400);
+
+    const requested = await request(app)
+      .post('/api/auth/email-change/request')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newEmail, currentPassword: PASSWORD });
+    assert.equal(requested.status, 202);
+    assert.equal(requested.body.pending.newEmail, newEmail);
+    assert.equal(sentMail.length, 1);
+    assert.equal(sentMail[0].to, newEmail);
+    const code = sentMail[0].text.match(/Verification code: (\d{6})/)[1];
+
+    const pending = await request(app).get('/api/auth/email-change').set('Authorization', `Bearer ${token}`);
+    assert.equal(pending.status, 200);
+    assert.equal(pending.body.pending.newEmail, newEmail);
+
+    const incorrect = await request(app)
+      .post('/api/auth/email-change/verify')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code: code === '000000' ? '111111' : '000000' });
+    assert.equal(incorrect.status, 400);
+    const { pool } = await import('../../src/db/pool.js');
+    const attempts = await pool.query(`SELECT attempts FROM email_change_requests WHERE user_id = $1 AND consumed_at IS NULL`, [userId]);
+    assert.equal(attempts.rows[0].attempts, 1, 'a wrong code must consume an attempt even though verification fails');
+
+    const verified = await request(app)
+      .post('/api/auth/email-change/verify')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ code });
+    assert.equal(verified.status, 200);
+    assert.equal(verified.body.email, newEmail);
+    assert.match(verified.headers['set-cookie'][0], /gk_refresh=;/);
+
+    const oldSession = await request(app).post('/api/auth/refresh').set('Cookie', oldCookie);
+    assert.equal(oldSession.status, 401);
+    assert.equal((await request(app).post('/api/auth/login').send({ email: oldEmail, password: PASSWORD })).status, 401);
+    assert.equal((await request(app).post('/api/auth/login').send({ email: newEmail, password: PASSWORD })).status, 200);
+
+    const audit = await pool.query(
+      `SELECT old_value, new_value FROM audit_logs WHERE action = 'user.email_changed' AND entity_id = $1`,
+      [String(userId)],
+    );
+    assert.equal(audit.rowCount, 1);
+    assert.equal(audit.rows[0].old_value.email, oldEmail);
+    assert.equal(audit.rows[0].new_value.email, newEmail);
+  });
+});
+
 describe('role-based access control', () => {
   it('denies customers access to admin routes', async () => {
     const login = await request(app).post('/api/auth/login').send({ email: 'asha.test@example.com', password: 'Another-pass-456' });

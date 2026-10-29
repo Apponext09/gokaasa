@@ -88,7 +88,7 @@ export const inventoryRepository = {
    * One reservation row per night. A booking hold passes holdId so the row shares the hold's expiry and can
    * be released or converted with it. Without a hold, the row expires after holdMinutes.
    */
-  async insertHold(client, { roomTypeId, stayDate, quantity, holdMinutes = 15, holdId = null }) {
+  async insertHold(client, { roomTypeId, stayDate, quantity, holdMinutes = 5, holdId = null }) {
     await client.query(
       `INSERT INTO inventory_reservations (room_type_id, stay_date, quantity, status, expires_at, hold_id)
        VALUES ($1, $2, $3, 'HELD',

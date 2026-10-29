@@ -15,7 +15,7 @@ const STATUS = {
 };
 
 /** Room types for one hotel. Used by the hotel's Rooms tab and by the standalone rooms page. */
-export function RoomTypeList({ hotelId, manageBasePath }) {
+export function RoomTypeList({ hotelId, manageBasePath, readOnly = false }) {
   const [rooms, setRooms] = useState(null);
   const [error, setError] = useState(null);
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -38,9 +38,11 @@ export function RoomTypeList({ hotelId, manageBasePath }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Checkbox label="Show archived" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)} />
-        <Link to={newPath} className={buttonVariants({})}>
-          <Plus className="h-4 w-4" aria-hidden="true" /> Add room type
-        </Link>
+        {!readOnly && (
+          <Link to={newPath} className={buttonVariants({})}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> Add room type
+          </Link>
+        )}
       </div>
 
       {error && <Alert tone="error">{error}</Alert>}
@@ -56,12 +58,12 @@ export function RoomTypeList({ hotelId, manageBasePath }) {
         <EmptyState
           icon={BedDouble}
           title="No room types yet"
-          description="Add the rooms guests can book, such as a Deluxe King or a Family Room. Each room type has its own rates and stock."
-          action={
+          description={readOnly ? 'No room types have been added to this hotel.' : 'Add the rooms guests can book, such as a Deluxe King or a Family Room. Each room type has its own rates and stock.'}
+          action={!readOnly ? (
             <Link to={newPath} className="text-sm font-medium text-brand-600 hover:underline">
               Add the first room type
             </Link>
-          }
+          ) : null}
         />
       )}
 
@@ -96,7 +98,7 @@ export function RoomTypeList({ hotelId, manageBasePath }) {
                 </p>
               </div>
               <Link to={`${manageBasePath}/${room.id}`} className={buttonVariants({ variant: 'secondary' })}>
-                Manage
+                {readOnly ? 'View details' : 'Manage'}
               </Link>
             </CardContent>
           </Card>

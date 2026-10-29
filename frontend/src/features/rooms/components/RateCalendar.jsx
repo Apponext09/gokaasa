@@ -23,6 +23,10 @@ const isoDay = (offset = 0) => {
 
 const DEFAULT_FROM_OFFSET = 0;
 const DEFAULT_TO_OFFSET = 13;
+const displayDate = (iso) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : iso;
+};
 
 const optionalWhole = (min, max, label) =>
   z.string().trim().refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) >= min && Number(v) <= max), `${label}: ${min} to ${max}`);
@@ -177,7 +181,7 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
           {!hasAnyPricedDay && data && (
             <div className="mb-4">
               <Alert tone="warning">
-                <strong>No room rates applied yet:</strong> Guests cannot find or book this room in search results until you set a base price and click <strong>Apply to {bulkFrom} → {bulkTo}</strong> below.
+                <strong>No room rates applied yet:</strong> Guests cannot find or book this room in search results until you set a base price and click <strong>Apply to {displayDate(bulkFrom)} → {displayDate(bulkTo)}</strong> below.
               </Alert>
             </div>
           )}
@@ -216,7 +220,7 @@ export function RateCalendar({ roomId, room, plans, disabled, onChanged }) {
               <Input id="bulk-max" inputMode="numeric" invalid={!!e.maxStay} disabled={disabled} {...register('maxStay')} />
             </FormField>
             <div className="flex items-end gap-2 sm:col-span-2 xl:col-span-4">
-              <Button type="submit" loading={applying} disabled={disabled}>Apply to {bulkFrom} → {bulkTo}</Button>
+              <Button type="submit" loading={applying} disabled={disabled}>Apply to {displayDate(bulkFrom)} → {displayDate(bulkTo)}</Button>
               <Button type="button" variant="secondary" disabled={disabled || applying} onClick={() => setValue('closure', 'KEEP')}>Reset</Button>
             </div>
           </form>

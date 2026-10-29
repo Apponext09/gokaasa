@@ -22,7 +22,7 @@ export function formatDuration(ms) {
   return `${(ms / 1000).toFixed(1)} s`;
 }
 
-function HistoryRow({ job, hotelId }) {
+function HistoryRow({ job, hotelId, readOnly }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState(null);
@@ -55,7 +55,7 @@ function HistoryRow({ job, hotelId }) {
           <p className="text-xs text-[var(--text-muted)]">Processing time: {formatDuration(job.durationMs)}</p>
         </div>
         <div className="flex items-center gap-2">
-          {job.hotelId === hotelId && job.status !== 'DISCARDED' && (
+          {!readOnly && job.hotelId === hotelId && job.status !== 'DISCARDED' && (
             <Link to={`/admin/hotels/onboarding/${job.id}/review`} className="text-sm font-medium text-brand-600 hover:underline">
               Open review
             </Link>
@@ -95,7 +95,7 @@ function HistoryRow({ job, hotelId }) {
   );
 }
 
-export function ImportHistory({ hotelId }) {
+export function ImportHistory({ hotelId, readOnly = false }) {
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
 
@@ -124,7 +124,7 @@ export function ImportHistory({ hotelId }) {
     <Card>
       <ul className="divide-y divide-[var(--border-subtle)]">
         {jobs.map((job) => (
-          <HistoryRow key={job.id} job={job} hotelId={hotelId} />
+          <HistoryRow key={job.id} job={job} hotelId={hotelId} readOnly={readOnly} />
         ))}
       </ul>
     </Card>

@@ -122,7 +122,7 @@ export const hotelRepository = {
 
   async findAmenityIdsByCodes(client, codes) {
     if (codes.length === 0) return [];
-    const { rows } = await client.query(`SELECT id, code FROM amenities WHERE code = ANY($1::text[])`, [codes]);
+    const { rows } = await client.query(`SELECT id, code FROM amenities WHERE is_active AND code = ANY($1::text[])`, [codes]);
     return rows;
   },
 

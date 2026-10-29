@@ -10,7 +10,7 @@ export const adminUserSessionParam = z.object({ id: positiveId, sessionId: posit
 export const adminUserListQuery = z.object({
   ...pagination,
   q: z.string().trim().max(100).optional(),
-  role: z.enum(['CUSTOMER', 'ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE']).optional(),
+  role: z.enum(['CUSTOMER', 'ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE']).optional(),
   status: z.enum(['active', 'inactive']).optional(),
   online: z.enum(['online', 'offline']).optional(),
   from: isoDateTime,
@@ -31,5 +31,5 @@ export const adminStaffCreateSchema = z.object({
   firstName: staffName,
   lastName: staffName,
   phone: z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/, 'Enter a valid phone number').optional().or(z.literal('').transform(() => undefined)),
-  role: z.enum(['SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE']),
+  role: z.enum(['SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE']),
 });

@@ -136,6 +136,7 @@ export function Pagination({ page, totalPages, onPageChange }) {
 const HOTEL_STATUS = {
   DRAFT: { label: 'Draft', tone: 'neutral' },
   PENDING_REVIEW: { label: 'Pending review', tone: 'warning' },
+  CHANGES_REQUESTED: { label: 'Changes requested', tone: 'danger' },
   READY_TO_PUBLISH: { label: 'Ready to publish', tone: 'brand' },
   PUBLISHED: { label: 'Published', tone: 'success' },
   UNPUBLISHED: { label: 'Unpublished', tone: 'danger' },

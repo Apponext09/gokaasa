@@ -55,8 +55,11 @@ test('notificationPath links a booking notification to its My Trips detail page'
   assert.equal(notificationPath({ entityType: 'booking', entityId: 42 }), '/my-trips/42');
 });
 
-test('notificationPath links nowhere for an entity type with no viewer page', () => {
-  assert.equal(notificationPath({ entityType: 'hotel', entityId: 1 }), null);
+test('notificationPath links hotel workflow notices to the internal review tab', () => {
+  assert.equal(notificationPath({ entityType: 'hotel', entityId: 1 }), '/admin/hotels/1?tab=review');
+});
+
+test('notificationPath links nowhere when an entity has no viewer page', () => {
   assert.equal(notificationPath({ entityType: 'booking', entityId: null }), null);
   assert.equal(notificationPath({ entityType: null, entityId: null }), null);
 });

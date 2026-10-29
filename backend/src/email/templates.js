@@ -41,6 +41,22 @@ export const emailTemplates = {
       cta: { label: 'Reset Password', url: p.resetUrl }, footer: supportFooter(p),
     }) };
   },
+  emailChangeCode(p) {
+    return { subject: 'Verify your new Gokaasa email address', ...layout({
+      heading: 'Verify your new email',
+      intro: `Enter this verification code in your Gokaasa profile within ${p.ttlMinutes} minutes.`,
+      rows: [['Verification code', p.code]],
+      footer: `If you did not request this change, do not share the code. ${supportFooter(p)}`,
+    }) };
+  },
+  emailChanged(p) {
+    return { subject: 'Your Gokaasa sign-in email was changed', ...layout({
+      heading: 'Email address changed',
+      intro: 'The sign-in email for your Gokaasa account was changed successfully.',
+      rows: [['New email', p.newEmail]],
+      footer: `If you did not make this change, contact support immediately. ${supportFooter(p)}`,
+    }) };
+  },
   partnerApproved(p) {
     return { subject: 'Your Gokaasa partner application has been approved', ...layout({
       heading: 'Partner application approved', intro: `Congratulations${p.firstName ? `, ${p.firstName}` : ''}. Your application has been approved. Continue in the partner portal to add and prepare your property.`,

@@ -77,6 +77,11 @@ api.interceptors.response.use(
  * never shown to users; the server already returns safe messages.
  */
 export function normalizeError(error) {
+  // Response interceptors already normalize API failures. Keep that useful server message when a
+  // component defensively calls normalizeError again.
+  if (error && typeof error === 'object' && 'status' in error && 'message' in error && 'fieldErrors' in error) {
+    return error;
+  }
   if (error?.code === 'ECONNABORTED') {
     return { status: 0, code: 'TIMEOUT', message: 'The request took too long. Please try again.', fieldErrors: {} };
   }

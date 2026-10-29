@@ -35,13 +35,13 @@ const STATUS_LABEL = { ACTIVE: 'Active', INACTIVE: 'Inactive', ARCHIVED: 'Archiv
 
 /** One room type: details, amenities, images, rate plans, and the availability calendar. */
 export function RoomEditorPage() {
-  const { isOnboardingExecutive } = useAuth();
+  const { isReviewExecutive } = useAuth();
   const { hotelId: hotelParam, roomId } = useParams();
   const hotelId = Number(hotelParam);
   const isNew = !roomId;
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const visibleTabs = isOnboardingExecutive ? TABS.filter((item) => item.value !== 'availability') : TABS;
+  const visibleTabs = TABS;
   const requested = searchParams.get('tab');
   const tab = visibleTabs.some((item) => item.value === requested) ? requested : 'details';
   const setTab = (value) => setSearchParams((p) => new URLSearchParams({ ...Object.fromEntries(p), tab: value }), { replace: true });
@@ -61,7 +61,7 @@ export function RoomEditorPage() {
 
   const form = useForm({ resolver: zodResolver(roomFormSchema), defaultValues: EMPTY_ROOM_FORM, mode: 'onTouched' });
   const { handleSubmit, reset, formState } = form;
-  const readOnly = room?.status === 'ARCHIVED';
+  const readOnly = isReviewExecutive || room?.status === 'ARCHIVED';
   const amenitiesDirty = selectedAmenities.slice().sort().join(',') !== savedAmenities.slice().sort().join(',');
 
   const apply = useCallback(
@@ -203,7 +203,8 @@ export function RoomEditorPage() {
         }
       />
 
-      {readOnly && <Alert tone="info" title="Archived">This room type is read-only. Its history is kept.</Alert>}
+      {isReviewExecutive && <Alert tone="info" title="Review mode">Room details, rates, and availability are read-only. Add any concerns in Internal review.</Alert>}
+      {!isReviewExecutive && room?.status === 'ARCHIVED' && <Alert tone="info" title="Archived">This room type is read-only. Its history is kept.</Alert>}
       {codeError && <Alert tone="error" title="Room code unavailable">{codeError}</Alert>}
 
       {!isNew && (
@@ -245,9 +246,7 @@ export function RoomEditorPage() {
                   catalog={catalog}
                   selected={selectedAmenities}
                   disabled={readOnly || saving}
-                  onToggle={(code, checked) =>
-                    setSelectedAmenities((current) => (checked ? [...new Set([...current, code])] : current.filter((c) => c !== code)))
-                  }
+                  onSelectionChange={setSelectedAmenities}
                 />
                 <div className="flex justify-end">
                   <Button onClick={saveAmenities} loading={saving} disabled={readOnly || !amenitiesDirty}>Save amenities</Button>

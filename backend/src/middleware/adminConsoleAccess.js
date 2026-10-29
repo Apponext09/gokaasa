@@ -6,6 +6,7 @@ export const CONSOLE_ROLES = Object.freeze([
   'HOTEL_OWNER',
   'SALES_EXECUTIVE',
   'HOTEL_ONBOARDING_EXECUTIVE',
+  'HOTEL_REVIEW_EXECUTIVE',
 ]);
 
 const SALES_RULES = [
@@ -51,10 +52,34 @@ const ONBOARDING_RULES = [
   ['GET', /^\/room-types\/\d+\/rate-plans$/],
   ['POST', /^\/room-types\/\d+\/rate-plans$/],
   ['PATCH', /^\/rate-plans\/\d+$/],
+  ['GET', /^\/room-types\/\d+\/calendar$/],
+  ['POST', /^\/room-types\/\d+\/calendar\/bulk$/],
+  ['GET', /^\/room-types\/\d+\/blocks$/],
+  ['POST', /^\/room-types\/\d+\/blocks$/],
+  ['DELETE', /^\/availability-blocks\/\d+$/],
   ['POST', /^\/hotel-import\/(?:search|import)$/],
   ['GET', /^\/hotel-import\/(?:jobs|providers)$/],
   ['GET', /^\/hotel-import\/jobs\/\d+(?:\/review)?$/],
   ['POST', /^\/hotel-import\/jobs\/\d+\/discard$/],
+  ['GET', /^\/hotels\/\d+\/review$/],
+  ['POST', /^\/hotels\/\d+\/review\/issues\/\d+\/fix$/],
+];
+
+const REVIEW_RULES = [
+  ['GET', /^\/hotel-reviews$/],
+  ['GET', /^\/hotels\/\d+$/],
+  ['GET', /^\/hotels\/\d+\/room-types$/],
+  ['GET', /^\/room-types\/\d+$/],
+  ['GET', /^\/room-types\/\d+\/rate-plans$/],
+  ['GET', /^\/room-types\/\d+\/calendar$/],
+  ['GET', /^\/room-types\/\d+\/blocks$/],
+  ['GET', /^\/hotels\/\d+\/cancellation-policies$/],
+  ['GET', /^\/hotels\/\d+\/import-history$/],
+  ['GET', /^\/hotel-import\/jobs\/\d+$/],
+  ['GET', /^\/hotels\/\d+\/review$/],
+  ['POST', /^\/hotels\/\d+\/review\/issues$/],
+  ['POST', /^\/hotels\/\d+\/review\/issues\/\d+\/(?:verify|reopen)$/],
+  ['POST', /^\/hotels\/\d+\/review\/(?:request-changes|approve)$/],
 ];
 
 function allowed(rules, req) {
@@ -62,7 +87,7 @@ function allowed(rules, req) {
 }
 
 /**
- * Existing ADMIN/HOTEL_MANAGER/HOTEL_OWNER behavior stays unchanged. The two restricted staff roles
+ * Existing ADMIN/HOTEL_MANAGER/HOTEL_OWNER behavior stays unchanged. Restricted staff roles
  * are allow-listed here before any broad legacy admin route can run, so a hidden link can never turn
  * into accidental API access.
  */
@@ -71,5 +96,6 @@ export function restrictSpecializedStaff(req, _res, next) {
   if (roles.some((role) => ['ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER'].includes(role))) return next();
   if (roles.includes('SALES_EXECUTIVE') && allowed(SALES_RULES, req)) return next();
   if (roles.includes('HOTEL_ONBOARDING_EXECUTIVE') && allowed(ONBOARDING_RULES, req)) return next();
+  if (roles.includes('HOTEL_REVIEW_EXECUTIVE') && allowed(REVIEW_RULES, req)) return next();
   return next(AppError.forbidden());
 }

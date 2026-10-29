@@ -34,7 +34,7 @@ export function GuestContactModal({ open, onClose, onContinue }) {
       onContinue();
     } catch (err) {
       const normalized = normalizeError(err);
-      if (!applyServerFieldErrors(form, err)) setSubmitError(normalized.message);
+      if (!applyServerFieldErrors(form, normalized)) setSubmitError(normalized.message);
     }
   };
 

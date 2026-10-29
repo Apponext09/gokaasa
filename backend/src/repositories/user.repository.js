@@ -63,11 +63,19 @@ export const userRepository = {
        RETURNING id`,
       [email, passwordHash, firstName, lastName, phone ?? null, isGuest],
     );
-    await client.query(
+    const roleAssignment = await client.query(
       `INSERT INTO user_roles (user_id, role_id)
-       SELECT $1, id FROM roles WHERE code = $2`,
+       SELECT $1, id FROM roles WHERE code = $2
+       RETURNING user_id`,
       [rows[0].id, roleCode],
     );
+    // INSERT ... SELECT succeeds with zero rows when a deployment is missing the requested role.
+    // Throwing keeps the surrounding transaction from committing a valid-looking but roleless user.
+    if (roleAssignment.rowCount !== 1) {
+      const error = new Error(`Staff role ${roleCode} is not available`);
+      error.code = 'STAFF_ROLE_NOT_AVAILABLE';
+      throw error;
+    }
     return rows[0].id;
   },
 
@@ -78,6 +86,15 @@ export const userRepository = {
     await client.query(
       `UPDATE users SET password_hash = $2, is_guest = FALSE, updated_at = now() WHERE id = $1`,
       [userId, passwordHash],
+    );
+  },
+
+  async updateEmail(client, userId, email) {
+    await client.query(
+      `UPDATE users
+          SET email = $2, email_verified_at = now(), updated_at = now()
+        WHERE id = $1`,
+      [userId, email],
     );
   },
 

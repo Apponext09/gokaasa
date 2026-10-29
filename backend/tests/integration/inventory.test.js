@@ -555,11 +555,20 @@ describe('14b. overbooking is prevented under concurrency', () => {
 });
 
 describe('room types: amenities and audit', () => {
-  it('stores room amenities and records the change in the audit log', async () => {
+  it('uses the shared catalog while keeping hotel and room selections independent', async () => {
     const roomId = await createRoom(hotelId, { name: 'Amenity Room', roomCode: 'AMN', totalUnits: 1 });
     const res = await request(app).put(`/api/admin/room-types/${roomId}/amenities`).set(bearer(adminToken)).send({ codes: ['AC', 'WIFI'] });
     assert.equal(res.status, 200);
     assert.deepEqual(res.body.roomType.amenities.map((a) => a.code).sort(), ['AC', 'WIFI']);
+
+    // WIFI is selected for both, while AC belongs only to this room. The public room offer must
+    // expose the room's own subset without changing the hotel's independently stored selection.
+    const publicRooms = await availability(hotelId, addDays(D0, 60), addDays(D0, 61));
+    const publicRoom = publicRooms.body.roomTypes.find((item) => item.id === roomId);
+    assert.deepEqual(publicRoom.amenities.map((a) => a.code).sort(), ['AC', 'WIFI']);
+
+    const hotel = await request(app).get(`/api/admin/hotels/${hotelId}`).set(bearer(adminToken));
+    assert.deepEqual(hotel.body.hotel.amenities.map((a) => a.code).sort(), ['WIFI']);
 
     const { rows } = await pool.query(`SELECT action FROM audit_logs WHERE entity = 'room_type' AND entity_id = $1`, [String(roomId)]);
     assert.ok(rows.some((row) => row.action === 'room_type.created'));

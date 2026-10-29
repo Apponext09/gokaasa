@@ -1,5 +1,6 @@
 import { config } from '../config/index.js';
 import { authService } from '../services/auth.service.js';
+import { emailChangeService } from '../services/emailChange.service.js';
 import { refreshCookieOptions, requestMeta, sendSession } from './sessionCookie.js';
 
 export const authController = {
@@ -44,5 +45,31 @@ export const authController = {
   async me(req, res) {
     const user = await authService.getProfile(req.user.id);
     return res.json({ user });
+  },
+
+  async pendingEmailChange(req, res) {
+    const pending = await emailChangeService.pending(req.user.id);
+    return res.json({ pending });
+  },
+
+  async requestEmailChange(req, res) {
+    const pending = await emailChangeService.request(req.user.id, req.validated.body);
+    return res.status(202).json({ pending, message: 'A verification code was sent to your new email address.' });
+  },
+
+  async resendEmailChange(req, res) {
+    const pending = await emailChangeService.resend(req.user.id);
+    return res.status(202).json({ pending, message: 'A new verification code was sent.' });
+  },
+
+  async verifyEmailChange(req, res) {
+    const result = await emailChangeService.verify(req.user.id, req.validated.body.code, { id: req.user.id, ip: req.ip });
+    res.clearCookie(config.auth.refreshCookieName, { ...refreshCookieOptions(), maxAge: undefined });
+    return res.json({ ...result, message: 'Email changed successfully. Please sign in with your new email.' });
+  },
+
+  async cancelEmailChange(req, res) {
+    await emailChangeService.cancel(req.user.id);
+    return res.status(204).end();
   },
 };

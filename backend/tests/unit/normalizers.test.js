@@ -137,6 +137,7 @@ test('a customer-facing location URL satisfies the map-location publish requirem
 test('hotel status machine rejects skipped steps', () => {
   assert.equal(resolveTransition('DRAFT', 'PUBLISH'), null, 'draft cannot go straight to published');
   assert.equal(resolveTransition('DRAFT', 'SUBMIT_FOR_REVIEW'), 'PENDING_REVIEW');
+  assert.equal(resolveTransition('CHANGES_REQUESTED', 'SUBMIT_FOR_REVIEW'), 'PENDING_REVIEW');
   assert.equal(resolveTransition('PENDING_REVIEW', 'MARK_READY'), 'READY_TO_PUBLISH');
   assert.equal(resolveTransition('READY_TO_PUBLISH', 'PUBLISH'), 'PUBLISHED');
   assert.equal(resolveTransition('PUBLISHED', 'UNPUBLISH'), 'UNPUBLISHED');

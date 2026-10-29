@@ -25,7 +25,12 @@ export function describePolicy(policy) {
   if (!policy) return 'Cancellation terms are not set for this rate.';
   if (policy.is_non_refundable) return 'Non-refundable. No refund after booking.';
   const hours = policy.cancellation_deadline_hours;
-  const when = hours == null ? '' : hours % 24 === 0 && hours >= 24 ? `${hours / 24} day(s)` : `${hours} hours`;
+  const days = hours != null && hours % 24 === 0 && hours >= 24 ? hours / 24 : null;
+  const when = hours == null
+    ? ''
+    : days != null
+      ? `${days} ${days === 1 ? 'day' : 'days'}`
+      : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
   if (policy.refund_percent === 100) return `Free cancellation if cancelled at least ${when} before check-in.`;
   if (policy.refund_percent === 0) return 'No refund for cancellations.';
   return `${policy.refund_percent}% refund if cancelled at least ${when} before check-in.`;

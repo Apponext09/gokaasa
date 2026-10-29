@@ -293,7 +293,7 @@ after(async () => {
 });
 
 describe('holds: creation, server-side quote, expiry', () => {
-  it('creates a 15-minute hold with a quote the server computed, and the browser cannot change the price', async () => {
+  it('creates a 5-minute hold with a quote the server computed, and the browser cannot change the price', async () => {
     const res = await request(app)
       .post('/api/booking/holds')
       .set(bearer(guestToken))
@@ -312,7 +312,7 @@ describe('holds: creation, server-side quote, expiry', () => {
     assert.equal(res.status, 201, JSON.stringify(res.body));
     assert.equal(res.body.hold.status, 'HELD');
     assert.equal(res.body.hold.quote.totals.total, NIGHT_TOTAL);
-    assert.ok(res.body.hold.secondsRemaining > 14 * 60 && res.body.hold.secondsRemaining <= 15 * 60, 'expiry follows HOLD_DURATION_MINUTES');
+    assert.ok(res.body.hold.secondsRemaining > 4 * 60 && res.body.hold.secondsRemaining <= 5 * 60, 'expiry follows HOLD_DURATION_MINUTES');
     assert.equal((await holdRow(res.body.hold.id)).status, 'HELD');
   });
 

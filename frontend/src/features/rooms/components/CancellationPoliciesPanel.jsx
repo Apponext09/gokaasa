@@ -146,9 +146,11 @@ export function CancellationPoliciesPanel({ hotelId, disabled }) {
           <CardTitle>Cancellation policies</CardTitle>
           <CardDescription>Reusable terms. Each rate plan points at one policy, so different rates can have different refund rules.</CardDescription>
         </div>
-        <Button size="sm" disabled={disabled} onClick={() => setCreating(true)}>
-          <Plus className="h-4 w-4" aria-hidden="true" /> New policy
-        </Button>
+        {!disabled && (
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus className="h-4 w-4" aria-hidden="true" /> New policy
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-3">
         {error && <Alert tone="error">{error}</Alert>}
@@ -165,12 +167,14 @@ export function CancellationPoliciesPanel({ hotelId, disabled }) {
               <p className="text-sm text-[var(--text-body)]">{policy.summary}</p>
               {policy.description && <p className="text-xs text-[var(--text-muted)]">{policy.description}</p>}
             </div>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm" disabled={disabled} onClick={() => setEditing(policy)}>Edit</Button>
-              <Button variant="danger-outline" size="sm" disabled={disabled} onClick={() => archive(policy)}>
-                <Archive className="h-4 w-4" aria-hidden="true" /> Archive
-              </Button>
-            </div>
+            {!disabled && (
+              <div className="flex gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setEditing(policy)}>Edit</Button>
+                <Button variant="danger-outline" size="sm" onClick={() => archive(policy)}>
+                  <Archive className="h-4 w-4" aria-hidden="true" /> Archive
+                </Button>
+              </div>
+            )}
           </div>
         ))}
       </CardContent>

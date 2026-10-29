@@ -9,6 +9,7 @@ import { createApp } from '../../src/app.js';
 
 const TABLES_TO_CLEAR = [
   'email_deliveries',
+  'email_change_requests',
   'platform_settings',
   'notifications',
   'newsletter_subscribers',
@@ -18,6 +19,9 @@ const TABLES_TO_CLEAR = [
   'hotel_import_logs',
   'hotel_import_jobs',
   'external_hotel_sources',
+  'hotel_review_events',
+  'hotel_review_issues',
+  'hotel_reviews',
   'reviews',
   'wishlists',
   'coupon_usages',
@@ -58,6 +62,48 @@ const TABLES_TO_CLEAR = [
   'users',
 ];
 
+async function seedCatalogMasters(client) {
+  await client.query(`
+    INSERT INTO property_types (code, name, sort_order) VALUES
+      ('HOTEL', 'Hotel', 10), ('RESORT', 'Resort', 20), ('VILLA', 'Villa', 30),
+      ('APARTMENT', 'Apartment', 40), ('HOSTEL', 'Hostel', 50), ('GUEST_HOUSE', 'Guest house', 60)
+    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order, is_active = TRUE
+  `);
+  await client.query(`
+    INSERT INTO room_categories (code, name, sort_order) VALUES
+      ('STANDARD', 'Standard', 10), ('DELUXE', 'Deluxe', 20), ('SUITE', 'Suite', 30),
+      ('FAMILY', 'Family', 40), ('VILLA', 'Villa', 50), ('DORM', 'Dormitory', 60), ('OTHER', 'Other', 70)
+    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order, is_active = TRUE
+  `);
+  await client.query(`
+    INSERT INTO bed_types (code, name, sort_order) VALUES
+      ('KING', 'King', 10), ('QUEEN', 'Queen', 20), ('DOUBLE', 'Double', 30),
+      ('TWIN', 'Twin', 40), ('SINGLE', 'Single', 50), ('SOFA_BED', 'Sofa bed', 60), ('BUNK', 'Bunk', 70)
+    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order, is_active = TRUE
+  `);
+  await client.query(`
+    INSERT INTO image_categories (code, name, sort_order) VALUES
+      ('EXTERIOR', 'Exterior', 10), ('LOBBY', 'Lobby', 20), ('ROOM', 'Room', 30),
+      ('BATHROOM', 'Bathroom', 40), ('RESTAURANT', 'Restaurant', 50), ('POOL', 'Pool', 60),
+      ('GYM', 'Gym', 70), ('SPA', 'Spa', 80), ('OTHER', 'Other', 90)
+    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order, is_active = TRUE
+  `);
+  await client.query(`
+    INSERT INTO meal_plans (code, name, includes_breakfast, includes_lunch, includes_dinner, sort_order) VALUES
+      ('ROOM_ONLY', 'Room only', FALSE, FALSE, FALSE, 10),
+      ('BREAKFAST', 'Breakfast included', TRUE, FALSE, FALSE, 20),
+      ('HALF_BOARD', 'Half board', TRUE, FALSE, TRUE, 30),
+      ('FULL_BOARD', 'Full board', TRUE, TRUE, TRUE, 40)
+    ON CONFLICT (code) DO UPDATE SET
+      name = EXCLUDED.name,
+      includes_breakfast = EXCLUDED.includes_breakfast,
+      includes_lunch = EXCLUDED.includes_lunch,
+      includes_dinner = EXCLUDED.includes_dinner,
+      sort_order = EXCLUDED.sort_order,
+      is_active = TRUE
+  `);
+}
+
 /**
  * Prepares a clean database for integration tests. It refuses to run unless the database name
  * contains "test", so it can never truncate a real environment by accident.
@@ -74,6 +120,9 @@ export async function prepareTestDatabase() {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // TRUNCATE users ... CASCADE also clears every master table with a created_by FK. Restore the
+    // baseline catalog before tests create hotels, rooms, images, or rate plans.
+    await seedCatalogMasters(client);
     await seedAmenities(client);
     // commission_configs is truncated above like any other table, but the platform MUST always have a
     // global default rate (commission.service.js relies on one always existing) -- migration 022 seeds

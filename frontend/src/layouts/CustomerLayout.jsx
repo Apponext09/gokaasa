@@ -25,6 +25,7 @@ import {
 import { FullPageSpinner, Logo } from '@/components/shared/index.jsx';
 import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
+import { StaffViewToggle } from '@/components/shared/StaffViewToggle.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
@@ -1244,7 +1245,7 @@ function Footer() {
 ========================================================= */
 
 export function CustomerLayout() {
-  const { isAuthenticated, status } = useAuth();
+  const { isAuthenticated, isStaff, status } = useAuth();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -1359,6 +1360,11 @@ export function CustomerLayout() {
                   aria-hidden="true"
                 />
               </Link>
+            )}
+
+            {/* Staff preview control belongs with the account actions, not in a second header row. */}
+            {isStaff && (
+              <StaffViewToggle customerMode className="hidden 2xl:inline-flex" />
             )}
 
             {/* Notification */}

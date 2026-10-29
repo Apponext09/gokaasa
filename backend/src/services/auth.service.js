@@ -110,8 +110,10 @@ export const authService = {
     if (existing) {
       const hasRealHistory = !existing.isGuest || (await bookingRepository.hasAnyBooking(existing.id));
       if (hasRealHistory) {
+        const message = 'This email is already registered. Please log in, or use "Forgot password" to access the account.';
         throw AppError.conflict(
-          'An account already exists with this email. Please log in, or use "Forgot password" if you checked out as a guest before.',
+          message,
+          [{ field: 'body.email', message }],
         );
       }
       await userRepository.updateGuestContact(pool, existing.id, {

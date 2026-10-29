@@ -29,6 +29,7 @@ test('homePathFor: canonical destination per role', () => {
   assert.equal(homePathFor({ roles: ['CUSTOMER'] }), '/');
   assert.equal(homePathFor({ roles: ['SALES_EXECUTIVE'] }), '/admin/bookings');
   assert.equal(homePathFor({ roles: ['HOTEL_ONBOARDING_EXECUTIVE'] }), '/admin/hotels');
+  assert.equal(homePathFor({ roles: ['HOTEL_REVIEW_EXECUTIVE'] }), '/admin/hotel-reviews');
 });
 
 test('specialized staff can open only their assigned console areas', () => {
@@ -46,6 +47,12 @@ test('specialized staff can open only their assigned console areas', () => {
   assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms/8'), true);
   assert.equal(canAccessAdminPath(onboarding, '/admin/bookings'), false);
   assert.equal(canAccessAdminPath(onboarding, '/admin/settings'), false);
+
+  const reviewer = { roles: ['HOTEL_REVIEW_EXECUTIVE'] };
+  assert.equal(canAccessAdminPath(reviewer, '/admin/hotel-reviews'), true);
+  assert.equal(canAccessAdminPath(reviewer, '/admin/hotels/35'), true);
+  assert.equal(canAccessAdminPath(reviewer, '/admin/hotels'), false);
+  assert.equal(canAccessAdminPath(reviewer, '/admin/bookings'), false);
 });
 
 // Regression coverage for the intermittent-admin-redirect bug: LoginPage used to prefer

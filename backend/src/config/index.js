@@ -44,7 +44,7 @@ const schema = z.object({
   HOTEL_API_KEY: z.string().optional(),
   IMPORT_JOB_CONCURRENCY: z.coerce.number().int().min(1).max(10).default(2),
 
-  HOLD_DURATION_MINUTES: z.coerce.number().int().min(1).max(120).default(15),
+  HOLD_DURATION_MINUTES: z.coerce.number().int().min(1).max(120).default(5),
   BUSINESS_TIMEZONE: z.string().default('Asia/Kolkata'),
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
