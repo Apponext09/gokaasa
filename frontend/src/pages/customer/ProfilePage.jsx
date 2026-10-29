@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CalendarDays, Heart, Luggage, Mail, ShieldCheck, Tag, UserRound } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { CalendarDays, ChevronRight, Heart, Luggage, Mail, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
 import { Card, Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { PageHeader } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { homePathFor } from '@/features/auth/routing.js';
 import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
+import { setStaffCustomerView } from '@/features/auth/viewMode.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { bookingApi } from '@/services/endpoints.js';
 
@@ -71,6 +73,7 @@ function RecentTripRow({ trip }) {
 
 export function ProfilePage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [upcoming, setUpcoming] = useState(null);
 
   useDocumentMeta({ title: 'My Account | Gokaasa', description: 'Your Gokaasa account and upcoming stays.' });
@@ -147,6 +150,23 @@ export function ProfilePage() {
               <p className="text-sm font-medium capitalize text-[var(--text-strong)]">{user?.roles?.join(', ').toLowerCase()}</p>
             </div>
           </div>
+          {isNonCustomer && (
+            <button
+              type="button"
+              onClick={() => {
+                setStaffCustomerView(false);
+                navigate(homePathFor(user));
+              }}
+              className="flex w-full items-center gap-3 p-5 text-left transition-colors hover:bg-[var(--surface-muted)]"
+            >
+              <Users className="h-5 w-5 text-brand-700" aria-hidden="true" />
+              <div className="flex-1">
+                <p className="text-xs text-[var(--text-muted)]">Browsing</p>
+                <p className="text-sm font-medium text-[var(--text-strong)]">Return to staff workspace</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            </button>
+          )}
         </Card>
         <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet -- contact support if you need a change.</p>
       </section>

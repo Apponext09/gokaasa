@@ -30,7 +30,6 @@ import { Logo } from '@/components/shared/index.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { FullPageSpinner } from '@/components/shared/index.jsx';
 import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
-import { StaffViewToggle } from '@/components/shared/StaffViewToggle.jsx';
 import { AdminCommandPalette } from '@/features/admin/AdminCommandPalette.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { cn } from '@/lib/utils.js';
@@ -258,7 +257,6 @@ export function AdminLayout() {
             <AdminCommandPalette navigation={NAV.map((group) => ({ ...group, items: group.items.filter((item) => canAccessAdminPath(user, item.to)) }))} />
           </div>
           <div className="flex items-center gap-2">
-            <StaffViewToggle className="hidden sm:inline-flex" />
             <span className="hidden rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 lg:inline">{isAdmin ? 'Hotel operations' : isReviewExecutive ? 'Hotel review' : 'My hotels'}</span>
             <NotificationBell />
             <AdminProfileMenu />

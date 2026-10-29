@@ -31,7 +31,16 @@ function withDocuments(profile, documents) {
 export const partnerApplicationService = {
   async register(input) {
     const existing = await userRepository.findByEmail(input.email);
-    if (existing) throw AppError.conflict('An account with this email already exists');
+    if (existing) {
+      // A HOTEL_OWNER account that never completed email verification is not a real duplicate -- it's
+      // an abandoned or SMTP-interrupted attempt (see otpService.issue). Resume it with a fresh code
+      // instead of blocking the applicant behind a 409 they have no way to recover from.
+      if (existing.roles.includes('HOTEL_OWNER') && !existing.emailVerifiedAt) {
+        await otpService.issue(existing, OTP_PURPOSE);
+        return { email: existing.email };
+      }
+      throw AppError.conflict('An account with this email already exists. Please log in, or use a different email to register as a partner.');
+    }
 
     const passwordHash = await bcrypt.hash(input.password, config.auth.bcryptRounds);
     const user = await withTransaction(async (client) => {

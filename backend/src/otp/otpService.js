@@ -5,7 +5,9 @@ import { otpRepository } from '../repositories/otp.repository.js';
 import { hashToken } from '../utils/crypto.js';
 import { emailOtpChannel } from './emailOtpChannel.js';
 import { AppError } from '../utils/AppError.js';
+import { createLogger } from '../utils/logger.js';
 
+const log = createLogger('otp');
 const MINUTE_MS = 60 * 1000;
 
 function generateCode() {
@@ -13,7 +15,13 @@ function generateCode() {
 }
 
 export const otpService = {
-  /** Invalidates any prior unconsumed code for this purpose and issues a fresh one. */
+  /**
+   * Invalidates any prior unconsumed code for this purpose and issues a fresh one. The code is
+   * authoritative in the database the moment this returns; the email is a best-effort delivery of it,
+   * same philosophy as auth.service.js's welcome email. A provider/SMTP failure here must not undo the
+   * registration that already committed, and must not be mistaken for the OTP itself failing to issue --
+   * it is logged for ops and the caller can always get a fresh attempt via resend-otp.
+   */
   async issue(user, purpose) {
     const code = generateCode();
     await withTransaction(async (client) => {
@@ -25,7 +33,11 @@ export const otpService = {
         expiresAt: new Date(Date.now() + config.partner.otpTtlMinutes * MINUTE_MS),
       });
     });
-    await emailOtpChannel.send(user, code, { ttlMinutes: config.partner.otpTtlMinutes });
+    try {
+      await emailOtpChannel.send(user, code, { ttlMinutes: config.partner.otpTtlMinutes });
+    } catch (error) {
+      log.error('failed to deliver OTP email', { userId: user.id, purpose, message: error.message });
+    }
   },
 
   /**
