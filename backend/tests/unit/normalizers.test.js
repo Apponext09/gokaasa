@@ -119,7 +119,19 @@ test('publish blockers list every missing requirement', () => {
     { name: 'A', addressLine: null, city: 'Goa', countryCode: 'IN', latitude: null, longitude: null, description: null, starRating: null },
     { imageCount: 0, amenityCount: 0 },
   );
-  assert.deepEqual(blockers, ['Address', 'Map location', 'Description', 'Star rating', 'At least one image', 'At least one amenity']);
+  assert.deepEqual(blockers, ['Address', 'Map location', 'Description', 'At least one image', 'At least one amenity']);
+});
+
+test('a hotel with no star rating can pass the publish gate', () => {
+  const blockers = getPublishBlockers(
+    {
+      name: 'A', addressLine: '1 Test Road', city: 'Goa', countryCode: 'IN',
+      locationUrl: 'https://maps.app.goo.gl/example', latitude: null, longitude: null,
+      description: 'An unrated hotel', starRating: null,
+    },
+    { imageCount: 1, amenityCount: 1, hasCover: true },
+  );
+  assert.deepEqual(blockers, []);
 });
 
 test('a customer-facing location URL satisfies the map-location publish requirement', () => {

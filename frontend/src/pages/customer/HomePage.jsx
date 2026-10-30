@@ -29,10 +29,8 @@ import {
 import { Reveal } from '@/components/shared/Reveal.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { HeroSection } from '@/features/home/HeroSection.jsx';
-import { QuickAccessNav } from '@/features/nav/QuickAccessNav.jsx';
 import { DestinationCard } from '@/features/home/DestinationCard.jsx';
-import { QuickFilterChips } from '@/features/home/QuickFilterChips.jsx';
-import { ALL_AREAS, CITIES } from '@/features/home/destinations.config.js';
+import { ALL_AREAS } from '@/features/home/destinations.config.js';
 import { useGeolocation } from '@/features/home/useGeolocation.js';
 import { distanceFromCoordinatesKm } from '@/features/hotels/distance.js';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
@@ -502,12 +500,10 @@ export function HomePage() {
   const customerView = !isStaff || isStaffCustomerView();
   const geolocation = useGeolocation({ autoRequest: status !== 'loading' && customerView });
 
-  const [popular, setPopular] = useState(null);
   const [areaDestinations, setAreaDestinations] = useState(null);
   const [stayTypes, setStayTypes] = useState(null);
   const [stats, setStats] = useState(null);
   const [offers, setOffers] = useState(null);
-  const [error, setError] = useState(null);
   const [heroIndex, setHeroIndex] = useState(0);
   const [homepageBackgrounds, setHomepageBackgrounds] = useState(null);
   const [hotelSearch, setHotelSearch] = useState(null);
@@ -543,19 +539,6 @@ export function HomePage() {
     if (!customerView) return undefined;
 
     let cancelled = false;
-
-    discoveryApi
-      .popularDestinations({ limit: 10 })
-      .then((places) => {
-        if (!cancelled) {
-          setPopular(places);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(normalizeError(err).message);
-        }
-      });
 
     discoveryApi
       .stats()
@@ -616,16 +599,6 @@ export function HomePage() {
   }
 
   const extraStats = buildStats(stats);
-  const cityFeatureCards = CITIES.map((city) => {
-    const match = popular?.find((place) => place.destination === city.citySlug);
-    return {
-      ...city,
-      label: match?.label ?? city.name,
-      imageUrl: match?.imageUrl,
-      hotelCount: match?.hotelCount ?? 0,
-    };
-  });
-
   return (
     <div className="customer-home min-h-screen text-[var(--text-body)]">
       <HeroSection
@@ -640,7 +613,6 @@ export function HomePage() {
           }, 0);
         }}
       />
-      <QuickAccessNav />
 
       {/* EXCLUSIVE OFFERS */}
       {offers && offers.length > 0 && (
@@ -755,33 +727,6 @@ export function HomePage() {
           </div>
         </section>
       )}
-
-      <section aria-labelledby="famous-destinations-heading" className="customer-section">
-        <Reveal>
-          <SectionHeading
-            title="Find Your Next Favourite Place"
-            subtitle="From vibrant city escapes to relaxing waterfront stays, explore the best of Mumbai and Navi Mumbai."
-          />
-        </Reveal>
-
-        <div className="famous-dest-cards-grid">
-          {cityFeatureCards.map((city, index) => (
-            <Reveal key={city.id} delay={index * 65} direction="zoom" className="h-full">
-              <DestinationCard
-                variant="feature"
-                label={city.label}
-                description={city.tagline}
-                imageUrl={city.imageUrl}
-                citySlug={city.citySlug}
-                hotelCount={city.hotelCount}
-                className="h-full"
-              />
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      <QuickFilterChips className="mx-auto mb-2 w-[min(71.25rem,calc(100%-3rem))]" />
 
       {/* NEARBY HOTELS */}
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}

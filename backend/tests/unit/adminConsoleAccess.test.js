@@ -52,8 +52,9 @@ test('review executive can review the hotel and inspect rooms and policies witho
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'GET', '/hotels/35/import-history'), 'allowed');
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'GET', '/hotel-import/jobs/91'), 'allowed');
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'GET', '/hotels/35/review'), 'allowed');
-  assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'POST', '/hotels/35/review/issues'), 'allowed');
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'POST', '/hotels/35/review/approve'), 'allowed');
+  assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'POST', '/hotels/35/status'), 'allowed');
+  assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'POST', '/hotels/35/review/issues'), 403);
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'PATCH', '/hotels/35'), 403);
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'POST', '/hotels/35/room-types'), 403);
   assert.equal(decision('HOTEL_REVIEW_EXECUTIVE', 'POST', '/hotels/35/cancellation-policies'), 403);

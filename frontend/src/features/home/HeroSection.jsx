@@ -1,19 +1,11 @@
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
-import { StaggeredReveal } from '@/components/shared/StaggeredReveal.jsx';
-import { ShowcaseCard } from '@/features/home/ShowcaseCard.jsx';
 import { HeroMessageRotator } from '@/features/home/HeroMessageRotator.jsx';
 import { SearchNearMeButton } from '@/features/home/SearchNearMeButton.jsx';
-import { destinationSearchPath } from '@/features/search/searchParams.js';
-
-const PROMO_CARDS = [
-  { title: 'Explore Mumbai', subtitle: "Hidden gems across the city", href: destinationSearchPath('mumbai') },
-  { title: 'Navi Mumbai stays', subtitle: 'Flexible options for every plan', href: destinationSearchPath('navi-mumbai') },
-];
 
 /**
  * The homepage hero: unchanged background-image carousel and floating white search card (owned by
  * HomePage.jsx -- heroSlides/heroIndex stay there since that's also where homepageBackgrounds() is
- * fetched), plus the new rotating quote and floating promo cards. `onSearch` is passed straight through
+ * fetched), plus the rotating quote. `onSearch` is passed straight through
  * to SearchWidget exactly as HomePage.jsx did inline, so the embedded results listing keeps working.
  */
 export function HeroSection({ heroSlides, heroIndex, setHeroIndex, onSearch }) {
@@ -43,13 +35,6 @@ export function HeroSection({ heroSlides, heroIndex, setHeroIndex, onSearch }) {
             <SearchNearMeButton className="mt-4" />
           </div>
 
-          <div className="customer-hero-promos" aria-hidden={PROMO_CARDS.length === 0}>
-            {PROMO_CARDS.map((card, index) => (
-              <StaggeredReveal key={card.title} index={index}>
-                <ShowcaseCard {...card} className="customer-hero-promo-card" />
-              </StaggeredReveal>
-            ))}
-          </div>
         </div>
 
         {heroSlides.length > 1 && (

@@ -29,6 +29,12 @@ test('a shared URL restores the same search after a reload', () => {
   assert.equal(back.get('name'), 'Sea Breeze');
 });
 
+test('the no-rating star category survives URL round trips', () => {
+  const state = parseSearchParams(new URLSearchParams('stars=0,5'));
+  assert.deepEqual(state.filters.stars, [0, 5]);
+  assert.equal(toSearchParams(state).get('stars'), '0,5');
+});
+
 test('clearing name, price and star filters removes them from the next request URL', () => {
   const current = parseSearchParams(new URLSearchParams('checkIn=2026-10-28&checkOut=2026-10-30&occ=2&name=Taj&minPrice=2000&maxPrice=2000&stars=4,5'));
   const cleared = toSearchParams({ ...current, name: null, filters: {}, page: 1 });

@@ -12,13 +12,10 @@ const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 let app;
 let adminToken;
 let onboardingToken;
-let otherOnboardingToken;
 let reviewerToken;
-let reviewerUserId;
 let hotelId;
 let roomId;
 let policyId;
-let issueId;
 
 async function login(email) {
   const response = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
@@ -30,11 +27,9 @@ before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'review.admin@test.gokaasa.com', password: PASSWORD, roleCode: 'ADMIN' });
   await createUserWithRole({ email: 'review.onboarding@test.gokaasa.com', password: PASSWORD, roleCode: 'HOTEL_ONBOARDING_EXECUTIVE' });
-  await createUserWithRole({ email: 'review.other@test.gokaasa.com', password: PASSWORD, roleCode: 'HOTEL_ONBOARDING_EXECUTIVE' });
-  reviewerUserId = await createUserWithRole({ email: 'review.executive@test.gokaasa.com', password: PASSWORD, roleCode: 'HOTEL_REVIEW_EXECUTIVE' });
+  await createUserWithRole({ email: 'review.executive@test.gokaasa.com', password: PASSWORD, roleCode: 'HOTEL_REVIEW_EXECUTIVE' });
   adminToken = await login('review.admin@test.gokaasa.com');
   onboardingToken = await login('review.onboarding@test.gokaasa.com');
-  otherOnboardingToken = await login('review.other@test.gokaasa.com');
   reviewerToken = await login('review.executive@test.gokaasa.com');
 
   const created = await request(app).post('/api/admin/hotels').set(bearer(onboardingToken)).send({
@@ -102,23 +97,13 @@ describe('internal hotel review workflow', () => {
     assert.equal(response.status, 403);
   });
 
-  it('lets an admin assign the review executive', async () => {
-    const response = await request(app).post(`/api/admin/hotels/${hotelId}/review/assign`).set(bearer(adminToken)).send({ reviewerId: reviewerUserId });
-    assert.equal(response.status, 200, JSON.stringify(response.body));
-    assert.equal(response.body.review.assignedReviewerId, reviewerUserId);
-  });
+  it('uses one required comment and sends requested changes to onboarding', async () => {
+    const missingComment = await request(app).post(`/api/admin/hotels/${hotelId}/review/request-changes`).set(bearer(reviewerToken)).send({ summary: '' });
+    assert.equal(missingComment.status, 400);
 
-  it('lets the assigned reviewer add an issue', async () => {
-    const response = await request(app).post(`/api/admin/hotels/${hotelId}/review/issues`).set(bearer(reviewerToken)).send({
-      section: 'IMAGES', severity: 'REQUIRED', comment: 'Replace the blurry lobby photograph.',
+    const response = await request(app).post(`/api/admin/hotels/${hotelId}/review/request-changes`).set(bearer(reviewerToken)).send({
+      summary: '1. Replace the blurry lobby photograph.\n2. Recheck the room price.',
     });
-    assert.equal(response.status, 201, JSON.stringify(response.body));
-    assert.equal(response.body.review.assignedReviewer, 'Test User');
-    issueId = response.body.review.issues[0].id;
-  });
-
-  it('sends requested changes to the submitting onboarding executive', async () => {
-    const response = await request(app).post(`/api/admin/hotels/${hotelId}/review/request-changes`).set(bearer(reviewerToken)).send({ summary: 'Please correct the required image issue.' });
     assert.equal(response.status, 200);
     assert.equal(response.body.review.status, 'CHANGES_REQUESTED');
 
@@ -128,28 +113,27 @@ describe('internal hotel review workflow', () => {
     assert.ok(notices.rows.some((row) => row.type === 'hotel.changes_requested'));
   });
 
-  it('allows only the submitting onboarding executive to mark the issue fixed', async () => {
-    const blocked = await request(app).post(`/api/admin/hotels/${hotelId}/review/issues/${issueId}/fix`).set(bearer(otherOnboardingToken));
-    assert.equal(blocked.status, 403);
-    const fixed = await request(app).post(`/api/admin/hotels/${hotelId}/review/issues/${issueId}/fix`).set(bearer(onboardingToken));
-    assert.equal(fixed.status, 200);
-    assert.equal(fixed.body.review.issues[0].status, 'FIXED_BY_ONBOARDING');
+  it('allows an administrator to make requested hotel changes', async () => {
+    const changed = await request(app).patch(`/api/admin/hotels/${hotelId}`).set(bearer(adminToken)).send({
+      description: 'The administrator updated this hotel after the reviewer requested changes.',
+    });
+    assert.equal(changed.status, 200, JSON.stringify(changed.body));
+    assert.match(changed.body.hotel.description, /administrator updated/i);
   });
 
-  it('resubmits, verifies the fix, approves, and then permits publishing', async () => {
+  it('resubmits, approves, and lets the reviewer publish only after approval', async () => {
     const resubmitted = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
     assert.equal(resubmitted.status, 200);
     assert.equal(resubmitted.body.hotel.status, 'PENDING_REVIEW');
 
-    const verified = await request(app).post(`/api/admin/hotels/${hotelId}/review/issues/${issueId}/verify`).set(bearer(reviewerToken));
-    assert.equal(verified.status, 200);
-    assert.equal(verified.body.review.issues[0].status, 'VERIFIED');
+    const tooEarly = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(reviewerToken)).send({ action: 'PUBLISH' });
+    assert.equal(tooEarly.status, 409);
 
-    const approved = await request(app).post(`/api/admin/hotels/${hotelId}/review/approve`).set(bearer(reviewerToken)).send({ summary: 'All required corrections are verified.' });
+    const approved = await request(app).post(`/api/admin/hotels/${hotelId}/review/approve`).set(bearer(reviewerToken)).send({ summary: 'The corrected hotel is ready.' });
     assert.equal(approved.status, 200, JSON.stringify(approved.body));
     assert.equal(approved.body.review.status, 'APPROVED');
 
-    const published = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'PUBLISH' });
+    const published = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(reviewerToken)).send({ action: 'PUBLISH' });
     assert.equal(published.status, 200, JSON.stringify(published.body));
     assert.equal(published.body.hotel.status, 'PUBLISHED');
   });

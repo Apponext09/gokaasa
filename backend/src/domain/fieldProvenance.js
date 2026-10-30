@@ -60,7 +60,7 @@ export const FIELD_STATUS = Object.freeze({
 });
 
 /** Fields the publish gate needs. Only these are reported as Missing; optional blanks stay quiet. */
-export const PUBLISH_REQUIRED_FIELDS = Object.freeze(['name', 'addressLine', 'city', 'countryCode', 'latitude', 'longitude', 'description', 'starRating']);
+export const PUBLISH_REQUIRED_FIELDS = Object.freeze(['name', 'addressLine', 'city', 'countryCode', 'latitude', 'longitude', 'description']);
 
 export function isEmptyValue(value) {
   return value == null || String(value).trim() === '';

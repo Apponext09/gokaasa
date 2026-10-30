@@ -77,9 +77,8 @@ const REVIEW_RULES = [
   ['GET', /^\/hotels\/\d+\/import-history$/],
   ['GET', /^\/hotel-import\/jobs\/\d+$/],
   ['GET', /^\/hotels\/\d+\/review$/],
-  ['POST', /^\/hotels\/\d+\/review\/issues$/],
-  ['POST', /^\/hotels\/\d+\/review\/issues\/\d+\/(?:verify|reopen)$/],
   ['POST', /^\/hotels\/\d+\/review\/(?:request-changes|approve)$/],
+  ['POST', /^\/hotels\/\d+\/status$/],
 ];
 
 function allowed(rules, req) {

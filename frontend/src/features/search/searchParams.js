@@ -132,7 +132,7 @@ export function parseSearchParams(params) {
   const minPrice = num('minPrice');
   const maxPrice = num('maxPrice');
   const guestRating = [3.5, 4, 4.5].includes(Number(get('guestRating'))) ? Number(get('guestRating')) : undefined;
-  const stars = csvList(get('stars'), oneOf(['1', '2', '3', '4', '5']))?.map(Number).sort((a, b) => a - b);
+  const stars = csvList(get('stars'), oneOf(['0', '1', '2', '3', '4', '5']))?.map(Number).sort((a, b) => a - b);
 
   return {
     destination: slugifyPlace(get('destination') ?? '') || null,

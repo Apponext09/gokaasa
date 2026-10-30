@@ -35,7 +35,7 @@ function renderControl(name, { register, disabled, invalid, ariaDescribedBy, pro
   if (name === 'starRating') {
     return (
       <Select {...common} {...register(name)}>
-        <option value="">Not rated</option>
+        <option value="">No rating</option>
         {[1, 2, 3, 4, 5].map((stars) => (
           <option key={stars} value={stars}>{stars} star</option>
         ))}

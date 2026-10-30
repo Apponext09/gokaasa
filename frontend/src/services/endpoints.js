@@ -102,15 +102,8 @@ export const adminApi = {
   // Internal hotel quality review (separate from guest reviews)
   listHotelReviews: (params) => api.get('/admin/hotel-reviews', { params }).then((r) => r.data),
   hotelReview: (id) => api.get(`/admin/hotels/${id}/review`).then((r) => r.data),
-  hotelReviewers: () => api.get('/admin/hotel-reviewers').then((r) => r.data.reviewers),
-  assignHotelReviewer: (id, reviewerId) => api.post(`/admin/hotels/${id}/review/assign`, { reviewerId }).then((r) => r.data.review),
-  addHotelReviewIssue: (id, body) => api.post(`/admin/hotels/${id}/review/issues`, body).then((r) => r.data.review),
-  fixHotelReviewIssue: (id, issueId) => api.post(`/admin/hotels/${id}/review/issues/${issueId}/fix`).then((r) => r.data.review),
-  verifyHotelReviewIssue: (id, issueId) => api.post(`/admin/hotels/${id}/review/issues/${issueId}/verify`).then((r) => r.data.review),
-  reopenHotelReviewIssue: (id, issueId) => api.post(`/admin/hotels/${id}/review/issues/${issueId}/reopen`).then((r) => r.data.review),
   requestHotelChanges: (id, summary) => api.post(`/admin/hotels/${id}/review/request-changes`, { summary }).then((r) => r.data.review),
   approveHotelReview: (id, summary) => api.post(`/admin/hotels/${id}/review/approve`, { summary }).then((r) => r.data.review),
-  approveAndPublishHotel: (id, summary) => api.post(`/admin/hotels/${id}/review/approve-and-publish`, { summary }).then((r) => r.data.review),
 
   // Hotel manager assignment
   listManagersForHotel: (id) => api.get(`/admin/hotels/${id}/managers`).then((r) => r.data.managers),

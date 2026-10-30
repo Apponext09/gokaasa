@@ -135,7 +135,6 @@ export function normalizeHotel(raw) {
   if (!hotel.addressLine) missing.push('addressLine');
   if (hotel.latitude == null) missing.push('location');
   if (!hotel.description) missing.push('description');
-  if (hotel.starRating == null) missing.push('starRating');
   if (images.length === 0) missing.push('images');
   if (amenityCodes.length === 0) missing.push('amenities');
 

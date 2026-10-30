@@ -20,7 +20,6 @@ const TABLES_TO_CLEAR = [
   'hotel_import_jobs',
   'external_hotel_sources',
   'hotel_review_events',
-  'hotel_review_issues',
   'hotel_reviews',
   'reviews',
   'wishlists',

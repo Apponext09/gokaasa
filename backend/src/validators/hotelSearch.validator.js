@@ -36,7 +36,8 @@ export const hotelSearchQuery = z
     limit: z.coerce.number().int().min(1).max(50).default(20),
     minPrice: z.coerce.number().int().min(0).max(1_000_000).optional(),
     maxPrice: z.coerce.number().int().min(0).max(1_000_000).optional(),
-    stars: csv(z.enum(['1', '2', '3', '4', '5'])),
+    // Zero is the public-search sentinel for hotels that have no star category.
+    stars: csv(z.enum(['0', '1', '2', '3', '4', '5'])),
     guestRating: z.coerce.number().min(0).max(5).optional(),
     propertyTypes: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Unknown property type')),
     amenities: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,40}$/, 'Unknown amenity')),

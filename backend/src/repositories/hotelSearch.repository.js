@@ -135,7 +135,9 @@ export const hotelSearchRepository = {
           WHERE h.deleted_at IS NULL AND h.status = 'PUBLISHED'
             AND ($1::text[] IS NULL OR lower(h.city) = ANY($1::text[]))
             AND ($2::text[] IS NULL OR lower(h.area) = ANY($2::text[]))
-            AND ($3::int[] IS NULL OR h.star_rating = ANY($3::int[]))
+            AND ($3::int[] IS NULL
+              OR h.star_rating = ANY(array_remove($3::int[], 0))
+              OR (0 = ANY($3::int[]) AND h.star_rating IS NULL))
             AND ($4::numeric IS NULL OR COALESCE(h.guest_rating, (
                   SELECT AVG(r.rating) FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED'
                 )) >= $4::numeric)

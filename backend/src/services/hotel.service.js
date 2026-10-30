@@ -24,7 +24,8 @@ import { hotelReviewService } from './hotelReview.service.js';
 const EXPORT_CAP = 5000;
 
 
-// Administrators and onboarding executives own the hotel lifecycle across the hotel catalogue.
+// Review executives may publish only after a review has already moved the hotel to READY_TO_PUBLISH.
+// Administrators and onboarding executives retain the broader catalogue lifecycle.
 const PUBLICATION_ACTIONS = new Set([HOTEL_ACTION.PUBLISH, HOTEL_ACTION.UNPUBLISH, HOTEL_ACTION.ARCHIVE]);
 const ONBOARDING_ACTIONS = new Set([
   HOTEL_ACTION.SAVE_DRAFT,
@@ -268,19 +269,27 @@ export const hotelService = {
   },
 
   async transition(id, action, actor, { feedback = null } = {}) {
+    const reviewerOnly = actor.roles.includes('HOTEL_REVIEW_EXECUTIVE') && !actor.roles.includes('ADMIN');
+    if (reviewerOnly && action !== HOTEL_ACTION.PUBLISH) {
+      throw AppError.forbidden('Review executives can only publish a hotel that is ready to publish');
+    }
     if (action === HOTEL_ACTION.MARK_READY && !actor.roles.includes('ADMIN')) {
       throw AppError.forbidden('Only an approved internal review can mark a hotel ready to publish');
     }
     if (actor.roles.includes('HOTEL_ONBOARDING_EXECUTIVE') && !ONBOARDING_ACTIONS.has(action)) {
       throw AppError.forbidden('Onboarding executives can prepare and publish hotels only');
     }
-    if (PUBLICATION_ACTIONS.has(action) && !actor.roles.some((role) => ['ADMIN', 'HOTEL_ONBOARDING_EXECUTIVE'].includes(role))) {
-      throw AppError.forbidden('Only administrators and onboarding executives can change publication status');
+    const canPublishReady = action === HOTEL_ACTION.PUBLISH && actor.roles.includes('HOTEL_REVIEW_EXECUTIVE');
+    if (PUBLICATION_ACTIONS.has(action) && !actor.roles.some((role) => ['ADMIN', 'HOTEL_ONBOARDING_EXECUTIVE'].includes(role)) && !canPublishReady) {
+      throw AppError.forbidden('You do not have permission to change publication status');
     }
 
     const detail = await withTransaction(async (client) => {
       const hotel = await hotelRepository.findById(id, { client });
       if (!hotel) throw AppError.notFound('Hotel not found');
+      if (reviewerOnly && hotel.status !== 'READY_TO_PUBLISH') {
+        throw AppError.conflict('This hotel must be approved before it can be published');
+      }
 
       const nextStatus = resolveTransition(hotel.status, action);
       if (!nextStatus) {

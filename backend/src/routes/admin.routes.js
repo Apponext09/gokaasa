@@ -102,10 +102,8 @@ import { pool } from '../db/pool.js';
 import { homepageBackgroundController } from '../controllers/homepageBackground.controller.js';
 import { hotelReviewController } from '../controllers/hotelReview.controller.js';
 import {
-  hotelReviewAssignSchema,
+  hotelReviewChangesSchema,
   hotelReviewDecisionSchema,
-  hotelReviewIssueParam,
-  hotelReviewIssueSchema,
   hotelReviewListQuery,
 } from '../validators/hotelReview.validator.js';
 import { z } from 'zod';
@@ -142,16 +140,9 @@ adminRouter.get('/search', validate({ query: adminSearchQuery }), adminSearchCon
 
 // Internal hotel quality review. This is separate from guest ratings/reviews under /reviews.
 adminRouter.get('/hotel-reviews', validate({ query: hotelReviewListQuery }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.list);
-adminRouter.get('/hotel-reviewers', authorize('ADMIN'), hotelReviewController.reviewers);
 adminRouter.get('/hotels/:id/review', validate({ params: idParam }), authorize('ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'), requireHotelReadAccess(hotelIdFromParam), hotelReviewController.detail);
-adminRouter.post('/hotels/:id/review/assign', validate({ params: idParam, body: hotelReviewAssignSchema }), authorize('ADMIN'), hotelReviewController.assign);
-adminRouter.post('/hotels/:id/review/issues', validate({ params: idParam, body: hotelReviewIssueSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.addIssue);
-adminRouter.post('/hotels/:id/review/issues/:issueId/fix', validate({ params: hotelReviewIssueParam }), authorize('ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'HOTEL_ONBOARDING_EXECUTIVE'), hotelReviewController.fixIssue);
-adminRouter.post('/hotels/:id/review/issues/:issueId/verify', validate({ params: hotelReviewIssueParam }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.verifyIssue);
-adminRouter.post('/hotels/:id/review/issues/:issueId/reopen', validate({ params: hotelReviewIssueParam }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.reopenIssue);
-adminRouter.post('/hotels/:id/review/request-changes', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.requestChanges);
+adminRouter.post('/hotels/:id/review/request-changes', validate({ params: idParam, body: hotelReviewChangesSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.requestChanges);
 adminRouter.post('/hotels/:id/review/approve', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.approve);
-adminRouter.post('/hotels/:id/review/approve-and-publish', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN'), hotelReviewController.approveAndPublish);
 
 // Platform master data. Reads and writes are ADMIN-only because every hotel and room uses these values.
 adminRouter.get('/catalogs/:kind', validate({ params: catalogKindParam }), authorize('ADMIN'), catalogController.adminList);
@@ -233,7 +224,7 @@ adminRouter.put(
 adminRouter.post(
   '/hotels/:id/status',
   validate({ params: idParam, body: hotelStatusSchema }),
-  requireHotelAccess(hotelIdFromParam),
+  requireHotelReadAccess(hotelIdFromParam),
   hotelController.transition,
 );
 

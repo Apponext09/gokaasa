@@ -1669,8 +1669,7 @@ body {
   text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
 }
 
-/* Hero two-column split: text+quote left, floating promo cards right (lg+ only). Mobile/tablet keep
-   the original single centered column with the promos hidden, per the "simplify on mobile" rule. */
+/* Hero content is centered on smaller screens and left-aligned on desktop. */
 .customer-hero-split {
   position: relative;
   z-index: 1;
@@ -1678,10 +1677,6 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
-}
-
-.customer-hero-promos {
-  display: none;
 }
 
 .customer-hero-quote {
@@ -1740,16 +1735,6 @@ body {
     margin-inline: 0;
   }
 
-  .customer-hero-promos {
-    display: flex;
-    flex: 0 0 16rem;
-    flex-direction: column;
-    gap: 0.85rem;
-  }
-
-  .customer-hero-promo-card {
-    min-height: 6rem;
-  }
 }
 
 .customer-search-shell {

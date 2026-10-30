@@ -105,7 +105,7 @@ function ValidationSummary({ hotel }) {
  */
 export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null }) {
   const { isAdmin, isOnboardingExecutive, isReviewExecutive } = useAuth();
-  const canPublish = isAdmin || isOnboardingExecutive;
+  const canPublish = isAdmin || isOnboardingExecutive || isReviewExecutive;
   const canManageLifecycle = isAdmin || isOnboardingExecutive;
   const [searchParams, setSearchParams] = useSearchParams();
   const visibleTabs = TABS;
@@ -432,7 +432,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
       </TabPanel>
 
       <TabPanel value="review" current={tab}>
-        <HotelReviewPanel hotelId={hotelId} onStatusChanged={refreshKeepingDraft} />
+        <HotelReviewPanel hotelId={hotelId} publishBlockers={blockers} onStatusChanged={refreshKeepingDraft} />
       </TabPanel>
 
       <TabPanel value="history" current={tab}>
@@ -548,15 +548,15 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
                 <Send className="h-4 w-4" aria-hidden="true" /> Submit for review
               </Button>
             )}
-            {!reviewOnly && <Button
+            <Button
               variant="primary"
-              disabled={!canPublish || readOnly || busy !== null || !PUBLISH_PATH[hotel.status] || (!hasUnsaved && blockers.length > 0)}
+              disabled={!canPublish || busy !== null || !PUBLISH_PATH[hotel.status] || (reviewOnly && hotel.status !== 'READY_TO_PUBLISH') || (!hasUnsaved && blockers.length > 0)}
               loading={busy !== null && PUBLISH_PATH[hotel.status]?.includes(busy)}
               onClick={handlePublish}
               title={!canPublish ? 'You do not have permission to publish' : blockers.length ? `Complete: ${blockers.join(', ')}` : undefined}
             >
               <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Publish
-            </Button>}
+            </Button>
           </div>
         </div>
       </div>

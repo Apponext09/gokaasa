@@ -14,7 +14,7 @@ const GUEST_RATINGS = [
   { value: 3.5, label: "3.5+" },
 ];
 
-const STAR_CATEGORIES = [5, 4, 3, 2, 1];
+const STAR_CATEGORIES = [5, 4, 3, 2, 1, 0];
 
 
 const toggle = (list, value) =>
@@ -230,12 +230,18 @@ export function HotelsFilterPanel({
               onChange={() => set({ stars: toggle(filters.stars, stars).sort((a, b) => a - b) })}
             />
             <span className="flex items-center gap-1.5">
-              {stars} Star
-              <span className="flex items-center">
-                {Array.from({ length: stars }).map((_, i) => (
-                  <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
-                ))}
-              </span>
+              {stars === 0 ? (
+                "No Rating"
+              ) : (
+                <>
+                  {stars} Star
+                  <span className="flex items-center">
+                    {Array.from({ length: stars }).map((_, i) => (
+                      <Star key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+                    ))}
+                  </span>
+                </>
+              )}
             </span>
           </label>
         ))}

@@ -221,6 +221,16 @@ describe('5-7. price, star and amenity filtering', () => {
     assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&stars=3,4`)), [ids.garden]);
   });
 
+  it('filters hotels with no star rating, including alongside rated categories', async () => {
+    await pool.query(`UPDATE hotels SET star_rating = NULL WHERE id = $1`, [ids.garden]);
+    try {
+      assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&stars=0`)), [ids.garden]);
+      assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&stars=0,5`)), [ids.seaBreeze, ids.garden]);
+    } finally {
+      await pool.query(`UPDATE hotels SET star_rating = 3 WHERE id = $1`, [ids.garden]);
+    }
+  });
+
   it('requires every selected amenity', async () => {
     assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&amenities=POOL`)), [ids.seaBreeze]);
     assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&amenities=WIFI,POOL`)), [ids.seaBreeze]);

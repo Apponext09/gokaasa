@@ -13,7 +13,6 @@ export function getPublishBlockers(hotel, { imageCount, amenityCount, hasCover =
   // Manual hotels provide a customer-facing map URL; older/imported hotels may still provide coordinates.
   if (!hotel.locationUrl && (hotel.latitude == null || hotel.longitude == null)) blockers.push('Map location');
   if (!hotel.description) blockers.push('Description');
-  if (hotel.starRating == null) blockers.push('Star rating');
   if (imageCount === 0) blockers.push('At least one image');
   // The cover is always an explicit choice. Gokaasa never promotes the first image automatically.
   else if (!hasCover) blockers.push('Cover image');
