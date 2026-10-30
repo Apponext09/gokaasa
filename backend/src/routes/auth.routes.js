@@ -8,6 +8,7 @@ import {
   emailChangeRequestSchema,
   emailChangeVerifySchema,
   guestCheckoutSchema,
+  googleAuthSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
@@ -20,6 +21,7 @@ export const authRouter = Router();
 authRouter.post('/register', authLimiter, validate({ body: registerSchema }), authController.register);
 authRouter.post('/guest-checkout', authLimiter, validate({ body: guestCheckoutSchema }), authController.guestCheckout);
 authRouter.post('/login', authLimiter, validate({ body: loginSchema }), authController.login);
+authRouter.post('/google', authLimiter, validate({ body: googleAuthSchema }), authController.googleLogin);
 authRouter.post('/refresh', authController.refresh);
 authRouter.post('/logout', authController.logout);
 authRouter.post('/forgot-password', authLimiter, validate({ body: forgotPasswordSchema }), authController.forgotPassword);

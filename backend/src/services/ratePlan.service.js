@@ -73,6 +73,7 @@ export const ratePlanService = {
         discount_percent: input.discountPercent,
         tax_percent: input.taxPercent,
         fee_minor: input.feeMinor,
+        base_price_minor: input.basePriceMinor ?? null,
         status: input.status ?? 'ACTIVE',
       });
       await auditService.record(client, {
@@ -121,11 +122,13 @@ export const ratePlanService = {
         discountPercent: 'discount_percent',
         taxPercent: 'tax_percent',
         feeMinor: 'fee_minor',
+        basePriceMinor: 'base_price_minor',
         status: 'status',
       };
       for (const [key, column] of Object.entries(map)) {
         if (input[key] !== undefined) changes[column] = input[key];
       }
+      if (input.basePriceMinor !== undefined) changes.pricing_review_required = false;
       await ratePlanRepository.update(client, planId, changes);
 
       const pricingChanged = ['discount_percent', 'tax_percent', 'fee_minor'].some(

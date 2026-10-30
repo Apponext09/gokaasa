@@ -42,10 +42,10 @@ async function policiesFor(hotelId) {
   return Object.fromEntries(res.body.policies.map((p) => [p.code, p]));
 }
 
-async function roomWithPlans(hotelId, { name, roomCode, maxAdults = 2, maxChildren = 1, maxOccupancy = 3, units = 4, plans, closedNight }) {
+async function roomWithPlans(hotelId, { name, roomCode, maxAdults = 2, maxChildren = 1, maxOccupancy = 3, units = 4, status = 'ACTIVE', plans }) {
   const policies = await policiesFor(hotelId);
   const room = await request(app).post(`/api/admin/hotels/${hotelId}/room-types`).set(bearer(adminToken)).send({
-    name, roomCode, category: 'DELUXE', bedCount: 1, maxAdults, maxChildren, maxOccupancy, smoking: 'NON_SMOKING', totalUnits: units,
+    name, roomCode, category: 'DELUXE', bedCount: 1, maxAdults, maxChildren, maxOccupancy, smoking: 'NON_SMOKING', totalUnits: units, status,
   });
   assert.equal(room.status, 201, JSON.stringify(room.body));
   const roomId = room.body.roomType.id;
@@ -68,9 +68,6 @@ async function roomWithPlans(hotelId, { name, roomCode, maxAdults = 2, maxChildr
       .post(`/api/admin/room-types/${roomId}/calendar/bulk`)
       .set(bearer(adminToken))
       .send({ from: D0, to: addDays(D0, 1), ratePlanId: res.body.ratePlan.id, basePriceMinor: plan.price });
-  }
-  if (closedNight) {
-    await request(app).post(`/api/admin/room-types/${roomId}/calendar/bulk`).set(bearer(adminToken)).send({ from: closedNight, to: closedNight, isClosed: true });
   }
   return { roomId, planIds };
 }
@@ -119,10 +116,10 @@ before(async () => {
   ids.pune = await publishedHotel({ name: 'Pune Lodge', city: 'Pune', starRating: 4, amenities: ['WIFI'], guestRating: 4.6, reviewCount: 40 });
   await roomWithPlans(ids.pune, { name: 'Lodge Room', roomCode: 'LR', plans: [{ code: 'RO', name: 'Room only', mealPlan: 'ROOM_ONLY', isRefundable: true, policy: 'FREE_CANCELLATION', price: 400000 }] });
 
-  // Closed on the second night: searchable, but not sellable for these dates.
+  // Inactive rooms are hidden and not sellable for every date.
   ids.closed = await publishedHotel({ name: 'Closed Night Inn', city: 'Mumbai', starRating: 2, amenities: ['WIFI'] });
   await roomWithPlans(ids.closed, {
-    name: 'Closed Room', roomCode: 'CR', units: 3, closedNight: addDays(D0, 1),
+    name: 'Closed Room', roomCode: 'CR', units: 3, status: 'INACTIVE',
     plans: [{ code: 'RO', name: 'Room only', mealPlan: 'ROOM_ONLY', isRefundable: true, policy: 'FREE_CANCELLATION', price: 300000 }],
   });
 
@@ -158,15 +155,26 @@ describe('1-3. published-only results, destinations and date filtering', () => {
     assert.equal(unknown.body.pagination.total, 0);
   });
 
-  it('returns nothing for dates with no prices', async () => {
+  it('uses the permanent rate-plan price for future dates', async () => {
     const far = addDays(D0, 60);
     const res = await search(`checkIn=${far}&checkOut=${addDays(far, 2)}&destination=mumbai`);
-    assert.equal(res.body.pagination.total, 0);
+    assert.ok(res.body.pagination.total > 0);
   });
 
-  it('excludes a hotel whose room is closed on a night of the stay', async () => {
+  it('keeps a published hotel visible when its only room is inactive', async () => {
     const res = await search(`${stayParams}&destination=mumbai&stars=2`);
-    assert.equal(res.body.pagination.total, 0, 'closed on the second night means no bookable stay');
+    assert.equal(res.body.pagination.total, 1);
+    assert.equal(res.body.items[0].id, ids.closed);
+    assert.equal(res.body.items[0].available, false);
+    assert.equal(res.body.items[0].availabilityStatus, 'NO_ACTIVE_ROOM');
+    assert.equal(res.body.items[0].bestOffer, null, 'inactive rooms are visible but never offered for booking');
+  });
+
+  it('finds an unavailable published hotel by its exact name', async () => {
+    const res = await search(`${stayParams}&name=${encodeURIComponent('  closed NIGHT inn  ')}`);
+    assert.equal(res.body.pagination.total, 1);
+    assert.equal(res.body.items[0].id, ids.closed);
+    assert.equal(res.body.items[0].availabilityStatus, 'NO_ACTIVE_ROOM');
   });
 
   it('rejects past check-in dates', async () => {
@@ -176,21 +184,89 @@ describe('1-3. published-only results, destinations and date filtering', () => {
 });
 
 describe('4. occupancy filtering', () => {
-  it('fits three adults only in the family room', async () => {
+  it('marks hotels whose rooms cannot fit the requested occupancy instead of hiding them', async () => {
     const res = await search(`${stayParams}&destination=mumbai&occ=3`);
-    assert.deepEqual(idsOf(res), [ids.garden]);
+    assert.equal(res.body.items[0].id, ids.garden);
+    assert.equal(res.body.items[0].available, true);
+    assert.equal(res.body.items.find((hotel) => hotel.id === ids.seaBreeze).availabilityStatus, 'OCCUPANCY_NOT_SUPPORTED');
+    assert.equal(res.body.items.find((hotel) => hotel.id === ids.closed).availabilityStatus, 'NO_ACTIVE_ROOM');
   });
 
   it('fits children against the room limits', async () => {
     const two = await search(`${stayParams}&destination=mumbai&occ=2-7.12`);
-    assert.deepEqual(idsOf(two), [ids.garden], 'two children only fit the family room');
+    assert.equal(two.body.items[0].id, ids.garden, 'two children only fit the family room, so it ranks first');
+    assert.equal(two.body.items.find((hotel) => hotel.id === ids.seaBreeze).availabilityStatus, 'OCCUPANCY_NOT_SUPPORTED');
     const one = await search(`${stayParams}&destination=mumbai&occ=2-7`);
     assert.equal(idsOf(one).includes(ids.seaBreeze), true);
   });
 
-  it('treats each room separately and runs out when rooms are sold out', async () => {
+  it('keeps sold-out hotels visible but marks them unavailable', async () => {
     const three = await search(`${stayParams}&destination=mumbai&occ=1|1|1`);
-    assert.deepEqual(idsOf(three), [ids.seaBreeze], 'Garden Stay has only two rooms');
+    assert.deepEqual(idsOf(three), [ids.seaBreeze, ids.garden, ids.closed], 'available hotels rank before unavailable hotels');
+    const garden = three.body.items.find((hotel) => hotel.id === ids.garden);
+    assert.equal(garden.available, false);
+    assert.equal(garden.availabilityStatus, 'SOLD_OUT');
+    assert.equal(garden.bestOffer.roomsLeft, 2);
+  });
+
+  it('keeps a hotel visible to other users while its last rooms are on hold, then restores booking after release', async () => {
+    const held = await request(app)
+      .post('/api/booking/holds')
+      .set(bearer(customerToken))
+      .send({
+        hotelId: ids.garden,
+        roomTypeId: ids.gardenRoom.roomId,
+        ratePlanId: ids.gardenRoom.planIds.NR,
+        checkIn: D0,
+        checkOut: CHECK_OUT,
+        rooms: 2,
+        occupancy: [{ adults: 1, childAges: [] }, { adults: 1, childAges: [] }],
+      });
+    assert.equal(held.status, 201, JSON.stringify(held.body));
+
+    const during = await search(`${stayParams}&destination=mumbai`);
+    const temporarilyHeld = during.body.items.find((hotel) => hotel.id === ids.garden);
+    assert.ok(temporarilyHeld, 'the hotel remains visible to another user');
+    assert.equal(temporarilyHeld.available, false);
+    assert.equal(temporarilyHeld.availabilityStatus, 'TEMPORARILY_HELD');
+    assert.ok(new Date(temporarilyHeld.retryAt).getTime() > Date.now());
+
+    const released = await request(app)
+      .post(`/api/booking/holds/${held.body.hold.id}/release`)
+      .set(bearer(customerToken));
+    assert.equal(released.status, 200, JSON.stringify(released.body));
+
+    const after = await search(`${stayParams}&destination=mumbai`);
+    const availableAgain = after.body.items.find((hotel) => hotel.id === ids.garden);
+    assert.equal(availableAgain.available, true);
+    assert.equal(availableAgain.availabilityStatus, 'AVAILABLE');
+  });
+
+  it('restores availability immediately when a hold expires, without waiting for a cleanup worker', async () => {
+    const held = await request(app)
+      .post('/api/booking/holds')
+      .set(bearer(customerToken))
+      .send({
+        hotelId: ids.garden,
+        roomTypeId: ids.gardenRoom.roomId,
+        ratePlanId: ids.gardenRoom.planIds.NR,
+        checkIn: D0,
+        checkOut: CHECK_OUT,
+        rooms: 2,
+        occupancy: [{ adults: 1, childAges: [] }, { adults: 1, childAges: [] }],
+      });
+    assert.equal(held.status, 201, JSON.stringify(held.body));
+
+    await pool.query(`UPDATE booking_holds SET expires_at = now() - interval '1 second' WHERE id = $1`, [held.body.hold.id]);
+    await pool.query(`UPDATE inventory_reservations SET expires_at = now() - interval '1 second' WHERE hold_id = $1`, [held.body.hold.id]);
+
+    const afterExpiry = await search(`${stayParams}&destination=mumbai`);
+    const availableAgain = afterExpiry.body.items.find((hotel) => hotel.id === ids.garden);
+    assert.equal(availableAgain.available, true);
+    assert.equal(availableAgain.availabilityStatus, 'AVAILABLE');
+
+    const stored = await pool.query(`SELECT status FROM booking_holds WHERE id = $1`, [held.body.hold.id]);
+    assert.equal(stored.rows[0].status, 'HELD', 'search uses expires_at directly; cleanup can finalize status later');
   });
 
   it('rejects impossible occupancy with a field error', async () => {
@@ -255,17 +331,17 @@ describe('5-7. price, star and amenity filtering', () => {
 describe('8-11. sorting, pagination, hotel details and availability', () => {
   it('sorts on the backend by price, rating and stars', async () => {
     const asc = idsOf(await search(`${stayParams}&destination=mumbai&sort=price_asc`));
-    assert.deepEqual(asc, [ids.garden, ids.seaBreeze]);
+    assert.deepEqual(asc, [ids.garden, ids.seaBreeze, ids.closed]);
     const desc = idsOf(await search(`${stayParams}&destination=mumbai&sort=price_desc`));
-    assert.deepEqual(desc, [ids.seaBreeze, ids.garden]);
-    assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&sort=guest_rating`)), [ids.seaBreeze, ids.garden]);
-    assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&sort=star_rating`)), [ids.seaBreeze, ids.garden]);
+    assert.deepEqual(desc, [ids.seaBreeze, ids.garden, ids.closed]);
+    assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&sort=guest_rating`)), [ids.seaBreeze, ids.garden, ids.closed]);
+    assert.deepEqual(idsOf(await search(`${stayParams}&destination=mumbai&sort=star_rating`)), [ids.seaBreeze, ids.garden, ids.closed]);
   });
 
   it('paginates with a true total', async () => {
     const first = await search(`${stayParams}&destination=mumbai&sort=price_asc&limit=1&page=1`);
-    assert.equal(first.body.pagination.total, 2);
-    assert.equal(first.body.pagination.totalPages, 2);
+    assert.equal(first.body.pagination.total, 3);
+    assert.equal(first.body.pagination.totalPages, 3);
     assert.deepEqual(idsOf(first), [ids.garden]);
     const second = await search(`${stayParams}&destination=mumbai&sort=price_asc&limit=1&page=2`);
     assert.deepEqual(idsOf(second), [ids.seaBreeze]);
@@ -322,37 +398,32 @@ describe('8-11. sorting, pagination, hotel details and availability', () => {
     assert.equal(room.availableRooms, 2);
   });
 
-  it('shows an unavailable hotel detail for a hotel with no bookable room on those dates', async () => {
+  it('keeps an active room bookable outside the retired rate-calendar range', async () => {
     const far = addDays(D0, 80);
     const res = await request(app).get(`/api/hotels/${ids.seaBreeze}/availability?checkIn=${far}&checkOut=${addDays(far, 1)}&occ=2`);
     assert.equal(res.status, 200);
-    assert.equal(res.body.roomTypes.every((room) => !room.available), true);
+    assert.equal(res.body.roomTypes.some((room) => room.name === 'Sea Deluxe' && room.available), true);
   });
 });
 
-describe('19. publication status is independent of date-specific availability', () => {
-  // Every fixture hotel only has rate/inventory rows around D0 (30 days out) -- none have rows for
-  // TODAY. That gap is exactly the scenario this section guards: a hotel's rate calendar running out
-  // (or never having covered a given date) must affect bookability for that date, never the hotel's
-  // publication/discoverability.
-  it('keeps a published hotel\'s own detail page reachable for dates outside its configured rate calendar', async () => {
+describe('19. publication and booking no longer depend on a date-specific rate calendar', () => {
+  it('keeps a published hotel\'s own detail page reachable without calendar rows', async () => {
     const res = await request(app).get('/api/hotels/sea-breeze-mumbai');
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.hotel.name, 'Sea Breeze');
   });
 
-  it('still lists a published hotel in general (non-dated) discovery when it has no inventory for today', async () => {
+  it('still lists a published hotel in general discovery', async () => {
     const res = await request(app).get('/api/hotels/handpicked?limit=24');
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.ok(res.body.items.some((item) => item.id === ids.seaBreeze), 'a published hotel with no rows for today must still be discoverable');
+    assert.ok(res.body.items.some((item) => item.id === ids.seaBreeze));
   });
 
-  it('excludes the same hotel only from a date-specific search for dates it has no bookable room on, without touching its publication', async () => {
+  it('includes the same active room for dates without legacy calendar rows', async () => {
     const res = await search(`checkIn=${TODAY}&checkOut=${addDays(TODAY, 2)}&destination=mumbai`);
     assert.equal(res.status, 200);
-    assert.equal(idsOf(res).includes(ids.seaBreeze), false, 'no rate_prices/room_inventory rows exist for these dates, so it is correctly absent from a dated search');
+    assert.equal(idsOf(res).includes(ids.seaBreeze), true, 'active rooms use permanent price and capacity');
 
-    // The same hotel, same (still PUBLISHED) status, is fully bookable again for the dates it does have rows for.
     const bookable = await search(stayParams);
     assert.ok(idsOf(bookable).includes(ids.seaBreeze));
   });

@@ -1,11 +1,9 @@
 import { SearchWidget } from '@/features/search/components/SearchWidget.jsx';
-import { HeroMessageRotator } from '@/features/home/HeroMessageRotator.jsx';
-import { SearchNearMeButton } from '@/features/home/SearchNearMeButton.jsx';
 
 /**
  * The homepage hero: unchanged background-image carousel and floating white search card (owned by
  * HomePage.jsx -- heroSlides/heroIndex stay there since that's also where homepageBackgrounds() is
- * fetched), plus the rotating quote. `onSearch` is passed straight through
+ * fetched). `onSearch` is passed straight through
  * to SearchWidget exactly as HomePage.jsx did inline, so the embedded results listing keeps working.
  */
 export function HeroSection({ heroSlides, heroIndex, setHeroIndex, onSearch }) {
@@ -29,10 +27,9 @@ export function HeroSection({ heroSlides, heroIndex, setHeroIndex, onSearch }) {
 
         <div className="customer-hero-split">
           <div className="customer-hero-content">
-            <h1>Your Next Getaway, Made Easy.</h1>
-            <p>Discover handpicked stays and enjoy a smoother journey with Gokaasa.</p>
-            <HeroMessageRotator className="mt-3" />
-            <SearchNearMeButton className="mt-4" />
+            {heroSlides[heroIndex]?.heroText && (
+              <h1 key={heroSlides[heroIndex].src}>{heroSlides[heroIndex].heroText}</h1>
+            )}
           </div>
 
         </div>

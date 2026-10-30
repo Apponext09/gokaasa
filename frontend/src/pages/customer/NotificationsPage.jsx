@@ -55,7 +55,7 @@ export function NotificationsPage() {
 
       {error && <p role="alert" className="text-sm text-danger-600">{error}</p>}
 
-      <Card className="overflow-hidden">
+      <Card className="admin-records-card overflow-hidden">
         {data === null && !error ? (
           <div className="space-y-3 p-5">{[0, 1, 2].map((row) => <Skeleton key={row} className="h-16 w-full" />)}</div>
         ) : data?.items.length === 0 ? (

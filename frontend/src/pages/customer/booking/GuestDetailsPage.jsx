@@ -15,6 +15,7 @@ import { useHold } from '@/features/booking/useHold.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 import { bookingApi } from '@/services/endpoints.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 
 /** Step 3 of the booking: the lead guest's contact details and every guest's name and age, room by room. */
 export function GuestDetailsPage() {
@@ -88,6 +89,7 @@ export function GuestDetailsPage() {
 }
 
 function GuestForm({ hold, onSaved, onExpired }) {
+  const { user } = useAuth();
   const occupancy = hold.quote.stay.occupancy;
   const schema = useMemo(() => buildGuestFormSchema(), []);
   const form = useForm({
@@ -95,9 +97,95 @@ function GuestForm({ hold, onSaved, onExpired }) {
     defaultValues: defaultGuestValues(occupancy, hold.guestDetails),
     mode: 'onBlur',
   });
-  const { register, handleSubmit, formState } = form;
+  const { register, handleSubmit, formState, setValue, getValues, clearErrors } = form;
   const { errors, isSubmitting } = formState;
   const [submitError, setSubmitError] = useState(null);
+
+  const userProfile = useMemo(() => {
+    if (!user) return null;
+    const firstName = user.firstName || (user.name ? user.name.split(' ')[0] : '') || '';
+    const lastName = user.lastName || (user.name ? user.name.split(' ').slice(1).join(' ') : '') || '';
+    const email = user.email || '';
+    const mobile = user.phone || '';
+    return { firstName, lastName, email, mobile };
+  }, [user]);
+
+  // Determine initial selection: if saved contact exists and its email differs from logged-in user, default to 'someone_else'.
+  const initialBookingFor = useMemo(() => {
+    const savedContact = hold.guestDetails?.primaryContact;
+    if (savedContact?.email && userProfile?.email) {
+      if (savedContact.email.trim().toLowerCase() !== userProfile.email.trim().toLowerCase()) {
+        return 'someone_else';
+      }
+    }
+    return 'myself';
+  }, [hold.guestDetails, userProfile]);
+
+  const [bookingFor, setBookingFor] = useState(initialBookingFor);
+  const [someoneElseDraft, setSomeoneElseDraft] = useState(() => {
+    const savedContact = hold.guestDetails?.primaryContact;
+    if (savedContact?.email && userProfile?.email && savedContact.email.trim().toLowerCase() !== userProfile.email.trim().toLowerCase()) {
+      return {
+        firstName: savedContact.firstName || '',
+        lastName: savedContact.lastName || '',
+        email: savedContact.email || '',
+        mobile: savedContact.mobile || '',
+      };
+    }
+    return { firstName: '', lastName: '', email: '', mobile: '' };
+  });
+
+  // On mount or when user profile becomes ready: if in 'myself' mode and fields are empty, auto-fill profile details
+  useEffect(() => {
+    if (bookingFor === 'myself' && userProfile) {
+      const currentValues = getValues('primaryContact');
+      const isBlank = !currentValues?.firstName && !currentValues?.email;
+      if (isBlank) {
+        if (userProfile.firstName) setValue('primaryContact.firstName', userProfile.firstName, { shouldValidate: true });
+        if (userProfile.lastName) setValue('primaryContact.lastName', userProfile.lastName, { shouldValidate: true });
+        if (userProfile.email) setValue('primaryContact.email', userProfile.email, { shouldValidate: true });
+        if (userProfile.mobile) setValue('primaryContact.mobile', userProfile.mobile, { shouldValidate: true });
+      }
+    }
+  }, [userProfile, bookingFor, setValue, getValues]);
+
+  const handleSelectBookingFor = (choice) => {
+    if (choice === bookingFor) return;
+
+    if (choice === 'myself') {
+      // Save current input before switching so it's not lost
+      const current = getValues('primaryContact');
+      setSomeoneElseDraft({
+        firstName: current?.firstName || '',
+        lastName: current?.lastName || '',
+        email: current?.email || '',
+        mobile: current?.mobile || '',
+      });
+
+      setBookingFor('myself');
+      clearErrors(['primaryContact.firstName', 'primaryContact.lastName', 'primaryContact.email', 'primaryContact.mobile']);
+
+      if (userProfile) {
+        setValue('primaryContact.firstName', userProfile.firstName || '', { shouldValidate: true, shouldDirty: true });
+        setValue('primaryContact.lastName', userProfile.lastName || '', { shouldValidate: true, shouldDirty: true });
+        setValue('primaryContact.email', userProfile.email || '', { shouldValidate: true, shouldDirty: true });
+        setValue('primaryContact.mobile', userProfile.mobile || '', { shouldValidate: true, shouldDirty: true });
+      }
+    } else {
+      setBookingFor('someone_else');
+      clearErrors(['primaryContact.firstName', 'primaryContact.lastName', 'primaryContact.email', 'primaryContact.mobile']);
+
+      // Restore previously typed someone-else details, or blank
+      setValue('primaryContact.firstName', someoneElseDraft.firstName || '', { shouldValidate: false, shouldDirty: true });
+      setValue('primaryContact.lastName', someoneElseDraft.lastName || '', { shouldValidate: false, shouldDirty: true });
+      setValue('primaryContact.email', someoneElseDraft.email || '', { shouldValidate: false, shouldDirty: true });
+      setValue('primaryContact.mobile', someoneElseDraft.mobile || '', { shouldValidate: false, shouldDirty: true });
+
+      setTimeout(() => {
+        document.getElementById('pc-first')?.focus();
+      }, 50);
+    }
+  };
 
   const submit = async (values) => {
     setSubmitError(null);
@@ -122,6 +210,60 @@ function GuestForm({ hold, onSaved, onExpired }) {
         <div>
           <h2 className="text-base font-semibold text-[var(--text-strong)]">Lead guest</h2>
           <p className="text-sm text-[var(--text-muted)]">Booking confirmations and important updates go to this person.</p>
+        </div>
+
+        {/* Simple radio selector matching screenshot */}
+        <div className="space-y-2 pt-1 pb-1">
+          <p className="text-sm font-bold text-[var(--text-strong)]">
+            I am booking for
+          </p>
+          <div className="flex items-center gap-6" role="radiogroup" aria-label="I am booking for">
+            <label className="group inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--text-strong)] select-none">
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                  bookingFor === 'myself'
+                    ? 'border-[#0084ff] bg-white ring-1 ring-[#0084ff]'
+                    : 'border-zinc-400 group-hover:border-zinc-600'
+                }`}
+              >
+                {bookingFor === 'myself' && (
+                  <span className="h-2 w-2 rounded-full bg-[#0084ff]" />
+                )}
+              </span>
+              <input
+                type="radio"
+                name="bookingFor"
+                value="myself"
+                checked={bookingFor === 'myself'}
+                onChange={() => handleSelectBookingFor('myself')}
+                className="sr-only"
+              />
+              <span>Myself</span>
+            </label>
+
+            <label className="group inline-flex items-center gap-2 cursor-pointer text-sm font-medium text-[var(--text-strong)] select-none">
+              <span
+                className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${
+                  bookingFor === 'someone_else'
+                    ? 'border-[#0084ff] bg-white ring-1 ring-[#0084ff]'
+                    : 'border-zinc-400 group-hover:border-zinc-600'
+                }`}
+              >
+                {bookingFor === 'someone_else' && (
+                  <span className="h-2 w-2 rounded-full bg-[#0084ff]" />
+                )}
+              </span>
+              <input
+                type="radio"
+                name="bookingFor"
+                value="someone_else"
+                checked={bookingFor === 'someone_else'}
+                onChange={() => handleSelectBookingFor('someone_else')}
+                className="sr-only"
+              />
+              <span>Someone Else</span>
+            </label>
+          </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField id="pc-first" label="First name" error={errors.primaryContact?.firstName?.message}>

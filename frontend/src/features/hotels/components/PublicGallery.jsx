@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button.jsx';
 import { cn } from '@/lib/utils.js';
 import { isIllustrativeImage } from '@/features/hotels/imageDisclaimer.js';
 
-function IllustrativeTag() {
+function ImageCategoryTag({ image }) {
+  const label = image?.categoryName || (image?.category ? image.category.charAt(0).toUpperCase() + image.category.slice(1).toLowerCase().replaceAll('_', ' ') : null);
+  if (!label && !isIllustrativeImage(image)) return null;
   return (
     <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white/90">
-      Illustrative image
+      {label || 'Illustrative image'}
     </span>
   );
 }
@@ -91,7 +93,7 @@ export function PublicGallery({ images, name, compact = false }) {
           {images.map((image, i) => (
             <button key={image.url + i} type="button" onClick={() => setIndex(i)} className="relative aspect-[16/10] w-full shrink-0 snap-center sm:aspect-[4/3]" aria-label={`Open photo ${i + 1} of ${count}`}>
               <SafeImage src={image.url} alt={image.altText ?? name} eager={i === 0} className="h-full w-full" sizes="100vw" fallbackLabel={`${name}: photo ${i + 1}`} />
-              {isIllustrativeImage(image) && <IllustrativeTag />}
+              <ImageCategoryTag image={image} />
             </button>
           ))}
         </div>
@@ -112,7 +114,7 @@ export function PublicGallery({ images, name, compact = false }) {
           aria-label={`Open photo ${hero.imageIndex + 1} of ${count}`}
         >
           <SafeImage src={hero.image.url} alt={hero.image.altText ?? name} eager className="h-full w-full" sizes="50vw" fallbackLabel={`${name}: main photo`} />
-          {isIllustrativeImage(hero.image) && <IllustrativeTag />}
+          <ImageCategoryTag image={hero.image} />
         </button>
         {gridImages.map(({ image, imageIndex }, i) => {
           const isLast = i === gridImages.length - 1 && remaining > 0;
@@ -130,7 +132,7 @@ export function PublicGallery({ images, name, compact = false }) {
               aria-label={`Open photo ${imageIndex + 1} of ${count}`}
             >
               <SafeImage src={image.url} alt={image.altText ?? name} className="h-full w-full" sizes="25vw" fallbackLabel={`${name}: photo ${i + 2}`} />
-              {isIllustrativeImage(image) && !isLast && <IllustrativeTag />}
+              {!isLast && <ImageCategoryTag image={image} />}
               {isLast && (
                 <span className="absolute inset-0 grid place-items-center bg-black/45 text-sm font-semibold text-white">+{remaining} more</span>
               )}
@@ -198,11 +200,25 @@ export function PublicGallery({ images, name, compact = false }) {
                 className="max-h-full max-w-full object-contain"
                 decoding="async"
               />
-              {isIllustrativeImage(images[index]) && (
-                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white/90">
-                  Illustrative -- not an actual photo of this property
-                </span>
-              )}
+              {(() => {
+                const img = images[index];
+                const label = img?.categoryName || (img?.category ? img.category.charAt(0).toUpperCase() + img.category.slice(1).toLowerCase().replaceAll('_', ' ') : null);
+                if (label) {
+                  return (
+                    <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2.5 py-1 text-xs font-medium text-white/90">
+                      {label}
+                    </span>
+                  );
+                }
+                if (isIllustrativeImage(img)) {
+                  return (
+                    <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white/90">
+                      Illustrative -- not an actual photo of this property
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </div>
             <button type="button" onClick={() => setIndex((index + 1) % count)} className="absolute right-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Next photo">
               <ChevronRight className="h-5 w-5" />

@@ -4,6 +4,7 @@ import { api } from './api.js';
 export const authApi = {
   register: (body) => api.post('/auth/register', body).then((r) => r.data),
   login: (body) => api.post('/auth/login', body).then((r) => r.data),
+  googleLogin: (body) => api.post('/auth/google', body).then((r) => r.data),
   guestCheckout: (body) => api.post('/auth/guest-checkout', body).then((r) => r.data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me').then((r) => r.data.user),
@@ -176,10 +177,11 @@ export const adminApi = {
   deleteCoupon: (id) => api.delete(`/admin/coupons/${id}`),
 
   listHomepageBackgrounds: () => api.get('/admin/homepage-background-images').then((r) => r.data.images),
-  uploadHomepageBackground: (slot, file, altText, onProgress) => {
+  uploadHomepageBackground: (slot, file, { altText, heroText }, onProgress) => {
     const form = new FormData();
-    form.append('image', file);
+    if (file) form.append('image', file);
     form.append('altText', altText ?? '');
+    form.append('heroText', heroText ?? '');
     return api.put(`/admin/homepage-background-images/${slot}`, form, {
       onUploadProgress: (event) => onProgress?.(event.total ? Math.round((event.loaded / event.total) * 100) : null),
     }).then((r) => r.data.image);
@@ -254,6 +256,7 @@ export const discoveryApi = {
   search: (params, { signal } = {}) => api.get('/hotels/search', { params, signal }).then((r) => r.data),
   suggestDestinations: (q, { signal } = {}) => api.get('/destinations/search', { params: { q }, signal }).then((r) => r.data.items),
   popularDestinations: (params) => api.get('/destinations/popular', { params }).then((r) => r.data.items),
+  popularAreas: (params) => api.get('/destinations/popular-areas', { params }).then((r) => r.data.items),
   stayTypes: (params) => api.get('/destinations/stay-types', { params }).then((r) => r.data.items),
   stats: () => api.get('/destinations/stats').then((r) => r.data),
   featuredHotels: () => api.get('/hotels', { params: { limit: 6 } }).then((r) => r.data.items),

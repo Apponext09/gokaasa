@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Check, ChevronLeft, ChevronRight, MapPin, ShieldCheck, Sparkles, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
+import { Camera, Check, ChevronLeft, ChevronRight, Clock3, MapPin, ShieldCheck, Sparkles, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -11,7 +11,6 @@ import { GuestContactModal } from '@/features/booking/GuestContactModal.jsx';
 import { saveSelection } from '@/features/booking/selection.js';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { stayParams, slugifyPlace } from '@/features/search/searchParams.js';
-import { normalizeAmenities } from '@/features/search/amenities.js';
 import { discountDisplay } from '@/features/search/discountDisplay.js';
 import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
 import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
@@ -22,6 +21,13 @@ import { cn } from '@/lib/utils.js';
 const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HALF_BOARD: 'Half board', FULL_BOARD: 'Full board' };
 const mealLabel = (code) => MEAL_LABEL[code] ?? String(code ?? 'Room rate').replaceAll('_', ' ').toLowerCase();
 const PROPERTY_LABEL = { HOTEL: 'Hotel', RESORT: 'Resort', VILLA: 'Villa', APARTMENT: 'Apartment', HOSTEL: 'Hostel', GUEST_HOUSE: 'Guest house' };
+const UNAVAILABLE_COPY = {
+  SOLD_OUT: ['Sold out for these dates', 'Try different dates or view the hotel for other room options.'],
+  NO_ACTIVE_ROOM: ['Rooms currently unavailable', 'This hotel is visible, but it is not accepting room bookings right now.'],
+  NO_ACTIVE_RATE: ['Rates currently unavailable', 'This hotel has no active bookable rate right now.'],
+  OCCUPANCY_NOT_SUPPORTED: ['No room fits these guests', 'Try fewer guests, more rooms, or different occupancy.'],
+  UNAVAILABLE: ['Currently unavailable', 'Try different dates or view the hotel for more information.'],
+};
 
 /** Public hotel page path. Uses the city slug the rest of the site uses, plus the search stay if there is one. */
 export function hotelPath(hotel, state) {
@@ -42,7 +48,13 @@ export function HotelCard({ hotel, state }) {
   const originalPerNightMinor = offer ? offerPricing.originalPerNightMinor : hotel.price?.originalAmountMinor;
   const discountPercent = offer ? offerPricing.discountPercent : (hotel.price?.discountPercent ?? 0);
   const hasDisplayPrice = Number.isFinite(Number(pricePerNightMinor));
-  const { shown: amenities, moreCount: moreAmenityCount } = normalizeAmenities(hotel.amenities, 3);
+  const unavailable = hotel.available === false;
+  const temporarilyHeld = hotel.availabilityStatus === 'TEMPORARILY_HELD';
+  const unavailableCopy = UNAVAILABLE_COPY[hotel.availabilityStatus] ?? UNAVAILABLE_COPY.UNAVAILABLE;
+  const allAmenities = useMemo(() => [...new Set(hotel.amenities ?? [])], [hotel.amenities]);
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const visibleAmenities = showAllAmenities ? allAmenities : allAmenities.slice(0, 3);
+  const remainingAmenitiesCount = Math.max(0, allAmenities.length - 3);
   const fullPath = hotelPath(hotel, state);
 
   const [details, setDetails] = useState(null);
@@ -52,6 +64,18 @@ export function HotelCard({ hotel, state }) {
   const [guestModalOpen, setGuestModalOpen] = useState(false);
   const [pendingSelection, setPendingSelection] = useState(null);
   const [reserving, setReserving] = useState(false);
+  const [holdSecondsRemaining, setHoldSecondsRemaining] = useState(null);
+
+  useEffect(() => {
+    if (!temporarilyHeld || !hotel.retryAt) {
+      setHoldSecondsRemaining(null);
+      return undefined;
+    }
+    const update = () => setHoldSecondsRemaining(Math.max(0, Math.ceil((new Date(hotel.retryAt).getTime() - Date.now()) / 1000)));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [hotel.retryAt, temporarilyHeld]);
 
   const loadDetails = useCallback(() => {
     if (details || detailsState === 'loading') return;
@@ -77,6 +101,9 @@ export function HotelCard({ hotel, state }) {
       setPhotoIndex(1);
     }
   }, [hovered, gallery.length]);
+
+  const currentPhoto = gallery[photoIndex] ?? hotel.image;
+  const currentCategory = currentPhoto?.categoryName || (currentPhoto?.category ? currentPhoto.category.charAt(0).toUpperCase() + currentPhoto.category.slice(1).toLowerCase().replaceAll('_', ' ') : null);
 
   const startHold = async (selection) => {
     if (!selection) return;
@@ -114,7 +141,7 @@ export function HotelCard({ hotel, state }) {
   };
 
   const quickReserve = () => {
-    if (!offer || !state?.checkIn || !state?.checkOut || !state?.occupancy?.length) return;
+    if (unavailable || !offer || !state?.checkIn || !state?.checkOut || !state?.occupancy?.length) return;
     beginReserve({
       hotelId: hotel.id,
       hotelSlug: hotel.slug,
@@ -208,9 +235,9 @@ export function HotelCard({ hotel, state }) {
         <div className="absolute right-3 top-3">
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
-        {isIllustrativeCover(hotel.image) && (
+        {(currentCategory || isIllustrativeCover(currentPhoto ?? hotel.image)) && (
           <p className="hcard-image-disclaimer absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
-            Illustrative image
+            {currentCategory ?? 'Illustrative image'}
           </p>
         )}
       </div>
@@ -268,15 +295,64 @@ export function HotelCard({ hotel, state }) {
           )}
         </div>
 
-        {amenities.length > 0 && (
-          <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
-            {amenities.map((name) => (
+        {allAmenities.length > 0 && (
+          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
+            {visibleAmenities.map((name) => (
               <li key={name} className="flex items-center gap-1">
-                <Check className="h-3.5 w-3.5 text-success-600" aria-hidden="true" /> {name}
+                <Check className="h-3.5 w-3.5 shrink-0 text-success-600" aria-hidden="true" /> {name}
               </li>
             ))}
-            {moreAmenityCount > 0 && <li className="text-[var(--text-muted)]">+{moreAmenityCount} more</li>}
+            {!showAllAmenities && remainingAmenitiesCount > 0 && (
+              <li>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowAllAmenities(true);
+                  }}
+                  className="cursor-pointer text-xs font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+                >
+                  +{remainingAmenitiesCount} more
+                </button>
+              </li>
+            )}
+            {showAllAmenities && remainingAmenitiesCount > 0 && (
+              <li>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowAllAmenities(false);
+                  }}
+                  className="cursor-pointer text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-strong)] hover:underline"
+                >
+                  Show less
+                </button>
+              </li>
+            )}
           </ul>
+        )}
+
+        {unavailable && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950" role="status">
+            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">{temporarilyHeld ? 'Temporarily unavailable' : unavailableCopy[0]}</p>
+              <p className="text-xs text-amber-800">
+                {temporarilyHeld
+                  ? `Another guest is completing a booking${holdSecondsRemaining != null && holdSecondsRemaining > 0 ? ` · check again in ${Math.floor(holdSecondsRemaining / 60)}:${String(holdSecondsRemaining % 60).padStart(2, '0')}` : ' · checking availability again shortly'}.`
+                  : unavailableCopy[1]}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {unavailable && !offer && (
+          <div className="mt-auto pt-1">
+            <Button variant="secondary" onClick={() => navigate(fullPath)}>View hotel</Button>
+          </div>
         )}
 
         {offer && (
@@ -334,9 +410,9 @@ export function HotelCard({ hotel, state }) {
               >
                 View Rooms &amp; Deals
               </Button>
-              <Button variant="secondary" onClick={quickReserve} loading={reserving}>
+              <Button variant="secondary" onClick={quickReserve} loading={reserving} disabled={unavailable}>
                 {!reserving && <Sparkles className="h-4 w-4 text-brand-600" aria-hidden="true" />}
-                Quick Reserve
+                {unavailable ? (temporarilyHeld ? 'Room currently held' : 'Sold out') : 'Quick Reserve'}
               </Button>
             </div>
           </div>
@@ -350,9 +426,6 @@ export function HotelCard({ hotel, state }) {
             {originalPerNightMinor > 0 && (
               <div className="hcard-strikethrough-row">
                 <span className="hcard-original-price">{formatMoney(originalPerNightMinor)}</span>
-                {discountPercent > 0 && (
-                  <span className="hcard-discount-pill">{discountPercent}% OFF</span>
-                )}
               </div>
             )}
             <div className="hcard-final-price-row">
@@ -384,10 +457,10 @@ export function HotelCard({ hotel, state }) {
             <button
               type="button"
               className="hcard-btn-reserve"
-              onClick={offer ? quickReserve : () => navigate(fullPath)}
-              disabled={reserving}
+              onClick={offer && !unavailable ? quickReserve : () => navigate(fullPath)}
+              disabled={reserving || unavailable}
             >
-              {reserving ? 'Reserving…' : 'Quick Reserve'}
+              {reserving ? 'Reserving…' : unavailable ? (temporarilyHeld ? 'ROOM CURRENTLY HELD' : 'SOLD OUT') : 'Quick Reserve'}
             </button>
           </div>
         </div>

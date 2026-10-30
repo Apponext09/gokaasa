@@ -39,6 +39,7 @@ import {
 } from '@/components/shared/index.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { GoogleSignInButton } from '@/features/auth/GoogleSignInButton.jsx';
 
 import {
   forgotPasswordSchema,
@@ -537,6 +538,23 @@ export function LoginPage() {
           )}
         </Button>
 
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[var(--border-subtle)]" />
+          </div>
+          <span className="relative bg-white px-3 text-xs uppercase tracking-wider text-[var(--text-muted)]">
+            or continue with
+          </span>
+        </div>
+
+        <GoogleSignInButton
+          onSuccess={(user) => {
+            const target = resolvePostLoginTarget(user, location.state?.from);
+            navigate(target, { replace: true });
+          }}
+          onError={setFormError}
+        />
+
         <p className="text-center text-sm text-[var(--text-muted)]">
           Own a hotel?{' '}
           <Link to="/partner/register" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
@@ -814,6 +832,24 @@ export function RegisterPage() {
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
           )}
         </Button>
+
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[var(--border-subtle)]" />
+          </div>
+          <span className="relative bg-white px-3 text-xs uppercase tracking-wider text-[var(--text-muted)]">
+            or continue with
+          </span>
+        </div>
+
+        <GoogleSignInButton
+          text="Sign up with Google"
+          onSuccess={(user) => {
+            const target = resolvePostLoginTarget(user, location.state?.from);
+            navigate(target, { replace: true });
+          }}
+          onError={setFormError}
+        />
       </form>
     </AuthShell>
   );

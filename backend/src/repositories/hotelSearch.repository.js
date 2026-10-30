@@ -14,11 +14,11 @@ import { pool } from '../db/pool.js';
  */
 
 const SORT_SQL = {
-  recommended: 'display_guest_rating DESC NULLS LAST, review_count DESC, star_rating DESC NULLS LAST, id ASC',
-  price_asc: 'per_night ASC, id ASC',
-  price_desc: 'per_night DESC, id ASC',
-  guest_rating: 'display_guest_rating DESC NULLS LAST, review_count DESC, id ASC',
-  star_rating: 'star_rating DESC NULLS LAST, guest_rating DESC NULLS LAST, id ASC',
+  recommended: 'is_available DESC, display_guest_rating DESC NULLS LAST, review_count DESC, star_rating DESC NULLS LAST, id ASC',
+  price_asc: 'is_available DESC, per_night ASC NULLS LAST, id ASC',
+  price_desc: 'is_available DESC, per_night DESC NULLS LAST, id ASC',
+  guest_rating: 'is_available DESC, display_guest_rating DESC NULLS LAST, review_count DESC, id ASC',
+  star_rating: 'is_available DESC, star_rating DESC NULLS LAST, guest_rating DESC NULLS LAST, id ASC',
 };
 
 export const hotelSearchRepository = {
@@ -28,11 +28,11 @@ export const hotelSearchRepository = {
               (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
               h.star_rating, h.guest_rating,
               h.review_count, FALSE AS wishlisted,
-              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
+              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type, 'category', i.category, 'categoryName', (SELECT ic.name FROM image_categories ic WHERE ic.code = i.category))
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
               ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
-                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities
+                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name) AS top_amenities
          FROM hotels h
         WHERE h.status = 'PUBLISHED' AND h.deleted_at IS NULL AND h.id <> $1 AND lower(h.city) = lower($2)
         ORDER BY h.guest_rating DESC NULLS LAST, h.star_rating DESC NULLS LAST, h.id
@@ -79,35 +79,40 @@ export const hotelSearchRepository = {
        ),
        cheapest AS (
          SELECT DISTINCT ON (rt.hotel_id) rt.hotel_id,
-                rpr.base_price_minor, rpr.discount_minor, rpr.final_price_minor
+                rp.base_price_minor,
+                ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint AS discount_minor,
+                (rp.base_price_minor
+                  - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint
+                  + ROUND((rp.base_price_minor - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint) * rp.tax_percent / 100)::bigint
+                  + rp.fee_minor)::bigint AS final_price_minor
            FROM room_types rt
            JOIN within w ON w.id = rt.hotel_id
-           JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE' AND rp.deleted_at IS NULL
-           JOIN rate_prices rpr ON rpr.rate_plan_id = rp.id AND rpr.stay_date = $4::date
+           JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE'
+             AND rp.base_price_minor IS NOT NULL AND rp.deleted_at IS NULL
           WHERE rt.status = 'ACTIVE' AND rt.deleted_at IS NULL
-          ORDER BY rt.hotel_id, rpr.final_price_minor ASC
+          ORDER BY rt.hotel_id, final_price_minor ASC
        )
        SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type,
               (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
               h.star_rating, h.guest_rating, h.review_count,
               h.latitude, h.longitude, w.distance_km,
               c.base_price_minor, c.discount_minor, c.final_price_minor,
-              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
+              (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type, 'category', i.category, 'categoryName', (SELECT ic.name FROM image_categories ic WHERE ic.code = i.category))
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
               ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
-                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities,
+                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name) AS top_amenities,
               (SELECT json_build_object('average', ROUND(AVG(r.rating)::numeric, 1), 'count', COUNT(*))
                  FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED') AS internal_rating,
-              ($5::bigint IS NOT NULL AND EXISTS (SELECT 1 FROM wishlists ws WHERE ws.user_id = $5::bigint AND ws.hotel_id = h.id)) AS wishlisted,
+              ($4::bigint IS NOT NULL AND EXISTS (SELECT 1 FROM wishlists ws WHERE ws.user_id = $4::bigint AND ws.hotel_id = h.id)) AS wishlisted,
               COUNT(*) OVER ()::int AS total_count
          FROM within w
          JOIN hotels h ON h.id = w.id
          LEFT JOIN cheapest c ON c.hotel_id = h.id
         ORDER BY (CASE WHEN $1::numeric IS NULL THEN 0 ELSE w.distance_km END) ASC,
                  h.guest_rating DESC NULLS LAST, h.review_count DESC, h.id ASC
-        LIMIT $6::int OFFSET $7::int`,
-      [lat, lng, radiusKm, referenceDate, userId, limit, offset],
+        LIMIT $5::int OFFSET $6::int`,
+      [lat, lng, radiusKm, userId, limit, offset],
     );
     return { rows, total: rows[0]?.total_count ?? 0 };
   },
@@ -149,55 +154,69 @@ export const hotelSearchRepository = {
        ),
        room_nights AS (
          SELECT rt.id AS room_type_id, rt.hotel_id, rt.total_units, rt.max_adults, rt.max_children, rt.max_occupancy,
-                rt.cancellation_policy_id, n.d AS stay_date, ri.units AS units_override,
-                COALESCE(ri.is_closed, FALSE) AS is_closed, ri.min_stay, ri.max_stay,
+                rt.cancellation_policy_id, n.d AS stay_date,
                 COALESCE((SELECT SUM(b.quantity) FROM availability_blocks b
                            WHERE b.room_type_id = rt.id AND b.is_active AND n.d >= b.start_date AND n.d < b.end_date), 0)::int AS blocked,
                 COALESCE((SELECT SUM(r.quantity) FROM inventory_reservations r
                            WHERE r.room_type_id = rt.id AND r.stay_date = n.d
-                             AND (r.status = 'CONFIRMED' OR (r.status = 'HELD' AND r.expires_at > now()))), 0)::int AS reserved
+                             AND r.status = 'CONFIRMED'), 0)::int AS confirmed,
+                COALESCE((SELECT SUM(r.quantity) FROM inventory_reservations r
+                           WHERE r.room_type_id = rt.id AND r.stay_date = n.d
+                             AND r.status = 'HELD' AND r.expires_at > now()), 0)::int AS held,
+                (SELECT MIN(r.expires_at) FROM inventory_reservations r
+                  WHERE r.room_type_id = rt.id AND r.stay_date = n.d
+                    AND r.status = 'HELD' AND r.expires_at > now()) AS next_hold_expires_at
            FROM room_types rt
            JOIN candidate c ON c.id = rt.hotel_id
            CROSS JOIN UNNEST($7::date[]) AS n(d)
-           LEFT JOIN room_inventory ri ON ri.room_type_id = rt.id AND ri.stay_date = n.d
           WHERE rt.status = 'ACTIVE' AND rt.deleted_at IS NULL
        ),
        room_fit AS (
          SELECT room_type_id, hotel_id, max_adults, max_children, max_occupancy, cancellation_policy_id,
-                MIN(CASE WHEN is_closed THEN 0 ELSE GREATEST(0, COALESCE(units_override, total_units) - blocked - reserved) END) AS available_rooms,
-                BOOL_AND(NOT is_closed) AS open_every_night,
-                BOOL_AND(COALESCE(min_stay, 1) <= $8::int AND COALESCE(max_stay, 365) >= $8::int) AS stay_ok
+                MIN(GREATEST(0, total_units - blocked - confirmed - held)) AS available_rooms,
+                MIN(GREATEST(0, total_units - blocked - confirmed)) AS available_without_holds,
+                MAX(next_hold_expires_at) AS next_hold_expires_at
            FROM room_nights
           GROUP BY room_type_id, hotel_id, max_adults, max_children, max_occupancy, cancellation_policy_id
        ),
-       room_ok AS (
+       eligible_rooms AS (
          SELECT rf.* FROM room_fit rf
-          WHERE rf.open_every_night AND rf.stay_ok AND rf.available_rooms >= $9::int
-            AND (SELECT BOOL_AND(a >= 1 AND a <= rf.max_adults AND c <= rf.max_children AND a + c <= rf.max_occupancy)
+          WHERE (SELECT BOOL_AND(a >= 1 AND a <= rf.max_adults AND c <= rf.max_children AND a + c <= rf.max_occupancy)
                    FROM UNNEST($10::int[], $11::int[]) AS o(a, c)) IS TRUE
+       ),
+       priced_plans AS (
+         SELECT p.*,
+                ROUND(p.base_price_minor * p.discount_percent / 100)::bigint AS nightly_discount,
+                ROUND((p.base_price_minor - ROUND(p.base_price_minor * p.discount_percent / 100)::bigint) * p.tax_percent / 100)::bigint AS nightly_tax
+           FROM rate_plans p
+          WHERE p.status = 'ACTIVE' AND p.base_price_minor IS NOT NULL AND p.deleted_at IS NULL
        ),
        plan_totals AS (
          SELECT p.id AS plan_id, ro.room_type_id, ro.hotel_id, ro.available_rooms,
+                ro.available_without_holds, ro.next_hold_expires_at,
                 p.code AS plan_code, p.name AS plan_name, p.meal_plan, mp.name AS meal_plan_name, p.is_refundable,
                 cp.code AS policy_code, cp.name AS policy_name, cp.is_non_refundable,
                 cp.cancellation_deadline_hours, cp.refund_percent,
-                SUM(rp.base_price_minor) AS base_total, SUM(rp.discount_minor) AS discount_total,
-                SUM(rp.tax_minor) AS tax_total, SUM(rp.fee_minor) AS fee_total, SUM(rp.final_price_minor) AS final_total
-           FROM room_ok ro
-           JOIN rate_plans p ON p.room_type_id = ro.room_type_id AND p.status = 'ACTIVE' AND p.deleted_at IS NULL
+                (p.base_price_minor * $8::int)::bigint AS base_total,
+                (p.nightly_discount * $8::int)::bigint AS discount_total,
+                (p.nightly_tax * $8::int)::bigint AS tax_total,
+                (p.fee_minor * $8::int)::bigint AS fee_total,
+                ((p.base_price_minor - p.nightly_discount + p.nightly_tax + p.fee_minor) * $8::int)::bigint AS final_total
+           FROM eligible_rooms ro
+           JOIN priced_plans p ON p.room_type_id = ro.room_type_id
            JOIN meal_plans mp ON mp.code = p.meal_plan AND mp.is_active
-           JOIN rate_prices rp ON rp.rate_plan_id = p.id AND rp.stay_date = ANY($7::date[])
            LEFT JOIN cancellation_policies cp ON cp.id = COALESCE(p.cancellation_policy_id, ro.cancellation_policy_id)
           WHERE ($12::text[] IS NULL OR p.meal_plan = ANY($12::text[]))
             AND ($13::boolean IS NOT TRUE OR (p.is_refundable AND NOT cp.is_non_refundable AND cp.refund_percent = 100))
-          GROUP BY p.id, ro.room_type_id, ro.hotel_id, ro.available_rooms, p.code, p.name, p.meal_plan, mp.name, p.is_refundable,
+          GROUP BY p.id, ro.room_type_id, ro.hotel_id, ro.available_rooms, ro.available_without_holds, ro.next_hold_expires_at,
+                   p.code, p.name, p.meal_plan, mp.name, p.is_refundable,
+                   p.base_price_minor, p.nightly_discount, p.nightly_tax, p.fee_minor,
                    cp.code, cp.name, cp.is_non_refundable, cp.cancellation_deadline_hours, cp.refund_percent
-         HAVING COUNT(rp.stay_date) = $8::int
        ),
        hotel_best AS (
          SELECT DISTINCT ON (pt.hotel_id) pt.*
            FROM plan_totals pt
-          ORDER BY pt.hotel_id, pt.final_total ASC, pt.room_type_id ASC, pt.plan_id ASC
+          ORDER BY pt.hotel_id, (pt.available_rooms >= $9::int) DESC, pt.final_total ASC, pt.room_type_id ASC, pt.plan_id ASC
        ),
        listing AS (
          SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
@@ -208,21 +227,50 @@ export const hotelSearchRepository = {
                 hb.plan_id, hb.plan_code, hb.plan_name, hb.meal_plan, hb.meal_plan_name, hb.is_refundable,
                 hb.policy_code, hb.policy_name, hb.is_non_refundable, hb.cancellation_deadline_hours, hb.refund_percent,
                 hb.base_total, hb.discount_total, hb.tax_total, hb.fee_total, hb.final_total,
-                hb.available_rooms AS rooms_left,
+                COALESCE(hb.available_rooms, 0) AS rooms_left,
+                COALESCE(hb.available_rooms >= $9::int, FALSE) AS is_available,
+                CASE
+                  WHEN hb.available_rooms >= $9::int THEN 'AVAILABLE'
+                  WHEN hb.available_without_holds >= $9::int AND hb.next_hold_expires_at IS NOT NULL THEN 'TEMPORARILY_HELD'
+                  WHEN hb.hotel_id IS NOT NULL THEN 'SOLD_OUT'
+                  WHEN NOT EXISTS (
+                    SELECT 1 FROM room_types candidate_room
+                     WHERE candidate_room.hotel_id = h.id AND candidate_room.status = 'ACTIVE' AND candidate_room.deleted_at IS NULL
+                  ) THEN 'NO_ACTIVE_ROOM'
+                  WHEN NOT EXISTS (
+                    SELECT 1 FROM room_types candidate_room
+                     WHERE candidate_room.hotel_id = h.id AND candidate_room.status = 'ACTIVE' AND candidate_room.deleted_at IS NULL
+                       AND (SELECT BOOL_AND(a >= 1 AND a <= candidate_room.max_adults
+                                           AND c <= candidate_room.max_children
+                                           AND a + c <= candidate_room.max_occupancy)
+                              FROM UNNEST($10::int[], $11::int[]) AS requested(a, c)) IS TRUE
+                  ) THEN 'OCCUPANCY_NOT_SUPPORTED'
+                  WHEN NOT EXISTS (
+                    SELECT 1 FROM room_types candidate_room
+                    JOIN rate_plans candidate_plan ON candidate_plan.room_type_id = candidate_room.id
+                     AND candidate_plan.status = 'ACTIVE' AND candidate_plan.base_price_minor IS NOT NULL
+                     AND candidate_plan.deleted_at IS NULL
+                    WHERE candidate_room.hotel_id = h.id AND candidate_room.status = 'ACTIVE' AND candidate_room.deleted_at IS NULL
+                  ) THEN 'NO_ACTIVE_RATE'
+                  ELSE 'UNAVAILABLE'
+                END AS availability_status,
+                CASE WHEN hb.available_rooms < $9::int THEN hb.next_hold_expires_at ELSE NULL END AS retry_at,
                 ROUND((hb.base_total - hb.discount_total)::numeric / $8::int)::bigint AS per_night,
-                (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type)
+                (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type, 'category', i.category, 'categoryName', (SELECT ic.name FROM image_categories ic WHERE ic.code = i.category))
                    FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                   ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
                 ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
-                       WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities,
+                       WHERE ha.hotel_id = h.id ORDER BY a.category, a.name) AS top_amenities,
                 ($14::bigint IS NOT NULL AND EXISTS (SELECT 1 FROM wishlists w WHERE w.user_id = $14::bigint AND w.hotel_id = h.id)) AS wishlisted,
                 (SELECT json_build_object('average', ROUND(AVG(r.rating)::numeric, 1), 'count', COUNT(*))
                    FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED') AS internal_rating,
                 MIN(ROUND((hb.base_total - hb.discount_total)::numeric / $8::int)::bigint) OVER () AS price_floor,
                 MAX(ROUND((hb.base_total - hb.discount_total)::numeric / $8::int)::bigint) OVER () AS price_ceiling
-           FROM hotel_best hb
-           JOIN hotels h ON h.id = hb.hotel_id
-           JOIN room_types rt ON rt.id = hb.room_type_id
+           FROM candidate candidate_hotel
+           JOIN hotels h ON h.id = candidate_hotel.id
+           LEFT JOIN hotel_best hb ON hb.hotel_id = h.id
+           LEFT JOIN room_types rt ON rt.id = hb.room_type_id
+          WHERE hb.hotel_id IS NOT NULL OR ($12::text[] IS NULL AND $13::boolean IS NOT TRUE)
        ),
        filtered AS (
          SELECT * FROM listing

@@ -19,6 +19,11 @@ export const authController = {
     return sendSession(res, 200, session);
   },
 
+  async googleLogin(req, res) {
+    const session = await authService.googleLogin(req.validated.body, requestMeta(req));
+    return sendSession(res, 200, session);
+  },
+
   async refresh(req, res) {
     const session = await authService.refresh(req.cookies?.[config.auth.refreshCookieName], requestMeta(req));
     return sendSession(res, 200, session);

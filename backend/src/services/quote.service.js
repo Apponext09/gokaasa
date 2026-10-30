@@ -4,10 +4,10 @@ import { cancellationPolicyRepository } from '../repositories/cancellationPolicy
 import { bookingRepository } from '../repositories/booking.repository.js';
 import { loadNightly } from './inventory.service.js';
 import { getStorage } from '../storage/index.js';
-import { occupancyFits, stayLengthCheck } from '../domain/inventory.js';
+import { occupancyFits } from '../domain/inventory.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
 import { localToday, zonedTimeToInstant } from '../domain/businessDate.js';
-import { nightsBetween, quoteNights } from '../domain/pricing.js';
+import { nightsBetween, priceComponents, quoteNights } from '../domain/pricing.js';
 import { AppError } from '../utils/AppError.js';
 
 /** Bump when the snapshot's shape changes, so old snapshots can still be read correctly. */
@@ -71,15 +71,6 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
   if (checkAvailability) {
     const nightly = await loadNightly(client, [roomTypeId], nights);
     const facts = nights.map((date) => nightly.get(`${roomTypeId}|${date}`));
-    if (facts.some((night) => night.isClosed)) {
-      throw AppError.conflict('This room type is closed for some of your dates.');
-    }
-    const stay = stayLengthCheck(facts, nights.length);
-    if (!stay.ok) {
-      throw AppError.unprocessable(
-        `This room needs a stay of ${stay.minRequired ?? 1} to ${stay.maxAllowed ?? 'any number of'} nights for these dates.`,
-      );
-    }
     availableRooms = Math.min(...facts.map((night) => night.sellable));
     if (availableRooms < rooms) {
       if (availableRooms <= 0) throw AppError.conflict('No rooms are available for your selected dates.', { available: 0, requested: rooms });
@@ -90,18 +81,14 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
     }
   }
 
-  const priceRows = await bookingRepository.nightlyPrices(plan.id, checkIn, checkOut, client);
-  if (priceRows.length !== nights.length) {
-    throw AppError.conflict('Rates are not available for every night of your stay.');
-  }
-  const nightlyRows = priceRows.map((row) => ({
-    date: row.stay_date,
-    base: row.base_price_minor,
-    discount: row.discount_minor,
-    tax: row.tax_minor,
-    fee: row.fee_minor,
-    final: row.final_price_minor,
-  }));
+  if (plan.base_price_minor == null) throw AppError.conflict('This rate needs a nightly price. Please choose another rate.');
+  const components = priceComponents({
+    baseMinor: Number(plan.base_price_minor),
+    discountPercent: plan.discount_percent,
+    taxPercent: plan.tax_percent,
+    feeMinor: plan.fee_minor,
+  });
+  const nightlyRows = nights.map((date) => ({ date, ...components }));
   const totals = quoteNights(nightlyRows, rooms);
   const total = totals.subtotal - totals.discount + totals.taxes + totals.fees;
 

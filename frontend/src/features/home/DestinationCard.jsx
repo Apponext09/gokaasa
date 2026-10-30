@@ -14,12 +14,39 @@ export function DestinationCard({ variant = 'grid', label, description, imageUrl
   const href = destinationSearchPath(citySlug, new Date(), area ? { area } : {});
   const isFeature = variant === 'feature';
 
+  if (!isFeature) {
+    return (
+      <Link
+        to={href}
+        className={cn('collection-card-item group', className)}
+      >
+        <div className="collection-img-wrap">
+          <SafeImage
+            src={imageUrl}
+            alt={`${label} hotels`}
+            className="h-full w-full object-cover"
+            fallbackLabel={`${label} photo`}
+            showFallbackContent={false}
+          />
+          <span className="collection-overlay-gradient" aria-hidden="true" />
+          <div className="collection-card-caption">
+            <h3>{label}</h3>
+            {hotelCount > 0 && (
+              <p className="card-explore-count">
+                Explore {hotelCount} {hotelCount === 1 ? 'hotel' : 'hotels'}
+              </p>
+            )}
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
   return (
     <Link
       to={href}
       className={cn(
-        'group relative flex flex-col justify-end overflow-hidden rounded-[var(--radius-card)]',
-        isFeature ? 'aspect-[16/11]' : 'aspect-[4/3]',
+        'group relative flex flex-col justify-end overflow-hidden rounded-[var(--radius-card)] aspect-[16/11]',
         className,
       )}
     >
@@ -33,18 +60,16 @@ export function DestinationCard({ variant = 'grid', label, description, imageUrl
       <span className="pop-card-overlay" aria-hidden="true" />
 
       <div className="relative z-10 p-4 text-white">
-        <h3 className={cn('font-[var(--font-display)] font-semibold tracking-tight', isFeature ? 'text-xl' : 'text-base')}>{label}</h3>
-        {isFeature && description && <p className="mt-1 text-sm text-white/80">{description}</p>}
+        <h3 className="font-[var(--font-display)] font-semibold tracking-tight text-xl">{label}</h3>
+        {description && <p className="mt-1 text-sm text-white/80">{description}</p>}
         {hotelCount > 0 && (
           <p className="mt-1 text-xs font-medium text-white/85">
             {hotelCount} hotel{hotelCount === 1 ? '' : 's'} available
           </p>
         )}
-        {isFeature && (
-          <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent-300">
-            Explore Stays <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </span>
-        )}
+        <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent-300">
+          Explore Stays <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
       </div>
     </Link>
   );

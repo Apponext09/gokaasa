@@ -11,16 +11,25 @@ import { normalizeError } from '@/services/api.js';
 function BackgroundSlot({ slot, image, onChanged }) {
   const [file, setFile] = useState(null);
   const [altText, setAltText] = useState(image?.altText ?? '');
+  const [heroText, setHeroText] = useState(image?.heroText ?? '');
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => setAltText(image?.altText ?? ''), [image]);
+  useEffect(() => {
+    setAltText(image?.altText ?? '');
+    setHeroText(image?.heroText ?? '');
+  }, [image]);
 
   const upload = async () => {
-    if (!file) return;
+    if (!file && !image) return;
     setSaving(true);
     try {
-      await adminApi.uploadHomepageBackground(slot, file, altText.trim(), setProgress);
+      await adminApi.uploadHomepageBackground(
+        slot,
+        file,
+        { altText: altText.trim(), heroText: heroText.trim() },
+        setProgress,
+      );
       setFile(null);
       toast.success(`Background image ${slot} saved`);
       await onChanged();
@@ -55,14 +64,15 @@ function BackgroundSlot({ slot, image, onChanged }) {
           <h3 className="font-semibold text-[var(--text-strong)]">Background {slot}</h3>
           <p className="text-xs text-[var(--text-muted)]">Recommended: 1920 × 700, JPEG or WebP, up to 5 MB.</p>
         </div>
-        <div className="grid gap-3 xl:grid-cols-2">
+        <div className="grid gap-3 xl:grid-cols-3">
           <Input aria-label={`Background ${slot} accessibility description`} placeholder="Accessibility description" value={altText} maxLength={160} onChange={(event) => setAltText(event.target.value)} />
+          <Input aria-label={`Background ${slot} homepage display text`} placeholder="Homepage display text" value={heroText} maxLength={160} onChange={(event) => setHeroText(event.target.value)} />
           <Input aria-label={`Choose background ${slot}`} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
         </div>
         {file && <p className="truncate text-xs text-[var(--text-muted)]">Selected: {file.name}{saving ? ` · ${progress}%` : ''}</p>}
       </div>
       <div className="flex flex-wrap gap-2 lg:flex-col lg:items-stretch">
-        <Button type="button" size="sm" loading={saving} disabled={!file} onClick={upload}><ImagePlus className="h-4 w-4" /> {image ? 'Replace' : 'Upload'}</Button>
+        <Button type="button" size="sm" loading={saving} disabled={!file && !image} onClick={upload}><ImagePlus className="h-4 w-4" /> {image ? (file ? 'Replace' : 'Save') : 'Upload'}</Button>
         {image && <Button type="button" size="sm" variant="danger-outline" disabled={saving} onClick={remove}><Trash2 className="h-4 w-4" /> Remove</Button>}
       </div>
     </div>

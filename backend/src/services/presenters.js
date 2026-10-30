@@ -6,6 +6,7 @@ export function toImage(row) {
   return {
     id: row.id,
     category: row.category,
+    categoryName: row.category_name ?? (row.category ? row.category.charAt(0).toUpperCase() + row.category.slice(1).toLowerCase().replaceAll('_', ' ') : null),
     origin: row.origin,
     url: row.origin === 'UPLOADED' && row.storage_key ? getStorage().publicUrl(row.storage_key) : row.source_url,
     sourceUrl: row.origin === 'IMPORTED' ? row.source_url : null,

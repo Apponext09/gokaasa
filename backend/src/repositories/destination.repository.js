@@ -99,6 +99,44 @@ export const destinationRepository = {
     return rows;
   },
 
+  /** Areas with the most published hotels and a real cover image, for the homepage area grid. */
+  async popularAreas(limit = 8) {
+    const { rows } = await pool.query(
+      `WITH areas AS (
+         SELECT area, city, country_code, COUNT(*)::int AS hotel_count
+           FROM hotels
+          WHERE status = 'PUBLISHED'
+            AND deleted_at IS NULL
+            AND area IS NOT NULL
+            AND trim(area) != ''
+          GROUP BY area, city, country_code
+          ORDER BY hotel_count DESC, area ASC
+          LIMIT $1
+       )
+       SELECT a.*,
+              cover.image AS cover
+         FROM areas a
+         LEFT JOIN LATERAL (
+           SELECT json_build_object(
+                    'storageKey', i.storage_key,
+                    'sourceUrl', i.source_url,
+                    'altText', i.alt_text,
+                    'imageType', i.image_type
+                  ) AS image
+             FROM hotels h
+             JOIN hotel_images i ON i.hotel_id = h.id AND i.deleted_at IS NULL
+            WHERE h.status = 'PUBLISHED' AND h.deleted_at IS NULL
+              AND lower(h.area) = lower(a.area)
+              AND lower(h.city) = lower(a.city)
+            ORDER BY i.is_cover DESC, h.guest_rating DESC NULLS LAST, i.sort_order ASC, i.id ASC
+            LIMIT 1
+         ) cover ON TRUE
+        ORDER BY a.hotel_count DESC, a.area ASC`,
+      [limit],
+    );
+    return rows;
+  },
+
   /** How many distinct cities and countries have a published hotel, for the homepage trust strip. */
   async coverage() {
     const { rows } = await pool.query(

@@ -24,6 +24,7 @@ const schema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(30),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(30),
   BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+  GOOGLE_CLIENT_ID: z.string().optional(),
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
@@ -112,6 +113,7 @@ export const config = Object.freeze({
     refreshTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
     passwordResetTtlMinutes: env.PASSWORD_RESET_TTL_MINUTES,
     bcryptRounds: env.BCRYPT_ROUNDS,
+    googleClientId: env.GOOGLE_CLIENT_ID,
     refreshCookieName: 'gk_refresh',
   },
   mail: {

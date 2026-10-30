@@ -32,6 +32,7 @@ function valuesFor(plan, defaultMealPlan = 'ROOM_ONLY') {
     discountPercent: String(plan.discountPercent),
     taxPercent: String(plan.taxPercent),
     feeRupees: minorToRupees(plan.feeMinor),
+    basePriceRupees: minorToRupees(plan.basePriceMinor),
     status: plan.status,
   };
 }
@@ -75,6 +76,9 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved, mealPl
               ))}
             </Select>
           </FormField>
+          <FormField id="rp-base-price" label="Base price per night (₹)" error={e.basePriceRupees?.message} hint="Used for every available booking date">
+            <Input id="rp-base-price" inputMode="decimal" placeholder="e.g. 8999" invalid={!!e.basePriceRupees} {...register('basePriceRupees')} />
+          </FormField>
           <FormField id="rp-policy" label="Cancellation policy" error={e.cancellationPolicyId?.message}>
             <Select id="rp-policy" invalid={!!e.cancellationPolicyId} {...register('cancellationPolicyId')}>
               <option value="">Choose a policy</option>
@@ -114,7 +118,7 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved, mealPl
   );
 }
 
-/** Rate plans for one room type. Prices are set per date in the calendar; a plan defines what is included. */
+/** Rate plans define the permanent nightly price and what is included. */
 export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
   const { items: mealPlans } = useCatalog('meal-plans');
   const mealPlanOptions = useMemo(() => toOptions(mealPlans), [mealPlans]);
@@ -143,7 +147,7 @@ export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
       <CardHeader className="flex flex-row items-start justify-between gap-4">
         <div>
           <CardTitle>Rate plans</CardTitle>
-          <CardDescription>What each price includes: meals, refundability and the cancellation policy. Set prices per night in the calendar.</CardDescription>
+          <CardDescription>Set one nightly price with its meals, refundability and cancellation policy.</CardDescription>
         </div>
         <Button size="sm" disabled={disabled} onClick={() => setCreating(true)}>
           <Plus className="h-4 w-4" aria-hidden="true" /> New rate plan
@@ -153,7 +157,7 @@ export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
         {error && <Alert tone="error">{error}</Alert>}
         {plans === null && !error && <Skeleton className="h-24 w-full" />}
         {plans?.length === 0 && (
-          <EmptyState title="No rate plans yet" description="Create one, such as Room Only or Breakfast Included, then set its prices in the calendar." />
+          <EmptyState title="No rate plans yet" description="Create one, such as Room Only or Breakfast Included, and enter its nightly price." />
         )}
         {plans?.map((plan) => (
           <div key={plan.id} className="flex flex-col gap-3 rounded-lg border border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -170,8 +174,9 @@ export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
                 )}
               </div>
               <p className="text-xs text-[var(--text-muted)]">
-                Policy: {plan.cancellationPolicy?.name ?? 'None'} · discount {plan.discountPercent}% · tax {plan.taxPercent}% · fee {formatMoney(plan.feeMinor)} per night
+                {plan.basePriceMinor == null ? 'Price required' : `${formatMoney(plan.basePriceMinor)} base per night`} · Policy: {plan.cancellationPolicy?.name ?? 'None'} · discount {plan.discountPercent}% · tax {plan.taxPercent}% · fee {formatMoney(plan.feeMinor)} per night
               </p>
+              {plan.pricingReviewRequired && <Alert tone="warning">This plan previously had different calendar prices. Confirm and save the permanent nightly price.</Alert>}
             </div>
             <Button variant="secondary" size="sm" disabled={disabled} onClick={() => setEditing(plan)}>
               Edit

@@ -40,10 +40,10 @@ export function HotelReviewsPage() {
       <PageHeader title="Hotel reviews" description="Every submitted hotel appears in this shared quality-review queue." />
       <div className="max-w-sm"><Select aria-label="Review status" value={status} onChange={(event) => update('status', event.target.value)}><option value="">All review statuses</option><option value="PENDING">Pending review</option><option value="CHANGES_REQUESTED">Changes requested</option><option value="APPROVED">Approved</option><option value="PUBLISHED">Published</option></Select></div>
       {error && <Alert tone="error" title="Unable to load hotel reviews">{error}</Alert>}
-      {!data && !error && <Card className="space-y-3 p-5"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></Card>}
-      {data && data.items.length === 0 && <Card><EmptyState icon={ClipboardCheck} title="No hotel reviews in this queue" description="Submitted hotels will appear here." /></Card>}
+      {!data && !error && <Card className="admin-records-card space-y-3 p-5"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-full" /></Card>}
+      {data && data.items.length === 0 && <Card className="admin-records-card"><EmptyState icon={ClipboardCheck} title="No hotel reviews in this queue" description="Submitted hotels will appear here." /></Card>}
       {data && data.items.length > 0 && (
-        <Card className="overflow-hidden">
+        <Card className="admin-records-card overflow-hidden">
           <Table minWidth="620px">
             <TableHeader><tr><TableHead>Hotel</TableHead><TableHead>Status</TableHead><TableHead>Submitted</TableHead><TableHead className="text-right">Action</TableHead></tr></TableHeader>
             <TableBody>{data.items.map((review) => {

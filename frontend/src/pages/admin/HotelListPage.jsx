@@ -20,6 +20,7 @@ const SORT_OPTIONS = [
 ];
 
 const FILTER_KEYS = ['q', 'status', 'city', 'countryCode', 'starRating', 'propertyType', 'sort', 'page'];
+const PAGE_SIZE = 20;
 
 function useHotelFilters() {
   const [params, setParams] = useSearchParams();
@@ -57,7 +58,7 @@ export function HotelListPage() {
     setError(null);
     const params = {
       page: Number(filters.page) || 1,
-      limit: 20,
+      limit: PAGE_SIZE,
       sort: filters.sort || 'updated_desc',
       ...(filters.q && { q: filters.q }),
       ...(filters.status && { status: filters.status }),
@@ -173,10 +174,11 @@ export function HotelListPage() {
             }
           />
         ) : (
-          <Table minWidth="760px">
+          <Table minWidth="820px">
             <caption className="sr-only">Hotels</caption>
             <TableHeader>
               <tr>
+                <TableHead className="w-16 text-center">No.</TableHead>
                 <TableHead>Hotel</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Rating</TableHead>
@@ -187,8 +189,11 @@ export function HotelListPage() {
               </tr>
             </TableHeader>
             <TableBody>
-              {data?.items.map((hotel) => (
+              {data?.items.map((hotel, index) => (
                 <TableRow key={hotel.id}>
+                  <TableCell className="text-center font-medium text-[var(--text-muted)]">
+                    {(data.pagination.page - 1) * PAGE_SIZE + index + 1}
+                  </TableCell>
                   <TableCell>
                     <Link to={`/admin/hotels/${hotel.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">
                       {hotel.name}

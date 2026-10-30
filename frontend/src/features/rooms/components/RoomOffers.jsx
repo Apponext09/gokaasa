@@ -14,7 +14,7 @@ const UNAVAILABLE_TEXT = {
   CAPACITY: 'Does not fit your party',
   CLOSED: 'Closed for these dates',
   STAY_LENGTH: 'Not available for this length of stay',
-  NO_RATES: 'No rates available for these dates',
+  NO_RATES: 'No active price is available for this room',
 };
 
 /** Each rate plan, compared side by side: what it includes, its refund rule, and the price breakdown. */

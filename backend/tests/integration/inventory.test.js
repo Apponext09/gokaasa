@@ -365,12 +365,12 @@ describe('7, 13, 14. availability, date-range pricing and multi-room', () => {
     assert.doesNotMatch(text, /"blocked"|"reserved"|"totalUnits"|"unitsOverride"|"sellable"/);
   });
 
-  it('applies date-range pricing to the quote', async () => {
+  it('applies a permanent rate-plan price to every night', async () => {
     await setPrice(roomId, planId, { from: addDays(D0, 1), to: addDays(D0, 1) }, 1000000);
     const res = await availability(hotelId, D0, addDays(D0, 2), '&rooms=1');
     const plan = res.body.roomTypes.find((item) => item.id === roomId).ratePlans[0];
-    assert.equal(plan.finalAmount, 800000 + 1000000);
-    assert.deepEqual(plan.nightly.map((night) => night.final), [800000, 1000000]);
+    assert.equal(plan.finalAmount, 2000000);
+    assert.deepEqual(plan.nightly.map((night) => night.final), [1000000, 1000000]);
   });
 
   it('shows capacity when guests per room exceed the room limit, and sold-out when rooms run out', async () => {
@@ -398,10 +398,10 @@ describe('7, 13, 14. availability, date-range pricing and multi-room', () => {
     assert.equal(room.availableRooms, 1);
   });
 
-  it('enforces stay-length limits', async () => {
+  it('ignores retired date-specific stay limits', async () => {
     await setPrice(roomId, planId, { from: D0, to: D0 }, 800000, { minStay: 3 });
     const res = await availability(hotelId, D0, addDays(D0, 2));
-    assert.equal(res.body.roomTypes.find((item) => item.id === roomId).unavailableReason, 'STAY_LENGTH');
+    assert.equal(res.body.roomTypes.find((item) => item.id === roomId).available, true);
     await setPrice(roomId, planId, { from: D0, to: D0 }, 800000, { minStay: null });
   });
 
@@ -418,7 +418,7 @@ async function createOverlapHold(roomId, stayDate, quantity) {
   await inventoryService.reserve({ roomTypeId: roomId, checkIn: stayDate, checkOut: addDays(stayDate, 1), rooms: quantity });
 }
 
-describe('8. closed inventory cannot be booked', () => {
+describe('8. inactive rooms cannot be booked', () => {
   let roomId;
   let planId;
 
@@ -431,25 +431,20 @@ describe('8. closed inventory cannot be booked', () => {
     await setPrice(roomId, planId, { from: addDays(D0, 10), to: addDays(D0, 12) }, 500000);
   });
 
-  it('marks a closed night unavailable for customers and refuses to reserve it', async () => {
-    const close = await request(app).post(`/api/admin/room-types/${roomId}/calendar/bulk`).set(bearer(adminToken)).send({
-      from: addDays(D0, 10), to: addDays(D0, 10), isClosed: true,
-    });
-    assert.equal(close.status, 200);
+  it('hides an inactive room and refuses to reserve it', async () => {
+    const close = await request(app).patch(`/api/admin/room-types/${roomId}`).set(bearer(adminToken)).send({ status: 'INACTIVE' });
+    assert.equal(close.status, 200, JSON.stringify(close.body));
 
     const res = await availability(hotelId, addDays(D0, 10), addDays(D0, 11));
-    const room = res.body.roomTypes.find((item) => item.id === roomId);
-    assert.equal(room.unavailableReason, 'CLOSED');
+    assert.equal(res.body.roomTypes.some((item) => item.id === roomId), false);
 
     await assert.rejects(
       () => inventoryService.reserve({ roomTypeId: roomId, checkIn: addDays(D0, 10), checkOut: addDays(D0, 11), rooms: 1 }),
       (error) => error.status === 409,
     );
 
-    const reopen = await request(app).post(`/api/admin/room-types/${roomId}/calendar/bulk`).set(bearer(adminToken)).send({
-      from: addDays(D0, 10), to: addDays(D0, 10), isClosed: false,
-    });
-    assert.equal(reopen.status, 200);
+    const reopen = await request(app).patch(`/api/admin/room-types/${roomId}`).set(bearer(adminToken)).send({ status: 'ACTIVE' });
+    assert.equal(reopen.status, 200, JSON.stringify(reopen.body));
     const after = await availability(hotelId, addDays(D0, 10), addDays(D0, 11));
     assert.equal(after.body.roomTypes.find((item) => item.id === roomId).available, true);
   });
@@ -531,7 +526,7 @@ describe('12. cancellation policies', () => {
       code: 'WEEK_FLEX', name: 'Week flexible', isNonRefundable: false, cancellationDeadlineHours: 168, refundPercent: 100,
     });
     assert.equal(created.status, 201);
-    assert.match(created.body.policy.summary, /7 day\(s\)/);
+    assert.match(created.body.policy.summary, /7 days/);
   });
 
   it('refuses incoherent policies', async () => {

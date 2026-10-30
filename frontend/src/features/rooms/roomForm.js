@@ -120,12 +120,13 @@ export const ratePlanFormSchema = z.object({
   discountPercent: z.string().trim().refine((v) => v !== '' && Number(v) >= 0 && Number(v) <= 100, 'Enter 0 to 100'),
   taxPercent: z.string().trim().refine((v) => v !== '' && Number(v) >= 0 && Number(v) <= 100, 'Enter 0 to 100'),
   feeRupees: z.string().trim().refine((v) => v === '' || rupeesToMinor(v) !== null, 'Enter an amount such as 150 or 150.50'),
+  basePriceRupees: z.string().trim().refine((v) => rupeesToMinor(v) !== null && rupeesToMinor(v) > 0, 'Enter a nightly price greater than 0'),
   status: z.enum(['ACTIVE', 'INACTIVE']),
 });
 
 export const EMPTY_RATE_PLAN_FORM = {
   code: '', name: '', description: '', mealPlan: 'ROOM_ONLY', isRefundable: true, cancellationPolicyId: '',
-  discountPercent: '0', taxPercent: '12', feeRupees: '0', status: 'ACTIVE',
+  discountPercent: '0', taxPercent: '12', feeRupees: '0', basePriceRupees: '', status: 'ACTIVE',
 };
 
 export function toRatePlanPayload(values) {
@@ -139,6 +140,7 @@ export function toRatePlanPayload(values) {
     discountPercent: Number(values.discountPercent),
     taxPercent: Number(values.taxPercent),
     feeMinor: values.feeRupees === '' ? 0 : rupeesToMinor(values.feeRupees),
+    basePriceMinor: rupeesToMinor(values.basePriceRupees),
     status: values.status,
   };
 }

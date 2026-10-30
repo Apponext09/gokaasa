@@ -74,6 +74,14 @@ export function AuthProvider({ children }) {
     [applySession],
   );
 
+  const loginWithGoogle = useCallback(
+    async (payload) => {
+      const body = typeof payload === 'string' ? { credential: payload } : payload;
+      return applySession(await authApi.googleLogin(body));
+    },
+    [applySession],
+  );
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -94,12 +102,13 @@ export function AuthProvider({ children }) {
       isReviewExecutive: Boolean(user?.roles?.includes('HOTEL_REVIEW_EXECUTIVE')),
       hasRole: (role) => Boolean(user?.roles?.includes(role)),
       login,
+      loginWithGoogle,
       register,
       guestCheckout,
       verifyPartnerOtp,
       logout,
     }),
-    [user, status, login, register, guestCheckout, verifyPartnerOtp, logout],
+    [user, status, login, loginWithGoogle, register, guestCheckout, verifyPartnerOtp, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

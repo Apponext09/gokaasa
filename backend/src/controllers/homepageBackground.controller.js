@@ -7,7 +7,13 @@ export const homepageBackgroundController = {
     return res.json({ images: await homepageBackgroundService.list() });
   },
   async replace(req, res) {
-    const image = await homepageBackgroundService.replace(req.validated.params.slot, req.file, req.body?.altText, actorOf(req));
+    const image = await homepageBackgroundService.replace(
+      req.validated.params.slot,
+      req.file,
+      req.body?.altText,
+      req.body?.heroText,
+      actorOf(req),
+    );
     return res.json({ image });
   },
   async remove(req, res) {

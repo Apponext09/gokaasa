@@ -36,7 +36,7 @@ function ResultCard({ result, expanded, onToggle, onImport, importing }) {
   const imported = result.alreadyImported;
 
   return (
-    <Card className="transition-shadow hover:shadow-sm">
+    <Card className="admin-records-card transition-shadow hover:shadow-sm">
       <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 gap-4">
           <div className="grid h-16 w-20 shrink-0 place-items-center rounded-lg bg-[var(--surface-muted)] text-[var(--text-muted)]" aria-hidden="true">
@@ -127,7 +127,7 @@ function ImportProgress({ job, onDismiss }) {
   const finished = FINAL_STATUSES.includes(job.status);
 
   return (
-    <Card aria-live="polite">
+    <Card className="admin-records-card" aria-live="polite">
       <CardContent className="space-y-5 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -310,7 +310,7 @@ export function HotelOnboardingPage() {
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Searching hotels…
           </p>
           {[0, 1, 2].map((item) => (
-            <Card key={item} className="p-5">
+            <Card key={item} className="admin-records-card p-5">
               <div className="flex gap-4">
                 <Skeleton className="h-16 w-20" />
                 <div className="flex-1 space-y-2">
@@ -388,13 +388,13 @@ export function HotelOnboardingPage() {
           Recent imports
         </h2>
         {recentJobs === null ? (
-          <Card><div className="space-y-3 p-5">{[0, 1].map((row) => <Skeleton key={row} className="h-12 w-full" />)}</div></Card>
+          <Card className="admin-records-card"><div className="space-y-3 p-5">{[0, 1].map((row) => <Skeleton key={row} className="h-12 w-full" />)}</div></Card>
         ) : recentJobs.length === 0 ? (
-          <Card>
+          <Card className="admin-records-card">
             <EmptyState icon={History} title="No imports yet" description="Your recent imports will appear here." />
           </Card>
         ) : (
-          <Card className="overflow-hidden">
+          <Card className="admin-records-card overflow-hidden">
             <Table minWidth="520px">
               <caption className="sr-only">Recent imports</caption>
               <TableHeader>

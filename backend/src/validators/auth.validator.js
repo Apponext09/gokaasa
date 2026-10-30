@@ -70,3 +70,12 @@ export const guestCheckoutSchema = z.object({
   lastName: name('Last name'),
   mobile,
 });
+
+export const googleAuthSchema = z
+  .object({
+    credential: z.string().min(10).optional(),
+    accessToken: z.string().min(10).optional(),
+  })
+  .refine((data) => Boolean(data.credential || data.accessToken), {
+    message: 'Either credential or accessToken is required',
+  });

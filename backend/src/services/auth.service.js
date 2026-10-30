@@ -252,4 +252,75 @@ export const authService = {
     if (!user || !user.isActive) throw AppError.unauthorized();
     return toPublicUser(user);
   },
+
+  async googleLogin(input, meta) {
+    const { credential, accessToken } = input;
+    if (!credential && !accessToken) {
+      throw AppError.badRequest('Google credential or accessToken is required');
+    }
+
+    let profile;
+    try {
+      if (credential) {
+        const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+        if (!response.ok) {
+          throw new Error('Google token verification failed');
+        }
+        profile = await response.json();
+      } else {
+        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!response.ok) {
+          throw new Error('Google userinfo fetch failed');
+        }
+        profile = await response.json();
+      }
+    } catch (err) {
+      log.warn('Google authentication verification failed', { error: err.message });
+      throw AppError.unauthorized('Invalid or expired Google authentication');
+    }
+
+    const email = profile.email?.toLowerCase().trim();
+    const emailVerified = profile.email_verified === 'true' || profile.email_verified === true;
+    if (!email || !emailVerified) {
+      throw AppError.unauthorized('Google account email is not verified');
+    }
+
+    if (config.auth.googleClientId && profile.aud && profile.aud !== config.auth.googleClientId) {
+      throw AppError.unauthorized('Google token audience mismatch');
+    }
+
+    let user = await userRepository.findByEmail(email);
+
+    if (user) {
+      if (!user.isActive) {
+        throw AppError.unauthorized('This account has been deactivated. Please contact support.');
+      }
+      await userRepository.touchLastLogin(user.id);
+    } else {
+      const firstName = (profile.given_name || profile.name?.split(' ')[0] || 'User').trim().slice(0, 80);
+      const lastName = (profile.family_name || profile.name?.split(' ').slice(1).join(' ') || 'Customer').trim().slice(0, 80);
+      const unusablePasswordHash = await bcrypt.hash(`google-oauth-${Date.now()}-${Math.random()}`, config.auth.bcryptRounds);
+
+      const result = await withTransaction(async (client) => {
+        const id = await userRepository.create(client, {
+          email,
+          passwordHash: unusablePasswordHash,
+          firstName: firstName || 'User',
+          lastName: lastName || 'Customer',
+          roleCode: 'CUSTOMER',
+        });
+        await client.query(`UPDATE users SET email_verified_at = now() WHERE id = $1`, [id]);
+        const createdUser = await userRepository.findById(id, client);
+        await emailNotificationService.enqueueWelcome(client, createdUser);
+        return { user: createdUser, eventKey: `customer.registered:${id}` };
+      });
+      user = result.user;
+      await emailNotificationService.processEvent(result.eventKey);
+    }
+
+    const session = await withTransaction((client) => issueSession(client, user, meta));
+    return session;
+  },
 };

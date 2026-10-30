@@ -1,18 +1,18 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import {
-  BadgeCheck,
-  BadgeIndianRupee,
   CalendarCheck,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Compass,
   Globe2,
   Headphones,
   Mail,
   MapPin,
   Quote,
   ShieldCheck,
+  Smile,
   Star,
 } from 'lucide-react';
 
@@ -30,7 +30,6 @@ import { Reveal } from '@/components/shared/Reveal.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { HeroSection } from '@/features/home/HeroSection.jsx';
 import { DestinationCard } from '@/features/home/DestinationCard.jsx';
-import { ALL_AREAS } from '@/features/home/destinations.config.js';
 import { useGeolocation } from '@/features/home/useGeolocation.js';
 import { distanceFromCoordinatesKm } from '@/features/hotels/distance.js';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
@@ -92,24 +91,20 @@ function DeferredNearbyHotels() {
 
 const WHY_GOKAASA = [
   {
-    icon: BadgeCheck,
-    title: 'Verified stays',
-    text: 'Hotel details checked before you book.',
+    icon: Smile,
+    title: 'Happy Travellers',
   },
   {
-    icon: BadgeIndianRupee,
-    title: 'Upfront total',
-    text: 'Room price, taxes and fees shown clearly.',
+    icon: Compass,
+    title: 'On-trip Assistance',
   },
   {
     icon: CalendarCheck,
-    title: 'Flexible choices',
-    text: 'Compare cancellation terms at a glance.',
+    title: 'Flexible Bookings',
   },
   {
     icon: Headphones,
-    title: 'Support that stays',
-    text: 'Help from booking through check-in.',
+    title: '24/7 Support',
   },
 ];
 
@@ -521,6 +516,7 @@ export function HomePage() {
     () => (homepageBackgrounds ?? []).map((image) => ({
       src: image.url,
       label: image.altText || `Homepage background ${image.slot}`,
+      heroText: image.heroText,
     })),
     [homepageBackgrounds],
   );
@@ -556,23 +552,12 @@ export function HomePage() {
       })
       .catch(() => { });
 
-    // Mumbai/Navi Mumbai areas are only ever shown when the backend actually has hotels there --
-    // each configured area is checked against the real search-suggest endpoint, never assumed.
-    Promise.all(
-      ALL_AREAS.map((area) =>
-        discoveryApi
-          .suggestDestinations(area.label)
-          .then((items) => items.find((item) => item.type === 'AREA' && item.destination === area.citySlug))
-          .catch(() => null),
-      ),
-    ).then((matches) => {
-      if (cancelled) return;
-      setAreaDestinations(
-        ALL_AREAS
-          .map((area, index) => (matches[index]?.hotelCount > 0 ? { ...area, ...matches[index] } : null))
-          .filter(Boolean),
-      );
-    });
+    discoveryApi
+      .popularAreas({ limit: 8 })
+      .then((items) => {
+        if (!cancelled) setAreaDestinations(items);
+      })
+      .catch(() => { });
 
     offerApi
       .list()
@@ -708,18 +693,19 @@ export function HomePage() {
           <Reveal>
             <SectionHeading
               title="Explore Stays Around You"
-              subtitle="Discover memorable stays across Mumbai and Navi Mumbai."
+              subtitle="Discover memorable stays in popular neighbourhoods and destinations."
             />
           </Reveal>
 
-          <div className="popular-dest-cards-grid">
+          <div className="collection-cards-grid">
             {areaDestinations.map((area, index) => (
-              <Reveal key={area.id} delay={index * 65} direction="zoom" className="h-full">
+              <Reveal key={area.id || area.label} delay={index * 65} direction="zoom" className="h-full">
                 <DestinationCard
                   label={area.label}
                   citySlug={area.citySlug}
                   area={area.area}
                   hotelCount={area.hotelCount}
+                  imageUrl={area.imageUrl}
                   className="h-full"
                 />
               </Reveal>
@@ -857,17 +843,14 @@ export function HomePage() {
             </div>
           </Reveal>
 
-          <div className="home-confidence-list">
-            {WHY_GOKAASA.map(({ icon: Icon, title, text }, index) => (
-              <Reveal key={title} delay={index * 70}>
+          <div className="home-confidence-grid">
+            {WHY_GOKAASA.map(({ icon: Icon, title }, index) => (
+              <Reveal key={title} delay={index * 60}>
                 <div className="home-confidence-item">
                   <div className="home-confidence-icon">
                     <Icon aria-hidden="true" />
                   </div>
-                  <div>
-                    <h3>{title}</h3>
-                    <p>{text}</p>
-                  </div>
+                  <h3>{title}</h3>
                 </div>
               </Reveal>
             ))}

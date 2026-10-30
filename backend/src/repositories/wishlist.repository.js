@@ -10,16 +10,21 @@ export const wishlistRepository = {
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,
               ARRAY(SELECT a.name FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
-                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name LIMIT 4) AS top_amenities
+                     WHERE ha.hotel_id = h.id ORDER BY a.category, a.name) AS top_amenities
          FROM wishlists w
          JOIN hotels h ON h.id = w.hotel_id
          LEFT JOIN LATERAL (
-           SELECT rpr.base_price_minor, rpr.discount_minor, rpr.final_price_minor
+           SELECT rp.base_price_minor,
+                  ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint AS discount_minor,
+                  (rp.base_price_minor
+                    - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint
+                    + ROUND((rp.base_price_minor - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint) * rp.tax_percent / 100)::bigint
+                    + rp.fee_minor)::bigint AS final_price_minor
              FROM room_types rt
-             JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE' AND rp.deleted_at IS NULL
-             JOIN rate_prices rpr ON rpr.rate_plan_id = rp.id AND rpr.stay_date = CURRENT_DATE + 1
+             JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE'
+               AND rp.base_price_minor IS NOT NULL AND rp.deleted_at IS NULL
             WHERE rt.hotel_id = h.id AND rt.status = 'ACTIVE' AND rt.deleted_at IS NULL
-            ORDER BY rpr.final_price_minor ASC
+            ORDER BY final_price_minor ASC
             LIMIT 1
          ) cheapest ON TRUE
         WHERE w.user_id = $1 AND h.status = 'PUBLISHED' AND h.deleted_at IS NULL

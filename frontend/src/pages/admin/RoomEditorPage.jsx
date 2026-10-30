@@ -13,8 +13,6 @@ import { ImageGallery } from '@/features/hotels/components/ImageGallery.jsx';
 import { AmenityPicker } from '@/features/hotels/components/AmenityPicker.jsx';
 import { RoomDetailsForm } from '@/features/rooms/components/RoomDetailsForm.jsx';
 import { RatePlansPanel } from '@/features/rooms/components/RatePlansPanel.jsx';
-import { RateCalendar } from '@/features/rooms/components/RateCalendar.jsx';
-import { BlocksPanel } from '@/features/rooms/components/BlocksPanel.jsx';
 import { CancellationPoliciesPanel } from '@/features/rooms/components/CancellationPoliciesPanel.jsx';
 import { EMPTY_ROOM_FORM, roomFormSchema, toRoomFormValues, toRoomPayload } from '@/features/rooms/roomForm.js';
 import { roomApi, hotelApi } from '@/services/endpoints.js';
@@ -28,12 +26,11 @@ const TABS = [
   { value: 'amenities', label: 'Amenities' },
   { value: 'images', label: 'Images' },
   { value: 'rates', label: 'Rate plans' },
-  { value: 'availability', label: 'Availability' },
 ];
 
 const STATUS_LABEL = { ACTIVE: 'Active', INACTIVE: 'Inactive', ARCHIVED: 'Archived' };
 
-/** One room type: details, amenities, images, rate plans, and the availability calendar. */
+/** One room type: details, amenities, images, and permanently-priced rate plans. */
 export function RoomEditorPage() {
   const { isReviewExecutive } = useAuth();
   const { hotelId: hotelParam, roomId } = useParams();
@@ -131,7 +128,7 @@ export function RoomEditorPage() {
       const payload = toRoomPayload(values, { includeRoomCode: !isNew });
       if (isNew) {
         const created = await roomApi.create(hotelId, payload);
-        toast.success('Room type created. Add its photos, rates and availability next.');
+        toast.success('Room type created. Add its photos and rate plans next.');
         navigate(`/admin/hotels/${hotelId}/rooms/${created.id}`, { replace: true });
         return;
       }
@@ -203,7 +200,7 @@ export function RoomEditorPage() {
         }
       />
 
-      {isReviewExecutive && <Alert tone="info" title="Review mode">Room details, rates, and availability are read-only. Add any concerns in Internal review.</Alert>}
+      {isReviewExecutive && <Alert tone="info" title="Review mode">Room details and rates are read-only. Add any concerns in Internal review.</Alert>}
       {!isReviewExecutive && room?.status === 'ARCHIVED' && <Alert tone="info" title="Archived">This room type is read-only. Its history is kept.</Alert>}
       {codeError && <Alert tone="error" title="Room code unavailable">{codeError}</Alert>}
 
@@ -286,10 +283,6 @@ export function RoomEditorPage() {
             <CancellationPoliciesPanel hotelId={hotelId} disabled={readOnly} />
           </TabPanel>
 
-          <TabPanel value="availability" current={tab}>
-            <RateCalendar roomId={roomId} room={room} plans={room.ratePlans} disabled={readOnly} onChanged={refresh} />
-            <BlocksPanel roomId={roomId} disabled={readOnly} onChanged={refresh} />
-          </TabPanel>
         </>
       )}
 

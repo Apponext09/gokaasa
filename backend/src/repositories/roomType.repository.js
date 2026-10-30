@@ -16,10 +16,15 @@ export const roomTypeRepository = {
         : `rt.status <> 'ARCHIVED'`;
     const { rows } = await client.query(
       `SELECT ${ROOM_COLUMNS},
-              (SELECT MIN(rp.final_price_minor)
-                 FROM rate_plans p JOIN rate_prices rp ON rp.rate_plan_id = p.id
+              (SELECT MIN(
+                        p.base_price_minor
+                        - ROUND(p.base_price_minor * p.discount_percent / 100)::bigint
+                        + ROUND((p.base_price_minor - ROUND(p.base_price_minor * p.discount_percent / 100)::bigint) * p.tax_percent / 100)::bigint
+                        + p.fee_minor
+                      )
+                 FROM rate_plans p
                 WHERE p.room_type_id = rt.id AND p.deleted_at IS NULL AND p.status = 'ACTIVE'
-                  AND rp.stay_date >= CURRENT_DATE) AS from_price_minor,
+                  AND p.base_price_minor IS NOT NULL) AS from_price_minor,
               (SELECT COUNT(*)::int FROM room_images ri WHERE ri.room_type_id = rt.id AND ri.deleted_at IS NULL) AS image_count
          FROM room_types rt
         WHERE rt.hotel_id = $1 AND rt.deleted_at IS NULL AND ${statusFilter}

@@ -115,6 +115,19 @@ export function HotelsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestKey, retryKey, authStatus]);
 
+  // A sold-out card caused only by a short booking hold becomes searchable again as soon as that
+  // hold expires. Refresh once at the earliest advertised expiry; confirmed inventory remains sold out.
+  useEffect(() => {
+    const retryTimes = (data?.items ?? [])
+      .filter((hotel) => hotel.availabilityStatus === "TEMPORARILY_HELD" && hotel.retryAt)
+      .map((hotel) => new Date(hotel.retryAt).getTime())
+      .filter(Number.isFinite);
+    if (retryTimes.length === 0) return undefined;
+    const delay = Math.max(250, Math.min(...retryTimes) - Date.now() + 250);
+    const timer = setTimeout(() => setRetryKey((key) => key + 1), delay);
+    return () => clearTimeout(timer);
+  }, [data?.items]);
+
   const update = (patch, { resetPage = true, replace = false } = {}) => {
     const next = { ...state, ...patch, page: resetPage && !("page" in patch) ? 1 : (patch.page ?? state.page) };
     const search = toSearchParams(next);

@@ -19,6 +19,7 @@ export function CuratedHotelCard({ hotel }) {
   const place = formatHotelLocation(hotel, { compact: true });
   const { shown: amenities, moreCount } = normalizeAmenities(hotel.amenities, 2);
   const detailsPath = `/hotels/${slugifyPlace(hotel.city)}/${hotel.slug}`;
+  const imageCategory = hotel.image?.categoryName || (hotel.image?.category ? hotel.image.category.charAt(0).toUpperCase() + hotel.image.category.slice(1).toLowerCase().replaceAll('_', ' ') : null);
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl">
@@ -39,9 +40,9 @@ export function CuratedHotelCard({ hotel }) {
         <div className="absolute right-3 top-3">
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
-        {isIllustrativeCover(hotel.image) && (
+        {(imageCategory || isIllustrativeCover(hotel.image)) && (
           <p className="absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
-            Illustrative image
+            {imageCategory ?? 'Illustrative image'}
           </p>
         )}
       </div>

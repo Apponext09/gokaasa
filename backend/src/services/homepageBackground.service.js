@@ -9,6 +9,7 @@ const dto = (row) => ({
   slot: row.slot,
   url: getStorage().publicUrl(row.storage_key),
   altText: row.alt_text,
+  heroText: row.hero_text,
   mimeType: row.mime_type,
   byteSize: row.byte_size,
   updatedAt: row.updated_at,
@@ -20,12 +21,37 @@ export const homepageBackgroundService = {
     return rows.map(dto);
   },
 
-  async replace(slot, file, altText, actor) {
-    if (!file?.buffer?.length) throw AppError.badRequest('Choose an image to upload');
+  async replace(slot, file, altText, heroText, actor) {
     const cleanAltText = typeof altText === 'string' ? altText.trim() : '';
+    const cleanHeroText = typeof heroText === 'string' ? heroText.trim() : '';
     if (cleanAltText.length > 160) {
       throw AppError.unprocessable('Accessibility description must be 160 characters or fewer');
     }
+    if (cleanHeroText.length > 160) {
+      throw AppError.unprocessable('Homepage display text must be 160 characters or fewer');
+    }
+
+    if (!file?.buffer?.length) {
+      return withTransaction(async (client) => {
+        const { rows } = await client.query(
+          `UPDATE homepage_background_images
+              SET alt_text = $2, hero_text = $3, updated_at = now()
+            WHERE slot = $1
+            RETURNING *`,
+          [slot, cleanAltText, cleanHeroText],
+        );
+        if (!rows[0]) throw AppError.badRequest('Choose an image to upload');
+        await auditService.record(client, {
+          actor,
+          action: 'homepage.background_updated',
+          entity: 'homepage_background',
+          entityId: slot,
+          newValue: { slot, altText: cleanAltText, heroText: cleanHeroText },
+        });
+        return dto(rows[0]);
+      });
+    }
+
     const detected = detectImageType(file.buffer);
     if (!detected) throw AppError.unsupportedMediaType('The file is not a valid JPEG, PNG or WebP image');
     if (detected.mime !== file.mimetype) throw AppError.unsupportedMediaType('The file contents do not match its declared type');
@@ -40,15 +66,15 @@ export const homepageBackgroundService = {
         oldKey = current.rows[0]?.storage_key ?? null;
         const contentHash = createHash('sha256').update(file.buffer).digest('hex');
         const { rows } = await client.query(
-          `INSERT INTO homepage_background_images (slot, storage_key, alt_text, mime_type, byte_size, content_hash, created_by)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           ON CONFLICT (slot) DO UPDATE SET storage_key = EXCLUDED.storage_key, alt_text = EXCLUDED.alt_text,
+          `INSERT INTO homepage_background_images (slot, storage_key, alt_text, hero_text, mime_type, byte_size, content_hash, created_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           ON CONFLICT (slot) DO UPDATE SET storage_key = EXCLUDED.storage_key, alt_text = EXCLUDED.alt_text, hero_text = EXCLUDED.hero_text,
              mime_type = EXCLUDED.mime_type, byte_size = EXCLUDED.byte_size, content_hash = EXCLUDED.content_hash,
              created_by = EXCLUDED.created_by, updated_at = now()
            RETURNING *`,
-          [slot, storageKey, cleanAltText, detected.mime, file.buffer.length, contentHash, actor.id],
+          [slot, storageKey, cleanAltText, cleanHeroText, detected.mime, file.buffer.length, contentHash, actor.id],
         );
-        await auditService.record(client, { actor, action: 'homepage.background_updated', entity: 'homepage_background', entityId: slot, newValue: { slot, altText: cleanAltText } });
+        await auditService.record(client, { actor, action: 'homepage.background_updated', entity: 'homepage_background', entityId: slot, newValue: { slot, altText: cleanAltText, heroText: cleanHeroText } });
         return rows[0];
       });
       if (oldKey && oldKey !== storageKey) await storage.remove(oldKey).catch(() => {});

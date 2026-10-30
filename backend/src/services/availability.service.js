@@ -4,10 +4,10 @@ import { roomTypeRepository } from '../repositories/roomType.repository.js';
 import { ratePlanRepository } from '../repositories/ratePlan.repository.js';
 import { loadNightly } from './inventory.service.js';
 import { getStorage } from '../storage/index.js';
-import { occupancyFits, stayLengthCheck } from '../domain/inventory.js';
+import { occupancyFits } from '../domain/inventory.js';
 import { describePolicy } from '../domain/cancellationPolicy.js';
 import { occupancyFromTotals, occupancyTotals } from '../domain/occupancy.js';
-import { addDays, MAX_STAY_NIGHTS, nightsBetween, quoteNights } from '../domain/pricing.js';
+import { MAX_STAY_NIGHTS, nightsBetween, priceComponents, quoteNights } from '../domain/pricing.js';
 import { AppError } from '../utils/AppError.js';
 import { localToday } from '../domain/businessDate.js';
 import { config } from '../config/index.js';
@@ -92,18 +92,13 @@ export const availabilityService = {
 
     const [nightly, planRows] = await Promise.all([
       loadNightly(pool, roomIds, nights),
-      ratePlanRepository.sellablePlansForRoomTypes(roomIds, checkIn, addDays(checkOut, 0)),
+      ratePlanRepository.sellablePlansForRoomTypes(roomIds, checkIn, checkOut),
     ]);
 
-    const plansByRoom = new Map();
-    for (const row of planRows) {
-      if (!plansByRoom.has(row.id)) plansByRoom.set(row.id, { plan: row, prices: [] });
-      if (row.stay_date) plansByRoom.get(row.id).prices.push(row);
-    }
     const plansForRoom = new Map();
-    for (const { plan, prices } of plansByRoom.values()) {
+    for (const plan of planRows) {
       if (!plansForRoom.has(plan.room_type_id)) plansForRoom.set(plan.room_type_id, []);
-      plansForRoom.get(plan.room_type_id).push({ plan, prices });
+      plansForRoom.get(plan.room_type_id).push(plan);
     }
 
     const roomTypes = [];
@@ -124,23 +119,17 @@ export const availabilityService = {
           maxOccupancy: room.max_occupancy,
         }),
       );
-      const closed = nightFacts.some((facts) => facts.isClosed);
       const availableRooms = Math.min(...nightFacts.map((facts) => facts.sellable));
-      const stay = stayLengthCheck(nightFacts, nights.length);
 
       const quotes = (plansForRoom.get(room.id) ?? [])
-        .filter(({ prices }) => prices.length === nights.length)
-        .map(({ plan, prices }) => {
-          const nightlyRows = prices
-            .sort((a, b) => a.stay_date.localeCompare(b.stay_date))
-            .map((row) => ({
-              date: row.stay_date,
-              base: row.base_price_minor,
-              discount: row.discount_minor,
-              tax: row.tax_minor,
-              fee: row.fee_minor,
-              final: row.final_price_minor,
-            }));
+        .map((plan) => {
+          const components = priceComponents({
+            baseMinor: Number(plan.base_price_minor),
+            discountPercent: plan.discount_percent,
+            taxPercent: plan.tax_percent,
+            feeMinor: plan.fee_minor,
+          });
+          const nightlyRows = nights.map((date) => ({ date, ...components }));
           const totals = quoteNights(nightlyRows, rooms);
           const policy = toPolicy(plan);
           return {
@@ -161,8 +150,6 @@ export const availabilityService = {
 
       let unavailableReason = null;
       if (!fits) unavailableReason = 'CAPACITY';
-      else if (closed) unavailableReason = 'CLOSED';
-      else if (!stay.ok) unavailableReason = 'STAY_LENGTH';
       else if (availableRooms < rooms) unavailableReason = 'SOLD_OUT';
       else if (quotes.length === 0) unavailableReason = 'NO_RATES';
 
@@ -172,7 +159,7 @@ export const availabilityService = {
         available,
         unavailableReason,
         availableRooms: Math.max(0, availableRooms),
-        stayLength: { minNights: stay.minRequired, maxNights: stay.maxAllowed },
+        stayLength: { minNights: null, maxNights: null },
         ratePlans: available ? quotes : [],
       });
     }

@@ -9,9 +9,9 @@ export const inventoryRepository = {
     if (roomTypeIds.length === 0 || nights.length === 0) return [];
     const { rows } = await client.query(
       `SELECT rt.id AS room_type_id, n.stay_date::text AS stay_date, rt.total_units,
-              ri.units AS units_override,
-              COALESCE(ri.is_closed, FALSE) AS is_closed,
-              ri.min_stay, ri.max_stay,
+              NULL::integer AS units_override,
+              FALSE AS is_closed,
+              NULL::smallint AS min_stay, NULL::smallint AS max_stay,
               COALESCE((SELECT SUM(b.quantity) FROM availability_blocks b
                          WHERE b.room_type_id = rt.id AND b.is_active
                            AND n.stay_date >= b.start_date AND n.stay_date < b.end_date), 0)::int AS blocked,
@@ -20,7 +20,6 @@ export const inventoryRepository = {
                            AND (r.status = 'CONFIRMED' OR (r.status = 'HELD' AND r.expires_at > now()))), 0)::int AS reserved
          FROM room_types rt
          CROSS JOIN UNNEST($2::date[]) AS n(stay_date)
-         LEFT JOIN room_inventory ri ON ri.room_type_id = rt.id AND ri.stay_date = n.stay_date
         WHERE rt.id = ANY($1::bigint[])
         ORDER BY rt.id, n.stay_date`,
       [roomTypeIds, nights],

@@ -1,5 +1,4 @@
 import { Checkbox } from '@/components/ui/form-controls.jsx';
-import { Button } from '@/components/ui/button.jsx';
 
 /** Amenities grouped by category. Source synonyms are mapped on the server, so this only edits codes. */
 export function AmenityPicker({ catalog, selected, onSelectionChange, disabled }) {
@@ -15,32 +14,51 @@ export function AmenityPicker({ catalog, selected, onSelectionChange, disabled }
       : selected.filter((code) => !affected.has(code)));
   };
 
+  const allCodes = catalog.map((item) => item.code);
+  const allSelected = allCodes.length > 0 && allCodes.every((code) => selected.includes(code));
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 py-2">
-        <span className="mr-auto text-sm font-medium text-[var(--text-strong)]">All amenities</span>
-        <Button type="button" size="sm" variant="ghost" disabled={disabled || selected.length === catalog.length} onClick={() => changeMany(catalog.map((item) => item.code), true)}>Select all</Button>
-        <Button type="button" size="sm" variant="ghost" disabled={disabled || selected.length === 0} onClick={() => onSelectionChange([])}>Unselect all</Button>
+      <div className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-4 py-2">
+        <span className="text-sm font-medium text-[var(--text-strong)]">All amenities</span>
+        <Checkbox
+          label="Select all"
+          className="min-w-24 justify-end whitespace-nowrap font-medium text-[var(--text-strong)]"
+          checked={allSelected}
+          disabled={disabled || allCodes.length === 0}
+          onChange={(event) => changeMany(allCodes, event.target.checked)}
+        />
       </div>
-      {Object.entries(groups).map(([category, items]) => (
-        <div key={category} className="space-y-2">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h3 className="mr-auto text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{category.replaceAll('_', ' ').toLowerCase()}</h3>
-            <Button type="button" size="sm" variant="ghost" disabled={disabled || items.every((item) => selected.includes(item.code))} onClick={() => changeMany(items.map((item) => item.code), true)}>Select category</Button>
-            <Button type="button" size="sm" variant="ghost" disabled={disabled || items.every((item) => !selected.includes(item.code))} onClick={() => changeMany(items.map((item) => item.code), false)}>Unselect category</Button>
-          </div>
-          <fieldset disabled={disabled} aria-label={`${category.replaceAll('_', ' ').toLowerCase()} amenities`} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {items.map((amenity) => (
+      {Object.entries(groups).map(([category, items]) => {
+        const categoryCodes = items.map((item) => item.code);
+        const categorySelected = categoryCodes.every((code) => selected.includes(code));
+        const categoryLabel = category.replaceAll('_', ' ').toLowerCase();
+
+        return (
+          <div key={category} className="space-y-3">
+            <div className="grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-[var(--border-subtle)] pb-2">
+              <h3 className="truncate text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">{categoryLabel}</h3>
               <Checkbox
-                key={amenity.code}
-                label={amenity.name}
-                checked={selected.includes(amenity.code)}
-                onChange={(event) => changeMany([amenity.code], event.target.checked)}
+                label="Select all"
+                className="min-w-24 justify-end whitespace-nowrap font-medium text-[var(--text-strong)]"
+                checked={categorySelected}
+                disabled={disabled}
+                onChange={(event) => changeMany(categoryCodes, event.target.checked)}
               />
-            ))}
-          </fieldset>
-        </div>
-      ))}
+            </div>
+            <fieldset disabled={disabled} aria-label={`${categoryLabel} amenities`} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {items.map((amenity) => (
+                <Checkbox
+                  key={amenity.code}
+                  label={amenity.name}
+                  checked={selected.includes(amenity.code)}
+                  onChange={(event) => changeMany([amenity.code], event.target.checked)}
+                />
+              ))}
+            </fieldset>
+          </div>
+        );
+      })}
     </div>
   );
 }

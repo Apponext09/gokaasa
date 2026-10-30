@@ -8,6 +8,7 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a date in YYYY-MM-D
 const idParam = z.string().regex(/^\d+$/, 'Invalid id').transform(Number);
 const optionalText = (max) => z.string().trim().max(max).nullish().transform((value) => value || null);
 const moneyMinor = z.number().int().min(0).max(100_000_000_00);
+const nightlyPriceMinor = z.number().int().min(1, 'Nightly price must be greater than zero').max(100_000_000_00);
 const percent = z.number().min(0).max(100);
 
 const roomFields = {
@@ -64,6 +65,7 @@ const ratePlanFields = {
   discountPercent: percent,
   taxPercent: percent,
   feeMinor: moneyMinor,
+  basePriceMinor: nightlyPriceMinor,
   status: z.enum(['ACTIVE', 'INACTIVE']),
 };
 
@@ -72,6 +74,7 @@ export const ratePlanCreateSchema = z.object({
   discountPercent: percent.default(0),
   taxPercent: percent.default(0),
   feeMinor: moneyMinor.default(0),
+  basePriceMinor: moneyMinor.optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });
 
@@ -113,7 +116,7 @@ export const bulkCalendarSchema = z
     from: isoDate,
     to: isoDate,
     ratePlanId: z.number().int().positive().optional(),
-    basePriceMinor: moneyMinor.nullish(),
+    basePriceMinor: nightlyPriceMinor.nullish(),
     units: z.number().int().min(0).max(500).nullish(),
     isClosed: z.boolean().optional(),
     minStay: nullableInt,

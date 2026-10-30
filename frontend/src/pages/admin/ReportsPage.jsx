@@ -96,7 +96,7 @@ function HotelPerformanceTable() {
   }, [sort, page, range]);
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="admin-records-card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] p-4">
         <div>
           <h2 className="text-base font-semibold text-[var(--text-strong)]">Hotel Performance</h2>

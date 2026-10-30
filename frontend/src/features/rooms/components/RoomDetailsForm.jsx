@@ -98,11 +98,11 @@ export function RoomDetailsForm({ form, policies, roomCategoryOptions = [], bedT
 
       <Card>
         <CardHeader>
-          <CardTitle>Inventory and cancellation</CardTitle>
+          <CardTitle>Availability and cancellation</CardTitle>
           <CardDescription>How many of this room you have, and the default policy for its rates.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <FormField id="totalUnits" label="Number of rooms" error={e.totalUnits?.message} hint="Physical rooms of this type. Dates can override this in the calendar.">
+          <FormField id="totalUnits" label="Number of rooms" error={e.totalUnits?.message} hint="Physical rooms of this type available before confirmed bookings.">
             <Input type="number" inputMode="numeric" min={0} {...field('totalUnits')} {...register('totalUnits')} />
           </FormField>
           <FormField id="cancellationPolicyId" label="Default cancellation policy" error={e.cancellationPolicyId?.message} hint="Rates can use their own policy.">

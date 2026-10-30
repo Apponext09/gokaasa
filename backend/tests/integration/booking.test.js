@@ -243,6 +243,7 @@ async function createPlan(roomId, { code, policyCode }) {
       mealPlan: 'BREAKFAST',
       isRefundable: true,
       cancellationPolicyId: policies[policyCode].id,
+      basePriceMinor: 1_000_000,
       discountPercent: 0,
       taxPercent: 12,
       feeMinor: 0,
@@ -481,6 +482,10 @@ describe('guest details and quotes', () => {
     assert.equal(requoted.body.changed, true);
     assert.equal(requoted.body.hold.quote.totals.total, 2_240_000);
     assert.equal((await startPayment(guestToken, id)).amount, 2_240_000);
+
+    // Pricing is permanent now, not scoped to one calendar date. Restore the
+    // shared plan so this scenario cannot change later booking/payment cases.
+    await priceNights(roomA, planRO, 20, 20, 1_000_000);
   });
 
   it('the booking snapshot keeps the hotel and room names as they were at booking time', async () => {

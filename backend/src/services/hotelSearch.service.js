@@ -70,13 +70,46 @@ function resolveNames(places, slug, field) {
 function imageFor(cover) {
   if (!cover) return null;
   const url = cover.storageKey ? getStorage().publicUrl(cover.storageKey) : cover.sourceUrl;
-  return url ? { url, altText: cover.altText ?? null, isIllustrative: cover.imageType === 'ILLUSTRATIVE' } : null;
+  return url ? {
+    url,
+    altText: cover.altText ?? null,
+    isIllustrative: cover.imageType === 'ILLUSTRATIVE',
+    category: cover.category ?? null,
+    categoryName: cover.categoryName ?? (cover.category ? cover.category.charAt(0).toUpperCase() + cover.category.slice(1).toLowerCase().replaceAll('_', ' ') : null),
+  } : null;
 }
 
 /** One hotel card. Every figure comes from the database; nothing is estimated or invented. */
 export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null } = {}) {
   const nights = row.nights;
   const freeCancellation = Boolean(row.is_refundable && !row.is_non_refundable && row.refund_percent === 100);
+  const bestOffer = row.plan_id == null ? null : {
+    roomTypeId: row.room_type_id,
+    roomName: row.room_name,
+    roomCode: row.room_code,
+    bedType: row.bed_type,
+    roomSizeSqm: row.room_size_sqm == null ? null : Number(row.room_size_sqm),
+    view: row.view,
+    ratePlanId: row.plan_id,
+    ratePlanName: row.plan_name,
+    mealPlan: row.meal_plan,
+    mealPlanName: row.meal_plan_name ?? null,
+    refundable: row.is_refundable && !row.is_non_refundable,
+    freeCancellation,
+    cancellationSummary: describePolicy({
+      is_non_refundable: row.is_non_refundable,
+      cancellation_deadline_hours: row.cancellation_deadline_hours,
+      refund_percent: row.refund_percent,
+    }),
+    nights,
+    pricePerNightMinor: Number(row.per_night),
+    baseTotalMinor: Number(row.base_total),
+    discountTotalMinor: Number(row.discount_total),
+    taxTotalMinor: Number(row.tax_total),
+    feeTotalMinor: Number(row.fee_total),
+    finalTotalMinor: Number(row.final_total),
+    roomsLeft: Number(row.rooms_left),
+  };
   return {
     id: row.id,
     slug: row.slug,
@@ -99,36 +132,13 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),
+    available: row.is_available == null ? undefined : Boolean(row.is_available),
+    availabilityStatus: row.is_available == null ? undefined : (row.availability_status ?? (row.is_available ? 'AVAILABLE' : 'SOLD_OUT')),
+    retryAt: row.retry_at ? new Date(row.retry_at).toISOString() : null,
     // The admin coupon/offer system's best generally-available discount for this hotel at this real
     // price -- see domain/coupon.js#bestDisplayOffer. null when nothing safely qualifies.
     offer: row.final_total != null ? offerBadgeFor(row, offers, { subtotalMinor: Number(row.final_total), nights, checkIn, checkOut }) : null,
-    bestOffer: {
-      roomTypeId: row.room_type_id,
-      roomName: row.room_name,
-      roomCode: row.room_code,
-      bedType: row.bed_type,
-      roomSizeSqm: row.room_size_sqm == null ? null : Number(row.room_size_sqm),
-      view: row.view,
-      ratePlanId: row.plan_id,
-      ratePlanName: row.plan_name,
-      mealPlan: row.meal_plan,
-      mealPlanName: row.meal_plan_name ?? null,
-      refundable: row.is_refundable && !row.is_non_refundable,
-      freeCancellation,
-      cancellationSummary: describePolicy({
-        is_non_refundable: row.is_non_refundable,
-        cancellation_deadline_hours: row.cancellation_deadline_hours,
-        refund_percent: row.refund_percent,
-      }),
-      nights,
-      pricePerNightMinor: Number(row.per_night),
-      baseTotalMinor: Number(row.base_total),
-      discountTotalMinor: Number(row.discount_total),
-      taxTotalMinor: Number(row.tax_total),
-      feeTotalMinor: Number(row.fee_total),
-      finalTotalMinor: Number(row.final_total),
-      roomsLeft: row.rooms_left,
-    },
+    bestOffer,
   };
 }
 
@@ -182,8 +192,8 @@ export const hotelSearchService = {
   },
 
   /**
-   * Searches published hotels with a bookable room for the stay and occupancy. Returns one card per hotel
-   * with its cheapest bookable option, plus the price bounds of the unfiltered set for the price slider.
+   * Searches matching published hotels. Bookable hotels include their cheapest option; unavailable hotels
+   * remain discoverable with an explicit reason and no offer. Price bounds cover priced results only.
    */
   async search(query, { userId = null, today = localToday(config.booking.businessTimezone) } = {}) {
     const { checkIn, checkOut, occupancy, page, limit, filters, sort } = query;
@@ -299,6 +309,21 @@ export const hotelSearchService = {
         label: row.city,
         destination: slugifyPlace(row.city),
         country: countryName(row.country_code),
+        hotelCount: row.hotel_count,
+        imageUrl: imageFor(row.cover)?.url ?? null,
+      })),
+    };
+  },
+
+  async popularAreas(limit = 8) {
+    const rows = await destinationRepository.popularAreas(limit);
+    return {
+      items: rows.map((row) => ({
+        id: `${slugifyPlace(row.city)}-${slugifyPlace(row.area)}`,
+        label: row.area,
+        area: slugifyPlace(row.area),
+        city: row.city,
+        citySlug: slugifyPlace(row.city),
         hotelCount: row.hotel_count,
         imageUrl: imageFor(row.cover)?.url ?? null,
       })),

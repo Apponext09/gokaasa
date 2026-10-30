@@ -124,20 +124,6 @@ body {
 }
 
 
-@keyframes heroQuote {
-  0% {
-    opacity: 0;
-    transform: translateY(-25px);
-    filter: blur(5px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
-
 @keyframes heroSearch {
   0% {
     opacity: 0;
@@ -1679,41 +1665,6 @@ body {
   gap: 1.5rem;
 }
 
-.customer-hero-quote {
-  margin: 0.75rem auto 0;
-  max-width: 32rem;
-  color: rgb(255 255 255 / 92%);
-  font-size: 0.85rem;
-  font-weight: 600;
-  font-style: italic;
-  text-shadow: 0 2px 8px rgb(0 0 0 / 28%);
-  animation: heroQuote 600ms ease-out;
-}
-
-.customer-near-me-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.95rem;
-  border: 1px solid rgb(255 255 255 / 30%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 12%);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 600;
-  transition: background-color 150ms ease, border-color 150ms ease;
-}
-
-.customer-near-me-btn:hover:not(:disabled) {
-  border-color: rgb(255 255 255 / 55%);
-  background: rgb(255 255 255 / 20%);
-}
-
-.customer-near-me-btn:disabled {
-  cursor: wait;
-  opacity: 0.75;
-}
-
 @media (min-width: 1024px) {
   .customer-hero-arch {
     text-align: left;
@@ -1729,10 +1680,6 @@ body {
   .customer-hero-split .customer-hero-content {
     margin-inline: 0;
     max-width: 32rem;
-  }
-
-  .customer-hero-quote {
-    margin-inline: 0;
   }
 
 }
@@ -3623,6 +3570,12 @@ body {
   background: rgb(255 255 255 / 0.97);
   box-shadow: var(--shadow-card);
   transition: border-color 160ms ease;
+}
+
+/* Table and records cards in admin: flat rectangular edges with zero curve (table style) */
+.admin-ui .ui-card.admin-records-card,
+.admin-ui .admin-records-card {
+  border-radius: 0 !important;
 }
 
 .admin-ui .ui-card-title {
@@ -6701,8 +6654,8 @@ body {
 .home-assurance-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(20rem, 0.8fr);
-  align-items: stretch;
-  gap: 1rem;
+  align-items: start;
+  gap: 1.25rem;
 }
 
 .home-faq-panel,
@@ -6723,6 +6676,7 @@ body {
   background: linear-gradient(135deg, #071e4a 0%, #0a2d70 50%, #083795 100%);
   color: rgb(255 255 255 / 88%);
   box-shadow: 0 12px 30px rgb(15 23 42 / 18%);
+  padding: 1.5rem;
 }
 
 .home-assurance-heading {
@@ -6836,30 +6790,29 @@ body {
   line-height: 1.5;
 }
 
-.home-confidence-list {
+.home-confidence-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.55rem;
-  border-top: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.25rem;
 }
 
 .home-confidence-item {
   display: flex;
-  min-height: 4.25rem;
   align-items: center;
   gap: 0.75rem;
   border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 0.75rem;
+  border-radius: 0.85rem;
   background: rgb(255 255 255 / 7%);
-  padding: 0.7rem 0.75rem;
-  box-shadow: none;
-  transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
+  padding: 0.85rem 0.95rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease;
 }
 
 .home-confidence-item:hover {
-  transform: translateY(-1px);
-  border-color: rgb(255 255 255 / 25%);
-  background: rgb(255 255 255 / 11%);
+  transform: translateY(-2px);
+  background: rgb(255 255 255 / 12%);
+  border-color: rgb(255 255 255 / 22%);
 }
 
 .home-confidence-icon {
@@ -6869,29 +6822,28 @@ body {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border-radius: 0.7rem;
-  background: rgb(255 255 255 / 10%);
+  border-radius: 0.65rem;
+  background: rgb(255 255 255 / 12%);
   color: var(--color-accent-300);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%);
+  transition: transform 200ms ease;
+}
+
+.home-confidence-item:hover .home-confidence-icon {
+  transform: scale(1.06);
 }
 
 .home-confidence-icon svg {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .home-confidence-item h3 {
   color: #fff;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  line-height: 1.3;
-}
-
-.home-confidence-item p {
-  margin-top: 0.12rem;
-  color: rgb(255 255 255 / 68%);
-  font-size: 0.68rem;
-  line-height: 1.4;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 @media (max-width: 1023px) {
@@ -6991,32 +6943,29 @@ body {
     line-height: 1.4;
   }
 
+  .home-confidence-grid {
+    gap: 1.25rem 0.85rem;
+    margin-top: 1.25rem;
+  }
+
   .home-confidence-item {
-    min-height: auto;
-    gap: 0.6rem;
-    border-radius: 0.65rem;
-    padding: 0.6rem;
+    gap: 0.65rem;
+    padding: 0;
   }
 
   .home-confidence-icon {
-    width: 1.9rem;
-    height: 1.9rem;
-    border-radius: 0.55rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.6rem;
   }
 
   .home-confidence-icon svg {
-    width: 0.92rem;
-    height: 0.92rem;
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
   .home-confidence-item h3 {
-    font-size: 0.72rem;
-  }
-
-  .home-confidence-item p {
-    margin-top: 0.08rem;
-    font-size: 0.63rem;
-    line-height: 1.35;
+    font-size: 0.82rem;
   }
 }
 
