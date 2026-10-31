@@ -137,7 +137,7 @@ export const invoiceService = {
     return { filename: `${booking.bookingRef}-invoice.pdf`, buffer: await renderInvoicePdf(booking) };
   },
 
-  /** ADMIN, or a HOTEL_MANAGER scoped to their own assigned hotels -- reuses the exact same admin-booking access check. */
+  /** ADMIN, or a HOTEL_OWNER scoped to their own hotels -- reuses the exact same admin-booking access check. */
   async forStaff(bookingId, actor) {
     const booking = await adminBookingService.detail(bookingId, actor);
     return { filename: `${booking.bookingRef}-invoice.pdf`, buffer: await renderInvoicePdf(booking) };

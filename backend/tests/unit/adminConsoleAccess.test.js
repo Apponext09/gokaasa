@@ -36,7 +36,7 @@ test('onboarding API allow-list permits hotel preparation but not inventory or o
 
 test('legacy staff roles continue through to existing route-level authorization', () => {
   assert.equal(decision('ADMIN', 'GET', '/users'), 'allowed');
-  assert.equal(decision('HOTEL_MANAGER', 'GET', '/settings'), 'allowed');
+  assert.equal(decision('HOTEL_OWNER', 'GET', '/settings'), 'allowed');
   assert.equal(decision('HOTEL_OWNER', 'GET', '/dashboard/summary'), 'allowed');
 });
 

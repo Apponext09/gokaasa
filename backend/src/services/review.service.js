@@ -169,7 +169,7 @@ export const reviewService = {
     };
   },
 
-  /** Read access for ADMIN (everything) and HOTEL_MANAGER (their assigned hotels, read-only -- see moderate()). */
+  /** Read access for ADMIN (everything) and HOTEL_OWNER (their hotels, read-only -- see moderate()). */
   async listForModeration(query, actor) {
     const hotelIds = await hotelScopeFor(actor);
     const { rows, total } = await reviewRepository.listForModeration(query, hotelIds);
@@ -190,7 +190,7 @@ export const reviewService = {
     ]);
   },
 
-  /** ADMIN only, enforced by the route (authorize('ADMIN')) -- a HOTEL_MANAGER never reaches here. */
+  /** ADMIN only, enforced by the route (authorize('ADMIN')) -- a HOTEL_OWNER never reaches here. */
   async moderate(reviewId, action, reason, actor) {
     const nextStatus = { APPROVE: REVIEW_STATUS.APPROVED, REJECT: REVIEW_STATUS.REJECTED, HIDE: REVIEW_STATUS.HIDDEN, RESTORE: REVIEW_STATUS.APPROVED }[action];
     const auditVerb = { APPROVE: 'approved', REJECT: 'rejected', HIDE: 'hidden', RESTORE: 'restored' }[action];

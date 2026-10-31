@@ -14,7 +14,7 @@ import {
   resetPasswordSchema,
 } from '../validators/auth.validator.js';
 
-const STAFF_ROLES = ['ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
+const STAFF_ROLES = ['ADMIN', 'HOTEL_OWNER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
 
 export const authRouter = Router();
 

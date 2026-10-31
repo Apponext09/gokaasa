@@ -164,7 +164,7 @@ export async function closeTestDatabase() {
 }
 
 /** Creates an active user with one role, bypassing the public registration route (which only grants CUSTOMER). */
-export async function createUserWithRole({ email, password, roleCode }) {
+export async function createUserWithRole({ email, password, roleCode, partnerApproved = true }) {
   const bcrypt = (await import('bcryptjs')).default;
   const { userRepository } = await import('../../src/repositories/user.repository.js');
   const passwordHash = await bcrypt.hash(password, 4);
@@ -178,6 +178,14 @@ export async function createUserWithRole({ email, password, roleCode }) {
       lastName: 'User',
       roleCode,
     });
+    if (roleCode === 'HOTEL_OWNER' && partnerApproved) {
+      await client.query(
+        `INSERT INTO partner_profiles
+           (user_id, status, business_name, business_type, contact_phone, property_name, property_city, submitted_at, reviewed_at)
+         VALUES ($1, 'APPROVED', 'Test Owner Business', 'INDIVIDUAL', '+919999999999', 'Test Property', 'Mumbai', now(), now())`,
+        [id],
+      );
+    }
     await client.query('COMMIT');
     return id;
   } finally {

@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
   { value: 'CUSTOMER', label: 'Customer' },
-  { value: 'HOTEL_MANAGER', label: 'Hotel Manager' },
   { value: 'HOTEL_OWNER', label: 'Hotel Owner (Partner)' },
   { value: 'ADMIN', label: 'Administrator' },
   { value: 'SALES_EXECUTIVE', label: 'Sales Executive' },
@@ -308,7 +307,7 @@ export function UsersPage() {
                       <p className="text-xs text-[var(--text-muted)]">{u.email}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone={r === 'ADMIN' ? 'premium' : r === 'HOTEL_MANAGER' || r === 'HOTEL_OWNER' ? 'brand' : 'neutral'}>{roleLabel(r)}</Badge>)}</div>
+                      <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} tone={r === 'ADMIN' ? 'premium' : r === 'HOTEL_OWNER' ? 'brand' : 'neutral'}>{roleLabel(r)}</Badge>)}</div>
                     </td>
                     <td className="px-4 py-3">{u.isActive ? <Badge tone="success">Active</Badge> : <Badge tone="danger">Inactive</Badge>}</td>
                     <td className="px-4 py-3"><PresenceDot lastHeartbeatAt={u.session?.lastHeartbeatAt} now={now} /></td>

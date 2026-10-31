@@ -43,7 +43,6 @@ const NAV = [
       { to: '/admin/hotels', label: 'All Hotels', icon: Building2, end: true },
       { to: '/admin/hotels/onboarding', label: 'Add Hotel', icon: Search },
       { to: '/admin/hotel-reviews', label: 'Hotel Reviews', icon: ClipboardCheck },
-      { to: '/admin/managers', label: 'Managers', icon: UserCog },
       { to: '/admin/partners', label: 'Partner Applications', icon: UserCog, adminOnly: true },
     ],
   },
@@ -77,6 +76,7 @@ const NAV = [
 
 function SidebarNav({ onNavigate, collapsed }) {
   const { isAdmin, user } = useAuth();
+  const isHotelOwner = Boolean(user?.roles?.includes('HOTEL_OWNER'));
   return (
     <nav aria-label="Admin" className="admin-sidebar-nav flex flex-col gap-5">
       {NAV.map((group, index) => {
@@ -87,25 +87,28 @@ function SidebarNav({ onNavigate, collapsed }) {
             {group.section && !collapsed && (
               <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{group.section}</p>
             )}
-            {items.map(({ to, label, icon: Icon, end }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={end}
-                onClick={onNavigate}
-                title={collapsed ? label : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    'admin-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-                    collapsed && 'justify-center',
-                    isActive ? 'is-active bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
-                  )
-                }
-              >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                {!collapsed && label}
-              </NavLink>
-            ))}
+            {items.map(({ to, label, icon: Icon, end }) => {
+              const visibleLabel = isHotelOwner && to === '/admin/hotels' ? 'My Hotels' : label;
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  onClick={onNavigate}
+                  title={collapsed ? visibleLabel : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'admin-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                      collapsed && 'justify-center',
+                      isActive ? 'is-active bg-brand-50 text-brand-700' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {!collapsed && visibleLabel}
+                </NavLink>
+              );
+            })}
           </div>
         );
       })}

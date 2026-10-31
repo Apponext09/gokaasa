@@ -40,7 +40,7 @@ export const reviewController = {
     return res.json({ ...reviews, rating });
   },
 
-  // Admin / hotel manager
+  // Admin / hotel owner
   async listForModeration(req, res) {
     return res.json(await reviewService.listForModeration(req.validated.query, actorOf(req)));
   },

@@ -2,7 +2,6 @@ import { AppError } from '../utils/AppError.js';
 
 export const CONSOLE_ROLES = Object.freeze([
   'ADMIN',
-  'HOTEL_MANAGER',
   'HOTEL_OWNER',
   'SALES_EXECUTIVE',
   'HOTEL_ONBOARDING_EXECUTIVE',
@@ -86,13 +85,13 @@ function allowed(rules, req) {
 }
 
 /**
- * Existing ADMIN/HOTEL_MANAGER/HOTEL_OWNER behavior stays unchanged. Restricted staff roles
+ * Existing ADMIN/HOTEL_OWNER behavior stays unchanged. Restricted staff roles
  * are allow-listed here before any broad legacy admin route can run, so a hidden link can never turn
  * into accidental API access.
  */
 export function restrictSpecializedStaff(req, _res, next) {
   const roles = req.user?.roles ?? [];
-  if (roles.some((role) => ['ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER'].includes(role))) return next();
+  if (roles.some((role) => ['ADMIN', 'HOTEL_OWNER'].includes(role))) return next();
   if (roles.includes('SALES_EXECUTIVE') && allowed(SALES_RULES, req)) return next();
   if (roles.includes('HOTEL_ONBOARDING_EXECUTIVE') && allowed(ONBOARDING_RULES, req)) return next();
   if (roles.includes('HOTEL_REVIEW_EXECUTIVE') && allowed(REVIEW_RULES, req)) return next();

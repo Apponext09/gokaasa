@@ -274,9 +274,9 @@ describe('role-based access control', () => {
     assert.equal(res.status, 403);
   });
 
-  it('allows an administrator through and lets hotel managers in too', async () => {
+  it('allows an administrator through and lets approved hotel owners in too', async () => {
     await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-    await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+    await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
 
     for (const email of ['admin@example.com', 'manager@example.com']) {
       const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });

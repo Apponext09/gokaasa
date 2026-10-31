@@ -18,7 +18,6 @@ import { ImportHistory } from '@/features/hotels/components/ImportHistory.jsx';
 import { HotelReviewPanel } from '@/features/hotels/components/HotelReviewPanel.jsx';
 import { RoomTypeList } from '@/features/rooms/components/RoomTypeList.jsx';
 import { CancellationPoliciesPanel } from '@/features/rooms/components/CancellationPoliciesPanel.jsx';
-import { ManagersPanel } from '@/features/hotels/components/ManagersPanel.jsx';
 import { adminApi, hotelApi } from '@/services/endpoints.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
@@ -357,12 +356,6 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
           </CardContent>
         </Card>
 
-        {isAdmin && (
-          <Card className="mt-6">
-            <CardHeader><CardTitle>Hotel managers</CardTitle><CardDescription>Operational access after onboarding.</CardDescription></CardHeader>
-            <CardContent><ManagersPanel hotelId={hotelId} /></CardContent>
-          </Card>
-        )}
       </TabPanel>
 
       <TabPanel value="location" current={tab}>

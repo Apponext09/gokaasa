@@ -18,7 +18,7 @@ const D0 = addDays(TODAY, 30);
 
 let app;
 let adminToken, managerAToken, managerBToken, guestToken;
-let hotelA, hotelB, roomA, planA, managerAId, managerBId;
+let hotelA, hotelB, roomA, planA, managerAId;
 
 const bearer = (token) => ({ Authorization: `Bearer ${token}` });
 const day = (offset) => addDays(D0, offset);
@@ -70,8 +70,8 @@ async function confirmedBooking(token, hotelId, roomId, planId, offset) {
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
-  await createUserWithRole({ email: 'managerB@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
+  await createUserWithRole({ email: 'managerB@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'admin8.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   adminToken = await loginAs('admin@example.com');
   managerAToken = await loginAs('managerA@example.com');
@@ -94,7 +94,6 @@ before(async () => {
   await request(app).post(`/api/admin/room-types/${roomA}/calendar/bulk`).set(bearer(adminToken)).send({ from: day(0), to: day(60), ratePlanId: planA, basePriceMinor: 1_000_000 });
 
   managerAId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['managerA@example.com'])).rows[0].id;
-  managerBId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['managerB@example.com'])).rows[0].id;
   await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) VALUES ($1, $2)`, [managerAId, hotelA]);
 });
 
@@ -114,7 +113,7 @@ describe('global admin search', () => {
     assert.ok(customers.body.items.some((item) => item.type === 'customer'));
   });
 
-  it('a HOTEL_MANAGER never sees another hotel in search results (cross-hotel IDOR)', async () => {
+  it('a HOTEL_OWNER never sees another hotel in search results (cross-hotel IDOR)', async () => {
     const res = await request(app).get('/api/admin/search?q=Phase8 Hotel B').set(bearer(managerAToken));
     assert.equal(res.status, 200, JSON.stringify(res.body));
     assert.equal(res.body.items.some((item) => item.type === 'hotel' && item.id === hotelB), false);
@@ -137,7 +136,7 @@ describe('CSV exports: authorization and scoping', () => {
     assert.ok(res.text.includes(booking.bookingRef));
   });
 
-  it('a HOTEL_MANAGER export of bookings never includes another hotel’s booking', async () => {
+  it('a HOTEL_OWNER export of bookings never includes another hotel’s booking', async () => {
     const bookingA = await confirmedBooking(guestToken, hotelA, roomA, planA, 4);
     const res = await request(app).get('/api/admin/exports/bookings').set(bearer(managerAToken));
     assert.equal(res.status, 200);
@@ -146,7 +145,7 @@ describe('CSV exports: authorization and scoping', () => {
     assert.equal(res.text.includes('Phase8 Hotel B'), false);
   });
 
-  it('a HOTEL_MANAGER with no assigned hotels exports an empty (header-only) CSV, never another manager’s rows', async () => {
+  it('a HOTEL_OWNER with no hotels exports an empty (header-only) CSV, never another owner’s rows', async () => {
     const res = await request(app).get('/api/admin/exports/bookings').set(bearer(managerBToken));
     assert.equal(res.status, 200);
     assert.equal(res.text.trim(), 'Booking Ref,Status,Payment Status,Hotel,City,Customer,Email,Check-in,Check-out,Rooms,Total (INR),Paid,Refunded,Created');
@@ -174,7 +173,7 @@ describe('CSV exports: authorization and scoping', () => {
 });
 
 describe('hotel performance report', () => {
-  it('ADMIN sees every hotel; a HOTEL_MANAGER sees only their own', async () => {
+  it('ADMIN sees every hotel; a HOTEL_OWNER sees only their own', async () => {
     await confirmedBooking(guestToken, hotelA, roomA, planA, 6);
     const asAdmin = await request(app).get(`/api/admin/reports/hotel-performance?from=${day(0)}&to=${day(10)}`).set(bearer(adminToken));
     assert.equal(asAdmin.status, 200, JSON.stringify(asAdmin.body));
@@ -215,16 +214,16 @@ describe('dashboard alerts', () => {
   });
 });
 
-describe('settings: readable by staff, writable by ADMIN only', () => {
-  it('both ADMIN and HOTEL_MANAGER can read settings', async () => {
+describe('settings: ADMIN only', () => {
+  it('ADMIN can read settings while HOTEL_OWNER cannot', async () => {
     const asAdmin = await request(app).get('/api/admin/settings').set(bearer(adminToken));
     assert.equal(asAdmin.status, 200, JSON.stringify(asAdmin.body));
     assert.equal(asAdmin.body.platform.companyName, 'Gokaasa');
     const asManager = await request(app).get('/api/admin/settings').set(bearer(managerAToken));
-    assert.equal(asManager.status, 200);
+    assert.equal(asManager.status, 403);
   });
 
-  it('a HOTEL_MANAGER cannot change settings; ADMIN can, and the change is read back', async () => {
+  it('a HOTEL_OWNER cannot change settings; ADMIN can, and the change is read back', async () => {
     const denied = await request(app).patch('/api/admin/settings').set(bearer(managerAToken)).send({ companyName: 'Hacked Inc' });
     assert.equal(denied.status, 403);
 
@@ -244,32 +243,6 @@ describe('settings: readable by staff, writable by ADMIN only', () => {
     const res = await request(app).get('/api/admin/settings').set(bearer(adminToken));
     const text = JSON.stringify(res.body);
     assert.equal(/jwtSecret|razorpay|keySecret|dbPassword/i.test(text), false);
-  });
-});
-
-describe('manager management: ADMIN-only directory and detail', () => {
-  it('the manager directory includes assigned hotel names', async () => {
-    const res = await request(app).get('/api/admin/managers').set(bearer(adminToken));
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    const managerA = res.body.managers.find((m) => m.id === managerAId);
-    assert.ok(managerA.hotels.some((h) => h.id === hotelA));
-  });
-
-  it('manager detail shows assigned hotels and aggregated activity, ADMIN only', async () => {
-    await confirmedBooking(guestToken, hotelA, roomA, planA, 12);
-    const res = await request(app).get(`/api/admin/managers/${managerAId}`).set(bearer(adminToken));
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.manager.id, managerAId);
-    assert.ok(res.body.manager.hotels.some((h) => h.id === hotelA));
-    assert.ok(res.body.manager.bookings.total > 0);
-
-    assert.equal((await request(app).get(`/api/admin/managers/${managerAId}`).set(bearer(managerAToken))).status, 403);
-    assert.equal((await request(app).get(`/api/admin/managers/${managerAId}`).set(bearer(guestToken))).status, 403);
-  });
-
-  it('404s for a user id that is not a hotel manager', async () => {
-    const res = await request(app).get(`/api/admin/managers/${managerBId + 999}`).set(bearer(adminToken));
-    assert.equal(res.status, 404);
   });
 });
 
@@ -299,7 +272,7 @@ describe('customer activation: ADMIN-only, idempotent, revokes sessions on deact
     guestId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['admin8.guest@example.com'])).rows[0].id;
   });
 
-  it('a HOTEL_MANAGER cannot change account status', async () => {
+  it('a HOTEL_OWNER cannot change account status', async () => {
     const res = await request(app).patch(`/api/admin/customers/${guestId}/status`).set(bearer(managerAToken)).send({ isActive: false });
     assert.equal(res.status, 403);
   });

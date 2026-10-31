@@ -2,11 +2,11 @@ import { pool } from '../db/pool.js';
 import { AppError } from '../utils/AppError.js';
 
 /**
- * Per-hotel authorization for HOTEL_MANAGER. ADMIN and HOTEL_ONBOARDING_EXECUTIVE always bypass
+ * Per-hotel authorization for HOTEL_OWNER. ADMIN and HOTEL_ONBOARDING_EXECUTIVE always bypass
  * this because both roles manage the hotel onboarding lifecycle across the catalogue. A
- * HOTEL_MANAGER must have a row in `hotel_managers` for the hotel the route touches,
+ * HOTEL_OWNER must have an ownership row in `hotel_managers` for the hotel the route touches,
  * resolved via `resolveHotelId(req)` since most admin routes are keyed by a room/plan/image/block id,
- * not the hotel id itself. A hotel a manager cannot access looks exactly like one that does not exist,
+ * not the hotel id itself. A hotel an owner cannot access looks exactly like one that does not exist,
  * the same "hide, don't reveal" pattern already used for booking/payment/hold ownership checks.
  */
 export function requireHotelAccess(resolveHotelId) {
@@ -52,7 +52,7 @@ export const hotelIdFromBlock = (req) =>
 /**
  * Import jobs reach this check before they may have resolved to a hotel yet (PENDING/PROCESSING).
  * Staff may always see their own job; once it has resolved to a hotel, the appropriate per-hotel
- * assignment also applies (manager assignments for operational staff, onboarding assignments for
+ * assignment also applies (ownership for hotel owners, onboarding assignments for
  * onboarding executives). This supports an explicit handover without exposing the job to unassigned staff.
  */
 export async function requireImportJobAccess(req, _res, next) {
@@ -66,7 +66,7 @@ export async function requireImportJobAccess(req, _res, next) {
       // Review executives may inspect the source/logs behind a submitted hotel. Their specialized
       // route allow-list permits GET detail only and continues to block import/discard mutations.
       if (req.user.roles.includes('HOTEL_REVIEW_EXECUTIVE')) return next();
-      const canUseManagerAssignment = req.user.roles.some((role) => ['HOTEL_MANAGER', 'HOTEL_OWNER'].includes(role));
+      const canUseOwnerAssignment = req.user.roles.includes('HOTEL_OWNER');
       const canUseOnboardingAssignment = req.user.roles.includes('HOTEL_ONBOARDING_EXECUTIVE');
       const { rowCount } = await pool.query(
         `SELECT 1
@@ -76,7 +76,7 @@ export async function requireImportJobAccess(req, _res, next) {
               OR ($4::boolean AND EXISTS (
                     SELECT 1 FROM hotel_onboarding_assignments WHERE user_id = $1 AND hotel_id = $2
                   ))`,
-        [req.user.id, job.hotel_id, canUseManagerAssignment, canUseOnboardingAssignment],
+        [req.user.id, job.hotel_id, canUseOwnerAssignment, canUseOnboardingAssignment],
       );
       if (rowCount > 0) return next();
     }
@@ -91,7 +91,7 @@ export async function requireImportJobAccess(req, _res, next) {
  * their own work. Harmless to also record for an ADMIN creator (it bypasses the check either way) —
  * simpler than branching on role, and keeps a record of who actually created the hotel.
  */
-export async function assignManagerIfNeeded(client, { creatorId, hotelId }) {
+export async function assignCreatorAccessIfNeeded(client, { creatorId, hotelId }) {
   const { rows } = await client.query(
     `SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = $1`,
     [creatorId],

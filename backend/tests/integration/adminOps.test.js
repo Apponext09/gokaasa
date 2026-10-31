@@ -28,8 +28,8 @@ async function loginAs(email) {
   return (await request(app).post('/api/auth/login').send({ email, password: PASSWORD })).body.accessToken;
 }
 
-async function publishedHotel(name) {
-  const created = await request(app).post('/api/admin/hotels').set(bearer(adminToken)).send({ name, city: 'Mumbai', countryCode: 'IN' });
+async function publishedHotel(name, creatorToken = adminToken) {
+  const created = await request(app).post('/api/admin/hotels').set(bearer(creatorToken)).send({ name, city: 'Mumbai', countryCode: 'IN' });
   const id = created.body.hotel.id;
   await request(app)
     .patch(`/api/admin/hotels/${id}`)
@@ -100,23 +100,21 @@ async function confirmedBooking(hotelId, roomId, planId, offset) {
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
-  await createUserWithRole({ email: 'managerB@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
+  await createUserWithRole({ email: 'managerB@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'adminops.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   adminToken = await loginAs('admin@example.com');
   managerAToken = await loginAs('managerA@example.com');
   managerBToken = await loginAs('managerB@example.com');
   guestToken = await loginAs('adminops.guest@example.com');
 
-  hotelA = await publishedHotel('Admin Ops Hotel A');
+  hotelA = await publishedHotel('Owner Ops Hotel A', managerAToken);
   hotelB = await publishedHotel('Admin Ops Hotel B');
   roomA = await createRoom(hotelA, { roomCode: 'DLX' });
   planA = await createPlan(hotelA, roomA);
   await priceNights(roomA, planA, 0, 10);
 
-  // Manager A is assigned to Hotel A only. Manager B is assigned to nothing (tests the "zero hotels" case).
-  const userA = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['managerA@example.com'])).rows[0].id;
-  await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) VALUES ($1, $2)`, [userA, hotelA]);
+  // Owner A created Hotel A and is linked automatically. Owner B has created no hotels.
 });
 
 after(async () => {
@@ -124,13 +122,13 @@ after(async () => {
   rmSync(MEDIA_DIR, { recursive: true, force: true });
 });
 
-describe('hotel-manager scoping (IDOR)', () => {
-  it('a manager assigned to Hotel A can read and edit it', async () => {
+describe('hotel-owner scoping (IDOR)', () => {
+  it('the owner who created Hotel A can read and edit it', async () => {
     const res = await request(app).get(`/api/admin/hotels/${hotelA}`).set(bearer(managerAToken));
     assert.equal(res.status, 200, JSON.stringify(res.body));
   });
 
-  it('a manager with no assignment to Hotel A gets the same not-found a stranger would', async () => {
+  it('another owner gets the same not-found a stranger would', async () => {
     const res = await request(app).get(`/api/admin/hotels/${hotelA}`).set(bearer(managerBToken));
     assert.equal(res.status, 404);
     const patch = await request(app).patch(`/api/admin/hotels/${hotelA}`).set(bearer(managerBToken)).send({ name: 'Hijacked' });
@@ -153,7 +151,7 @@ describe('hotel-manager scoping (IDOR)', () => {
     assert.equal(b.status, 200);
   });
 
-  it('the hotel list is filtered to a manager\'s own hotels, not just detail access', async () => {
+  it('the hotel list is filtered to an owner\'s own hotels, not just detail access', async () => {
     const asManagerA = await request(app).get('/api/admin/hotels').set(bearer(managerAToken));
     assert.deepEqual(asManagerA.body.items.map((h) => h.id).sort(), [hotelA]);
     const asManagerB = await request(app).get('/api/admin/hotels').set(bearer(managerBToken));
@@ -162,39 +160,12 @@ describe('hotel-manager scoping (IDOR)', () => {
     assert.ok(asAdmin.body.items.map((h) => h.id).includes(hotelA) && asAdmin.body.items.map((h) => h.id).includes(hotelB));
   });
 
-  it('a manager who creates a new hotel is automatically assigned to it', async () => {
-    const created = await request(app).post('/api/admin/hotels').set(bearer(managerAToken)).send({ name: 'Manager Created Hotel', city: 'Pune', countryCode: 'IN' });
+  it('an owner who creates a new hotel is automatically linked to it', async () => {
+    const created = await request(app).post('/api/admin/hotels').set(bearer(managerAToken)).send({ name: 'Owner Created Hotel', city: 'Pune', countryCode: 'IN' });
     assert.equal(created.status, 201, JSON.stringify(created.body));
     const ownId = created.body.hotel.id;
     const readBack = await request(app).get(`/api/admin/hotels/${ownId}`).set(bearer(managerAToken));
     assert.equal(readBack.status, 200, 'the creator is not locked out of what they just created');
-  });
-});
-
-describe('hotel manager assignment (ADMIN only)', () => {
-  it('ADMIN can assign and unassign a manager; a manager cannot', async () => {
-    const userB = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['managerB@example.com'])).rows[0].id;
-
-    const deniedAssign = await request(app).post(`/api/admin/hotels/${hotelB}/managers`).set(bearer(managerAToken)).send({ userId: userB });
-    assert.equal(deniedAssign.status, 403);
-
-    const assign = await request(app).post(`/api/admin/hotels/${hotelB}/managers`).set(bearer(adminToken)).send({ userId: userB });
-    assert.equal(assign.status, 201, JSON.stringify(assign.body));
-    assert.ok(assign.body.managers.some((m) => m.userId === userB));
-
-    const nowVisible = await request(app).get(`/api/admin/hotels/${hotelB}`).set(bearer(managerBToken));
-    assert.equal(nowVisible.status, 200);
-
-    const unassign = await request(app).delete(`/api/admin/hotels/${hotelB}/managers/${userB}`).set(bearer(adminToken));
-    assert.equal(unassign.status, 200);
-    const revoked = await request(app).get(`/api/admin/hotels/${hotelB}`).set(bearer(managerBToken));
-    assert.equal(revoked.status, 404, 'access is revoked the moment the assignment is removed');
-  });
-
-  it('only a HOTEL_MANAGER account can be assigned', async () => {
-    const admin = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['admin@example.com'])).rows[0].id;
-    const res = await request(app).post(`/api/admin/hotels/${hotelA}/managers`).set(bearer(adminToken)).send({ userId: admin });
-    assert.equal(res.status, 422);
   });
 });
 

@@ -61,7 +61,7 @@ before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'optguest.admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
   await createUserWithRole({ email: 'optional.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
-  await createUserWithRole({ email: 'optguest.manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'optguest.manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   adminToken = await loginAs('optguest.admin@example.com');
   guestToken = await loginAs('optional.guest@example.com');
   managerToken = await loginAs('optguest.manager@example.com');
@@ -245,7 +245,7 @@ describe('occupancy, pricing and booking records stay correct regardless of name
 });
 
 describe('hotel-manager access to guest details stays scoped to their own hotel', () => {
-  it('a HOTEL_MANAGER can see the guest-details/occupancy breakdown for their own hotel\'s booking', async () => {
+  it('a HOTEL_OWNER can see the guest-details/occupancy breakdown for their own hotel\'s booking', async () => {
     const hold = await createHold({ adults: 2, checkIn: day(20) });
     await request(app).put(`/api/booking/holds/${hold.id}/guests`).set(bearer(guestToken)).send({
       primaryContact: PRIMARY,
@@ -264,7 +264,7 @@ describe('hotel-manager access to guest details stays scoped to their own hotel'
     assert.equal(res.body.booking.guests.length, 0);
   });
 
-  it('a HOTEL_MANAGER cannot access a booking for a hotel they are not assigned to (IDOR)', async () => {
+  it('a HOTEL_OWNER cannot access a booking for a hotel they do not own (IDOR)', async () => {
     const hold = await createHold({ adults: 1, checkIn: day(21), hotel: otherHotelId });
     await request(app).put(`/api/booking/holds/${hold.id}/guests`).set(bearer(guestToken)).send({
       primaryContact: PRIMARY,

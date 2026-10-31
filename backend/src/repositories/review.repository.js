@@ -106,7 +106,7 @@ export const reviewRepository = {
     return rows;
   },
 
-  /** Admin moderation queue. ADMIN sees everything; a HOTEL_MANAGER's view is scoped by hotelIds (see review.service.js). */
+  /** Admin moderation queue. ADMIN sees everything; a HOTEL_OWNER's view is scoped by hotelIds (see review.service.js). */
   async listForModeration({ page, limit, status, hotelId, q }, hotelIds) {
     const params = [];
     const clauses = [];

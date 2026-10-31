@@ -68,7 +68,7 @@ function couponBody(overrides = {}) {
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'coupon.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   adminToken = await loginAs('admin@example.com');
   managerToken = await loginAs('manager@example.com');
@@ -106,7 +106,7 @@ after(async () => {
 });
 
 describe('admin coupon management: CRUD and RBAC', () => {
-  it('ADMIN can create a coupon; a customer and a hotel manager cannot', async () => {
+  it('ADMIN can create a coupon; a customer and a hotel owner cannot', async () => {
     const asGuest = await request(app).post('/api/admin/coupons').set(bearer(guestToken)).send(couponBody());
     assert.equal(asGuest.status, 403);
     const asManager = await request(app).post('/api/admin/coupons').set(bearer(managerToken)).send(couponBody());

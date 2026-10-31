@@ -107,17 +107,12 @@ export const adminApi = {
   approveHotelReview: (id, summary) => api.post(`/admin/hotels/${id}/review/approve`, { summary }).then((r) => r.data.review),
 
   // Hotel manager assignment
-  listManagersForHotel: (id) => api.get(`/admin/hotels/${id}/managers`).then((r) => r.data.managers),
-  assignManager: (id, userId) => api.post(`/admin/hotels/${id}/managers`, { userId }).then((r) => r.data.managers),
-  unassignManager: (id, userId) => api.delete(`/admin/hotels/${id}/managers/${userId}`).then((r) => r.data.managers),
-  listManagers: (params) => api.get('/admin/managers', { params }).then((r) => r.data.managers),
-  getManager: (userId) => api.get(`/admin/managers/${userId}`).then((r) => r.data.manager),
   listOnboardingExecutives: () => api.get('/admin/onboarding-executives').then((r) => r.data.executives),
   listOnboardingForHotel: (id) => api.get(`/admin/hotels/${id}/onboarding-executives`).then((r) => r.data.executives),
   assignOnboardingExecutive: (id, userId) => api.post(`/admin/hotels/${id}/onboarding-executives`, { userId }).then((r) => r.data.executives),
   unassignOnboardingExecutive: (id, userId) => api.delete(`/admin/hotels/${id}/onboarding-executives/${userId}`).then((r) => r.data.executives),
 
-  // Bookings, payments, refunds (platform-wide, scoped server-side for a hotel manager)
+  // Bookings, payments, refunds (scoped server-side for a hotel owner)
   listBookings: (params) => api.get('/admin/bookings', { params }).then((r) => r.data),
   getBooking: (id) => api.get(`/admin/bookings/${id}`).then((r) => r.data.booking),
   cancelBooking: (id, body) => api.post(`/admin/bookings/${id}/cancel`, body).then((r) => r.data.booking),
@@ -143,7 +138,7 @@ export const adminApi = {
   // Audit log (ADMIN only; the backend enforces this)
   listAuditLogs: (params) => api.get('/admin/audit-logs', { params }).then((r) => r.data),
 
-  // Reviews moderation (ADMIN sees every hotel; a HOTEL_MANAGER is scoped server-side to their own)
+  // Reviews moderation (ADMIN sees every hotel; a HOTEL_OWNER is scoped server-side to their own)
   listReviews: (params) => api.get('/admin/reviews', { params }).then((r) => r.data),
   moderateReview: (id, action, reason) => api.post(`/admin/reviews/${id}/moderate`, { action, reason }).then((r) => r.data.review),
 
@@ -155,7 +150,7 @@ export const adminApi = {
   // CSV exports -- each returns a Blob the caller saves as a file; same filters as the matching list endpoint.
   exportCsv: (entity, params) => api.get(`/admin/exports/${entity}`, { params, responseType: 'blob' }).then((r) => r.data),
 
-  // Settings (ADMIN can write; HOTEL_MANAGER can read)
+  // Settings (ADMIN only)
   getSettings: () => api.get('/admin/settings').then((r) => r.data),
   updateSettings: (body) => api.patch('/admin/settings', body).then((r) => r.data),
 

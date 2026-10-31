@@ -16,7 +16,6 @@ const log = createLogger('email-change');
 const MINUTE_MS = 60 * 1000;
 const STAFF_ROLES = new Set([
   'ADMIN',
-  'HOTEL_MANAGER',
   'HOTEL_OWNER',
   'SALES_EXECUTIVE',
   'HOTEL_ONBOARDING_EXECUTIVE',

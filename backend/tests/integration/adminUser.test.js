@@ -14,12 +14,12 @@ before(async () => {
   app = await prepareTestDatabase();
   customerId = await createUserWithRole({ email: 'admusr.customer@test.gokaasa.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   otherCustomerId = await createUserWithRole({ email: 'admusr.other@test.gokaasa.com', password: PASSWORD, roleCode: 'CUSTOMER' });
-  await createUserWithRole({ email: 'admusr.manager@test.gokaasa.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'admusr.owner@test.gokaasa.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'admusr.admin@test.gokaasa.com', password: PASSWORD, roleCode: 'ADMIN' });
 
   customerToken = (await request(app).post('/api/auth/login').send({ email: 'admusr.customer@test.gokaasa.com', password: PASSWORD })).body.accessToken;
   otherCustomerToken = (await request(app).post('/api/auth/login').send({ email: 'admusr.other@test.gokaasa.com', password: PASSWORD })).body.accessToken;
-  managerToken = (await request(app).post('/api/auth/login').send({ email: 'admusr.manager@test.gokaasa.com', password: PASSWORD })).body.accessToken;
+  managerToken = (await request(app).post('/api/auth/login').send({ email: 'admusr.owner@test.gokaasa.com', password: PASSWORD })).body.accessToken;
   adminToken = (await request(app).post('/api/auth/login').send({ email: 'admusr.admin@test.gokaasa.com', password: PASSWORD })).body.accessToken;
 });
 
@@ -34,7 +34,7 @@ describe('GET /api/admin/users -- authorization', () => {
     assert.equal((await request(app).get('/api/admin/users').set(bearer(customerToken))).status, 403);
   });
 
-  it('refuses a hotel manager -- this directory can reveal other staff accounts, unlike /admin/customers', async () => {
+  it('refuses a hotel owner -- this directory can reveal other staff accounts, unlike /admin/customers', async () => {
     assert.equal((await request(app).get('/api/admin/users').set(bearer(managerToken))).status, 403);
   });
 
@@ -43,7 +43,7 @@ describe('GET /api/admin/users -- authorization', () => {
     assert.equal(res.status, 200);
     const emails = res.body.items.map((u) => u.email);
     assert.ok(emails.includes('admusr.customer@test.gokaasa.com'));
-    assert.ok(emails.includes('admusr.manager@test.gokaasa.com'));
+    assert.ok(emails.includes('admusr.owner@test.gokaasa.com'));
     assert.ok(emails.includes('admusr.admin@test.gokaasa.com'));
     assert.ok(res.body.pagination.total >= 3);
   });
@@ -62,11 +62,19 @@ describe('POST /api/admin/users/staff', () => {
     assert.deepEqual(login.body.user.roles, ['SALES_EXECUTIVE']);
   });
 
-  it('does not let a manager create staff credentials', async () => {
+  it('does not let a hotel owner create staff credentials', async () => {
     const res = await request(app).post('/api/admin/users/staff').set(bearer(managerToken)).send({
       firstName: 'No', lastName: 'Access', email: 'blocked.staff@test.gokaasa.com', password: PASSWORD, role: 'SALES_EXECUTIVE',
     });
     assert.equal(res.status, 403);
+  });
+
+  it('rejects the retired HOTEL_MANAGER role', async () => {
+    const res = await request(app).post('/api/admin/users/staff').set(bearer(adminToken)).send({
+      firstName: 'Retired', lastName: 'Role', email: 'retired.role@test.gokaasa.com',
+      phone: '9876543211', password: PASSWORD, role: 'HOTEL_MANAGER',
+    });
+    assert.equal(res.status, 422);
   });
 });
 
@@ -78,9 +86,9 @@ describe('GET /api/admin/users -- search, filter, sort', () => {
   });
 
   it('searches by email', async () => {
-    const res = await request(app).get('/api/admin/users').set(bearer(adminToken)).query({ q: 'admusr.manager' });
+    const res = await request(app).get('/api/admin/users').set(bearer(adminToken)).query({ q: 'admusr.owner' });
     assert.equal(res.body.items.length, 1);
-    assert.equal(res.body.items[0].email, 'admusr.manager@test.gokaasa.com');
+    assert.equal(res.body.items[0].email, 'admusr.owner@test.gokaasa.com');
   });
 
   it('rejects an unsupported role or sort value instead of silently ignoring it', async () => {
