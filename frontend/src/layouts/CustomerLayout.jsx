@@ -7,30 +7,25 @@ import {
 
 import {
   Heart,
-  Menu,
   X,
   ChevronRight,
   MapPin,
   ShieldCheck,
   Headphones,
   Sparkles,
-  House,
-  Hotel,
-  Tag,
-  Info,
-  Mail,
   Phone,
+  KeyRound,
+  BriefcaseBusiness,
 } from 'lucide-react';
 
 import { FullPageSpinner, Logo } from '@/components/shared/index.jsx';
-import { ProfileMenu } from '@/components/shared/ProfileMenu.jsx';
-import { NotificationBell } from '@/components/shared/NotificationBell.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { discoveryApi } from '@/services/endpoints.js';
 import { SupportLauncher } from '@/features/support/SupportLauncher.jsx';
 import { cn } from '@/lib/utils.js';
 import { supportPhoneHref, supportPhoneLabel } from '@/config/support.js';
+import { Navbar, IndiaFlagIcon, ProductNavLinks } from '@/layouts/Navbar.jsx';
 
 /* =========================================================
    SOCIAL ICONS
@@ -133,168 +128,6 @@ function SocialButton({ label, children }) {
 }
 
 /* =========================================================
-   CUSTOMER NAV LINKS
-========================================================= */
-
-const CUSTOMER_NAV_ITEMS = [
-  {
-    label: 'Home',
-    to: '/',
-    icon: House,
-    isActive: (pathname) => pathname === '/',
-  },
-  {
-    label: 'Hotels',
-    to: '/hotels',
-    icon: Hotel,
-    isActive: (pathname) =>
-      pathname === '/hotels' || pathname.startsWith('/hotels/'),
-  },
-  {
-    label: 'Top Destinations',
-    to: '/destinations',
-    icon: MapPin,
-    isActive: (pathname) => pathname.startsWith('/destinations'),
-  },
-  {
-    label: 'Offers',
-    to: '/offers',
-    icon: Tag,
-    isActive: (pathname) => pathname.startsWith('/offers'),
-  },
-  {
-    label: 'About Us',
-    to: '/about',
-    icon: Info,
-    isActive: (pathname) => pathname.startsWith('/about'),
-  },
-  {
-    label: 'Contact Us',
-    to: '/contact',
-    icon: Mail,
-    isActive: (pathname) => pathname.startsWith('/contact'),
-  },
-];
-
-function ProductNavLinks({ className, onNavigate }) {
-  const location = useLocation();
-
-  return (
-    <>
-      {CUSTOMER_NAV_ITEMS.map((item) => {
-        const active = item.isActive(location.pathname);
-        const Icon = item.icon;
-
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              className,
-              `
-                customer-nav-link
-                relative
-                flex
-                items-center
-                transition-all
-                duration-300
-                hover:text-brand-600
-              `,
-              active
-                ? 'text-brand-700'
-                : 'text-[var(--text-body)]',
-            )}
-          >
-            <Icon
-              className="customer-nav-icon h-4 w-4"
-              strokeWidth={active ? 2.2 : 1.8}
-              aria-hidden="true"
-            />
-            {item.label}
-            <span
-              className={cn(
-                `
-                  customer-nav-active-bar
-                  absolute
-                  -bottom-[7px]
-                  left-0
-                  h-[2px]
-                  rounded-full
-                  bg-gradient-to-r
-                  from-brand-600
-                  to-[#E7BD62]
-                  transition-all
-                  duration-300
-                `,
-                active
-                  ? 'w-full opacity-100'
-                  : 'w-0 opacity-0',
-              )}
-            />
-          </Link>
-        );
-      })}
-    </>
-  );
-}
-
-/* =========================================================
-   GUEST LINKS
-========================================================= */
-
-function GuestLinks() {
-  return (
-    <div className="flex items-center gap-2">
-      <Link
-        to="/login"
-        className="
-          inline-flex
-          h-9
-          items-center
-          rounded-full
-          px-4
-          text-sm
-          font-medium
-          text-[var(--text-body)]
-          transition-all
-          duration-300
-          hover:bg-[var(--surface-muted)]
-          hover:text-brand-700
-        "
-      >
-        Login
-      </Link>
-
-      <Link
-        to="/register"
-        className="
-          inline-flex
-          h-9
-          items-center
-          rounded-full
-          bg-gradient-to-r
-          from-brand-600
-          to-brand-700
-          px-5
-          text-sm
-          font-semibold
-          text-white
-          shadow-sm
-          transition-all
-          duration-300
-          hover:-translate-y-0.5
-          hover:shadow-lg
-        "
-      >
-        Sign Up
-      </Link>
-    </div>
-  );
-}
-
-/* =========================================================
    BODY SCROLL LOCK
 ========================================================= */
 
@@ -321,8 +154,12 @@ function MobileDrawer({ open, onClose }) {
   const {
     isAuthenticated,
     isStaff,
+    user,
     logout,
   } = useAuth();
+
+  const isPartner = Boolean(user?.roles?.includes('HOTEL_OWNER'));
+  const partnerTo = isPartner ? '/partner/status' : '/partner/register';
 
   const handleLogout = async () => {
     onClose();
@@ -514,6 +351,81 @@ function MobileDrawer({ open, onClose }) {
               onNavigate={onClose}
             />
           </nav>
+        </div>
+
+        {/* Partner / Business */}
+
+        <div className="mx-5 border-t border-[var(--border-subtle)]" />
+
+        <div className="customer-mobile-drawer-partner px-5 py-5">
+          <p
+            className="
+              mb-2
+              px-2
+              text-[10px]
+              font-bold
+              uppercase
+              tracking-[0.18em]
+              text-[var(--text-muted)]
+            "
+          >
+            Partner With Us
+          </p>
+
+          <div className="flex flex-col gap-1">
+            <Link
+              to={partnerTo}
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-[var(--text-body)] transition-colors hover:bg-[var(--surface-muted)]"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+                <KeyRound size={17} aria-hidden="true" />
+              </span>
+              <span className="flex flex-col">
+                <span className="text-base font-medium">List Your Property</span>
+                <span className="text-xs text-[var(--text-muted)]">Grow your business!</span>
+              </span>
+            </Link>
+
+            <Link
+              to={partnerTo}
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-xl px-3 py-3 text-[var(--text-body)] transition-colors hover:bg-[var(--surface-muted)]"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600">
+                <BriefcaseBusiness size={17} aria-hidden="true" />
+              </span>
+              <span className="flex flex-col">
+                <span className="text-base font-medium">Gokaasa for Business</span>
+                <span className="text-xs text-[var(--text-muted)]">Grow your hotel business with us</span>
+              </span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Currency / Language (defaults only -- not yet configurable) */}
+
+        <div className="px-5 pb-5">
+          <div
+            className="
+              flex
+              items-center
+              justify-between
+              rounded-xl
+              border
+              border-[var(--border-subtle)]
+              bg-[var(--surface-muted)]
+              px-3
+              py-2.5
+              text-sm
+            "
+          >
+            <span className="flex items-center gap-2 font-medium text-[var(--text-body)]">
+              <IndiaFlagIcon />
+              INR &middot; English
+            </span>
+            <span className="text-xs font-semibold text-[var(--text-muted)]">Default</span>
+          </div>
         </div>
 
         {/* Account */}
@@ -1244,8 +1156,6 @@ function Footer() {
 ========================================================= */
 
 export function CustomerLayout() {
-  const { isAuthenticated, status } = useAuth();
-
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const location = useLocation();
@@ -1268,217 +1178,13 @@ export function CustomerLayout() {
       "
     >
       {/* =====================================================
-          HEADER
+          NAVBAR (single unified header, all breakpoints)
       ===================================================== */}
 
-      <header
-        className="
-          customer-header
-          sticky
-          top-0
-          z-30
-          border-b
-          border-[var(--border-subtle)]
-          bg-[var(--surface-card)]/90
-          backdrop-blur-xl
-          supports-[backdrop-filter]:bg-[var(--surface-card)]/75
-        "
-      >
-        <div
-          className="
-            customer-header-inner
-            mx-auto
-            flex
-            h-[72px]
-            max-w-7xl
-            items-center
-            justify-between
-            gap-4
-            px-4
-            sm:px-6
-          "
-        >
-          {/* Logo + Desktop Navigation */}
-
-          <div className="customer-header-primary flex min-w-0 items-center gap-8">
-            <Logo />
-
-            <nav
-              aria-label="Main"
-              className="
-                customer-product-nav
-                hidden
-                items-center
-                gap-7
-                xl:flex
-              "
-            >
-              <ProductNavLinks className="text-sm font-medium" />
-            </nav>
-          </div>
-
-          {/* Right Actions */}
-
-          <div className="customer-header-actions flex shrink-0 items-center gap-2">
-
-            {/* === My Trips (Manage Booking) — reference style === */}
-            {isAuthenticated && (
-              <Link
-                to="/my-trips"
-                className="
-                  go-nav-my-trips-btn
-                  hidden
-                  xl:inline-flex
-                "
-                title="Manage Booking & Trips"
-              >
-                {/* Suitcase icon */}
-                <svg className="go-trips-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="2" y="7" width="20" height="14" rx="2" />
-                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                  <line x1="12" y1="12" x2="12" y2="16" />
-                  <line x1="10" y1="14" x2="14" y2="14" />
-                </svg>
-                <div className="go-trips-text">
-                  <span className="go-trips-sub">Manage Booking</span>
-                  <strong className="go-trips-main">My Trips</strong>
-                </div>
-              </Link>
-            )}
-
-            {/* === Wishlist heart button — reference style === */}
-            {isAuthenticated && (
-              <Link
-                to="/wishlist"
-                aria-label="Saved Hotels / Wishlist"
-                title="Saved Hotels"
-                className="go-nav-wishlist-btn hidden xl:inline-flex"
-              >
-                <Heart
-                  className="go-nav-heart-icon"
-                  aria-hidden="true"
-                />
-              </Link>
-            )}
-
-            {/* Notification */}
-
-            {isAuthenticated && (
-              <div className="hidden md:block">
-                <NotificationBell />
-              </div>
-            )}
-
-            {/* Profile / Guest */}
-
-            <div className="hidden md:block">
-              {status !== 'loading' &&
-                (isAuthenticated ? (
-                  <ProfileMenu />
-                ) : (
-                  <GuestLinks />
-                ))}
-            </div>
-
-            {/* Mobile Wishlist */}
-
-            {isAuthenticated && (
-              <Link
-                to="/my-trips"
-                aria-label="My bookings"
-                title="My bookings"
-                className="customer-mobile-trips inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-body)] transition-all hover:bg-[var(--surface-muted)] hover:text-brand-600 xl:hidden"
-              >
-                <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <rect x="2" y="7" width="20" height="14" rx="2" />
-                  <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
-                  <path d="M10 14h4" />
-                </svg>
-                <span className="customer-mobile-trips-label">
-                  <small>Manage</small>
-                  <strong>Bookings</strong>
-                </span>
-              </Link>
-            )}
-
-            {isAuthenticated && (
-              <Link
-                to="/wishlist"
-                aria-label="Wishlist"
-                className="customer-mobile-wishlist
-                  inline-flex
-                  h-10
-                  w-10
-                  items-center
-                  justify-center
-                  rounded-full
-                  text-[var(--text-body)]
-                  transition-all
-                  hover:bg-[var(--surface-muted)]
-                  hover:text-brand-600
-                  xl:hidden
-                "
-              >
-                <Heart
-                  className="h-[18px] w-[18px]"
-                  aria-hidden="true"
-                />
-              </Link>
-            )}
-
-            {/* Mobile Notification */}
-
-            {isAuthenticated && (
-              <div className="customer-mobile-notification md:hidden">
-                <NotificationBell />
-              </div>
-            )}
-
-            {/* Mobile Menu */}
-
-            <button
-              type="button"
-              aria-label={
-                drawerOpen
-                  ? 'Close menu'
-                  : 'Open menu'
-              }
-              aria-expanded={drawerOpen}
-              onClick={() =>
-                setDrawerOpen((open) => !open)
-              }
-              className="customer-mobile-menu
-                inline-flex
-                h-10
-                w-10
-                items-center
-                justify-center
-                rounded-full
-                border
-                border-[var(--border-subtle)]
-                text-[var(--text-body)]
-                transition-all
-                duration-300
-                hover:bg-[var(--surface-muted)]
-                hover:text-brand-600
-                xl:hidden
-              "
-            >
-              {drawerOpen ? (
-                <X
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
-              ) : (
-                <Menu
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar
+        drawerOpen={drawerOpen}
+        onToggleDrawer={() => setDrawerOpen((open) => !open)}
+      />
 
       {/* Mobile Drawer */}
 
