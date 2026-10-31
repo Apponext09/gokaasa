@@ -2092,7 +2092,7 @@ body {
 }
 
 .customer-auth-shell {
-  background: linear-gradient(135deg, #071e4a 0%, #0a42ba 55%, #1877f2 100%);
+  background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 45%, #bae6fd 100%);
 }
 
 .customer-auth-shell > div:nth-child(2) > div {

@@ -1,13 +1,5 @@
 import { AppError } from '../utils/AppError.js';
 
-export const CONSOLE_ROLES = Object.freeze([
-  'ADMIN',
-  'HOTEL_OWNER',
-  'SALES_EXECUTIVE',
-  'HOTEL_ONBOARDING_EXECUTIVE',
-  'HOTEL_REVIEW_EXECUTIVE',
-]);
-
 const SALES_RULES = [
   ['GET', /^\/bookings(?:\/\d+)?$/],
   ['GET', /^\/bookings\/\d+\/invoice$/],
@@ -85,15 +77,14 @@ function allowed(rules, req) {
 }
 
 /**
- * Existing ADMIN/HOTEL_OWNER behavior stays unchanged. Restricted staff roles
- * are allow-listed here before any broad legacy admin route can run, so a hidden link can never turn
- * into accidental API access.
+ * Database permissions select a console profile; the profile's route allow-list prevents a hidden
+ * frontend link from becoming accidental API access. Role names are intentionally not consulted.
  */
 export function restrictSpecializedStaff(req, _res, next) {
-  const roles = req.user?.roles ?? [];
-  if (roles.some((role) => ['ADMIN', 'HOTEL_OWNER'].includes(role))) return next();
-  if (roles.includes('SALES_EXECUTIVE') && allowed(SALES_RULES, req)) return next();
-  if (roles.includes('HOTEL_ONBOARDING_EXECUTIVE') && allowed(ONBOARDING_RULES, req)) return next();
-  if (roles.includes('HOTEL_REVIEW_EXECUTIVE') && allowed(REVIEW_RULES, req)) return next();
+  const permissions = req.user?.permissions ?? [];
+  if (permissions.some((permission) => ['console.full', 'console.owner'].includes(permission))) return next();
+  if (permissions.includes('console.sales') && allowed(SALES_RULES, req)) return next();
+  if (permissions.includes('console.onboarding') && allowed(ONBOARDING_RULES, req)) return next();
+  if (permissions.includes('console.review') && allowed(REVIEW_RULES, req)) return next();
   return next(AppError.forbidden());
 }

@@ -47,6 +47,12 @@ export const authController = {
     return res.status(200).json({ message: 'Your password has been reset. Please sign in again.' });
   },
 
+  async changePassword(req, res) {
+    await authService.changePassword(req.user.id, req.validated.body, { id: req.user.id, ip: req.ip });
+    res.clearCookie(config.auth.refreshCookieName, { ...refreshCookieOptions(), maxAge: undefined });
+    return res.status(200).json({ message: 'Password changed successfully. Please sign in again.' });
+  },
+
   async me(req, res) {
     const user = await authService.getProfile(req.user.id);
     return res.json({ user });

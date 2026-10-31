@@ -27,7 +27,7 @@ export async function requireOwnDocumentOrAdmin(req, _res, next) {
   try {
     const doc = await partnerDocumentRepository.findById(req.validated.params.docId);
     if (!doc) return next(AppError.notFound('Document not found'));
-    if (!req.user.roles.includes('ADMIN') && doc.user_id !== req.user.id) {
+    if (!req.user.permissions.includes('partner.review') && doc.user_id !== req.user.id) {
       return next(AppError.notFound('Document not found'));
     }
     req.partnerDocument = doc;

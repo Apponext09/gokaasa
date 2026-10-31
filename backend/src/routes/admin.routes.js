@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { hotelController } from '../controllers/hotel.controller.js';
 import { hotelWorkspaceController } from '../controllers/hotelWorkspace.controller.js';
 import { roomInventoryController as inv } from '../controllers/roomInventory.controller.js';
-import { authenticate, authorize } from '../middleware/authenticate.js';
+import { authenticate, requirePermission } from '../middleware/authenticate.js';
 import { importSearchLimiter } from '../middleware/rateLimiters.js';
 import { uploadSingleImage } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
@@ -97,7 +97,7 @@ import {
 } from '../validators/settlement.validator.js';
 import { catalogController } from '../controllers/catalog.controller.js';
 import { catalogCreateSchema, catalogItemParam, catalogKindParam, catalogUpdateSchema } from '../validators/catalog.validator.js';
-import { CONSOLE_ROLES, restrictSpecializedStaff } from '../middleware/adminConsoleAccess.js';
+import { restrictSpecializedStaff } from '../middleware/adminConsoleAccess.js';
 import { pool } from '../db/pool.js';
 import { homepageBackgroundController } from '../controllers/homepageBackground.controller.js';
 import { hotelReviewController } from '../controllers/hotelReview.controller.js';
@@ -129,7 +129,7 @@ export const adminRouter = Router();
 // further down ('/users/stream-ticket'). It must stay above `adminRouter.use(staff)`.
 adminRouter.get('/users/stream', adminUserController.stream);
 
-const staff = [authenticate, authorize(...CONSOLE_ROLES), requirePartnerApproved, restrictSpecializedStaff];
+const staff = [authenticate, requirePermission('console.access'), requirePartnerApproved, restrictSpecializedStaff];
 adminRouter.use(staff);
 
 adminRouter.get('/dashboard/summary', hotelController.dashboard);
@@ -139,38 +139,38 @@ adminRouter.get('/dashboard/alerts', hotelController.dashboardAlerts);
 adminRouter.get('/search', validate({ query: adminSearchQuery }), adminSearchController.search);
 
 // Internal hotel quality review. This is separate from guest ratings/reviews under /reviews.
-adminRouter.get('/hotel-reviews', validate({ query: hotelReviewListQuery }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.list);
-adminRouter.get('/hotels/:id/review', validate({ params: idParam }), authorize('ADMIN', 'HOTEL_OWNER', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'), requireHotelReadAccess(hotelIdFromParam), hotelReviewController.detail);
-adminRouter.post('/hotels/:id/review/request-changes', validate({ params: idParam, body: hotelReviewChangesSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.requestChanges);
-adminRouter.post('/hotels/:id/review/approve', validate({ params: idParam, body: hotelReviewDecisionSchema }), authorize('ADMIN', 'HOTEL_REVIEW_EXECUTIVE'), hotelReviewController.approve);
+adminRouter.get('/hotel-reviews', validate({ query: hotelReviewListQuery }), requirePermission('hotel.review'), hotelReviewController.list);
+adminRouter.get('/hotels/:id/review', validate({ params: idParam }), requireHotelReadAccess(hotelIdFromParam), hotelReviewController.detail);
+adminRouter.post('/hotels/:id/review/request-changes', validate({ params: idParam, body: hotelReviewChangesSchema }), requirePermission('hotel.review'), hotelReviewController.requestChanges);
+adminRouter.post('/hotels/:id/review/approve', validate({ params: idParam, body: hotelReviewDecisionSchema }), requirePermission('hotel.review'), hotelReviewController.approve);
 
 // Platform master data. Reads and writes are ADMIN-only because every hotel and room uses these values.
-adminRouter.get('/catalogs/:kind', validate({ params: catalogKindParam }), authorize('ADMIN'), catalogController.adminList);
-adminRouter.post('/catalogs/:kind', validate({ params: catalogKindParam, body: catalogCreateSchema }), authorize('ADMIN'), catalogController.create);
-adminRouter.patch('/catalogs/:kind/:code', validate({ params: catalogItemParam, body: catalogUpdateSchema }), authorize('ADMIN'), catalogController.update);
-adminRouter.get('/homepage-background-images', authorize('ADMIN'), homepageBackgroundController.list);
+adminRouter.get('/catalogs/:kind', validate({ params: catalogKindParam }), requirePermission('catalog.manage'), catalogController.adminList);
+adminRouter.post('/catalogs/:kind', validate({ params: catalogKindParam, body: catalogCreateSchema }), requirePermission('catalog.manage'), catalogController.create);
+adminRouter.patch('/catalogs/:kind/:code', validate({ params: catalogItemParam, body: catalogUpdateSchema }), requirePermission('catalog.manage'), catalogController.update);
+adminRouter.get('/homepage-background-images', requirePermission('homepage.manage'), homepageBackgroundController.list);
 adminRouter.put(
   '/homepage-background-images/:slot',
   validate({ params: z.object({ slot: z.coerce.number().int().min(1).max(4) }) }),
-  authorize('ADMIN'),
+  requirePermission('homepage.manage'),
   uploadSingleImage,
   homepageBackgroundController.replace,
 );
 adminRouter.delete(
   '/homepage-background-images/:slot',
   validate({ params: z.object({ slot: z.coerce.number().int().min(1).max(4) }) }),
-  authorize('ADMIN'),
+  requirePermission('homepage.manage'),
   homepageBackgroundController.remove,
 );
 
-adminRouter.get('/settings', authorize('ADMIN'), settingsController.get);
-adminRouter.patch('/settings', validate({ body: settingsUpdateSchema }), authorize('ADMIN'), settingsController.update);
+adminRouter.get('/settings', requirePermission('settings.manage'), settingsController.get);
+adminRouter.patch('/settings', validate({ body: settingsUpdateSchema }), requirePermission('settings.manage'), settingsController.update);
 
 // Commission configuration. Global (hotel_id null) and per-hotel overrides. A hotel's own effective rate
 // is readable by that hotel's own manager/owner (requireHotelAccess, below); only ADMIN may add a new
 // rate row anywhere -- an admin-level pricing lever, same policy as /coupons and /settings' PATCH.
 adminRouter.get('/commission-config', commissionConfigController.getGlobal);
-adminRouter.put('/commission-config', validate({ body: commissionRateSchema }), authorize('ADMIN'), commissionConfigController.setGlobal);
+adminRouter.put('/commission-config', validate({ body: commissionRateSchema }), requirePermission('commission.manage'), commissionConfigController.setGlobal);
 adminRouter.get(
   '/hotels/:id/commission',
   validate({ params: idParam }),
@@ -180,7 +180,7 @@ adminRouter.get(
 adminRouter.put(
   '/hotels/:id/commission',
   validate({ params: idParam, body: commissionRateSchema }),
-  authorize('ADMIN'),
+  requirePermission('commission.manage'),
   commissionConfigController.setForHotel,
 );
 
@@ -195,18 +195,18 @@ adminRouter.get('/earnings/bookings/:bookingId', validate({ params: earningsBook
 // HOTEL_OWNER can see their own hotel's settlement history (scoped in the service).
 adminRouter.get('/settlements', validate({ query: settlementListQuery }), settlementController.list);
 adminRouter.get('/settlements/:id', validate({ params: settlementIdParam }), settlementController.detail);
-adminRouter.post('/settlements', validate({ body: settlementCreateSchema }), authorize('ADMIN'), settlementController.create);
-adminRouter.post('/settlements/:id/approve', validate({ params: settlementIdParam }), authorize('ADMIN'), settlementController.approve);
+adminRouter.post('/settlements', validate({ body: settlementCreateSchema }), requirePermission('settlement.manage'), settlementController.create);
+adminRouter.post('/settlements/:id/approve', validate({ params: settlementIdParam }), requirePermission('settlement.manage'), settlementController.approve);
 adminRouter.post(
   '/settlements/:id/mark-paid',
   validate({ params: settlementIdParam, body: settlementMarkPaidSchema }),
-  authorize('ADMIN'),
+  requirePermission('settlement.manage'),
   settlementController.markPaid,
 );
 adminRouter.post(
   '/settlements/:id/reverse',
   validate({ params: settlementIdParam, body: settlementReverseSchema }),
-  authorize('ADMIN'),
+  requirePermission('settlement.manage'),
   settlementController.reverse,
 );
 
@@ -229,35 +229,35 @@ adminRouter.post(
 );
 
 // Per-hotel onboarding assignments for internal onboarding executives.
-adminRouter.get('/onboarding-executives', authorize('ADMIN'), managerController.listOnboardingExecutives);
-adminRouter.get('/hotels/:id/onboarding-executives', validate({ params: idParam }), authorize('ADMIN'), managerController.listOnboardingForHotel);
+adminRouter.get('/onboarding-executives', requirePermission('onboarding.assign'), managerController.listOnboardingExecutives);
+adminRouter.get('/hotels/:id/onboarding-executives', validate({ params: idParam }), requirePermission('onboarding.assign'), managerController.listOnboardingForHotel);
 adminRouter.post(
   '/hotels/:id/onboarding-executives',
   validate({ params: idParam, body: managerAssignSchema }),
-  authorize('ADMIN'),
+  requirePermission('onboarding.assign'),
   managerController.assignOnboarding,
 );
 adminRouter.delete(
   '/hotels/:id/onboarding-executives/:userId',
   validate({ params: idParam.extend({ userId: idParam.shape.id }) }),
-  authorize('ADMIN'),
+  requirePermission('onboarding.assign'),
   managerController.unassignOnboarding,
 );
 
 // Coupons / offers. ADMIN and SALES_EXECUTIVE may manage offers; permanent deletion stays ADMIN-only.
-adminRouter.get('/coupons', validate({ query: couponListQuery }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.list);
-adminRouter.post('/coupons', validate({ body: couponCreateSchema }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.create);
-adminRouter.get('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.detail);
-adminRouter.patch('/coupons/:id', validate({ params: couponIdParam, body: couponUpdateSchema }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.update);
-adminRouter.patch('/coupons/:id/status', validate({ params: couponIdParam, body: couponStatusSchema }), authorize('ADMIN', 'SALES_EXECUTIVE'), couponController.setStatus);
+adminRouter.get('/coupons', validate({ query: couponListQuery }), requirePermission('offer.manage'), couponController.list);
+adminRouter.post('/coupons', validate({ body: couponCreateSchema }), requirePermission('offer.manage'), couponController.create);
+adminRouter.get('/coupons/:id', validate({ params: couponIdParam }), requirePermission('offer.manage'), couponController.detail);
+adminRouter.patch('/coupons/:id', validate({ params: couponIdParam, body: couponUpdateSchema }), requirePermission('offer.manage'), couponController.update);
+adminRouter.patch('/coupons/:id/status', validate({ params: couponIdParam, body: couponStatusSchema }), requirePermission('offer.manage'), couponController.setStatus);
 adminRouter.post(
   '/coupons/:id/image',
   validate({ params: couponIdParam }),
-  authorize('ADMIN', 'SALES_EXECUTIVE'),
+  requirePermission('offer.manage'),
   uploadSingleImage,
   couponController.uploadImage,
 );
-adminRouter.delete('/coupons/:id', validate({ params: couponIdParam }), authorize('ADMIN'), couponController.remove);
+adminRouter.delete('/coupons/:id', validate({ params: couponIdParam }), requirePermission('offer.delete'), couponController.remove);
 
 // Minimal hotel lookup used by Sales when an offer applies to selected properties. It intentionally
 // excludes addresses, contacts, status internals and editing links.
@@ -527,55 +527,55 @@ adminRouter.get('/customers/:id', validate({ params: adminCustomerIdParam }), ad
 adminRouter.patch(
   '/customers/:id/status',
   validate({ params: adminCustomerIdParam, body: customerStatusSchema }),
-  authorize('ADMIN'),
+  requirePermission('customer.manage'),
   adminCustomerController.setStatus,
 );
 
 // User Management: a unified, presence-aware directory across every role (customers, hotel owners,
 // admins). ADMIN only -- unlike /customers, this can reveal other staff accounts, so it is not opened
 // restricted to ADMIN even for read access.
-adminRouter.post('/users/stream-ticket', authorize('ADMIN'), adminUserController.issueStreamTicket);
-adminRouter.post('/users/staff', validate({ body: adminStaffCreateSchema }), authorize('ADMIN'), adminUserController.createStaff);
-adminRouter.get('/users/kpis', authorize('ADMIN'), adminUserController.kpis);
-adminRouter.get('/users', validate({ query: adminUserListQuery }), authorize('ADMIN'), adminUserController.list);
-adminRouter.get('/users/:id', validate({ params: adminUserIdParam }), authorize('ADMIN'), adminUserController.detail);
+adminRouter.post('/users/stream-ticket', requirePermission('user.manage'), adminUserController.issueStreamTicket);
+adminRouter.post('/users/staff', validate({ body: adminStaffCreateSchema }), requirePermission('user.manage'), adminUserController.createStaff);
+adminRouter.get('/users/kpis', requirePermission('user.manage'), adminUserController.kpis);
+adminRouter.get('/users', validate({ query: adminUserListQuery }), requirePermission('user.manage'), adminUserController.list);
+adminRouter.get('/users/:id', validate({ params: adminUserIdParam }), requirePermission('user.manage'), adminUserController.detail);
 adminRouter.patch(
   '/users/:id/status',
   validate({ params: adminUserIdParam, body: adminUserStatusSchema }),
-  authorize('ADMIN'),
+  requirePermission('user.manage'),
   adminUserController.setStatus,
 );
-adminRouter.post('/users/:id/force-signout', validate({ params: adminUserIdParam }), authorize('ADMIN'), adminUserController.forceSignOut);
+adminRouter.post('/users/:id/force-signout', validate({ params: adminUserIdParam }), requirePermission('user.manage'), adminUserController.forceSignOut);
 adminRouter.delete(
   '/users/:id/sessions/:sessionId',
   validate({ params: adminUserSessionParam }),
-  authorize('ADMIN'),
+  requirePermission('user.manage'),
   adminUserController.revokeSession,
 );
 
 // Audit log viewer. ADMIN only — it can reveal other staff members' actions across every hotel.
-adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), authorize('ADMIN'), auditLogController.list);
+adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), requirePermission('audit.read'), auditLogController.list);
 
 // Reviews moderation. HOTEL_OWNER gets read-only visibility into its own hotels (scoped in the service,
 // same hotel_managers table as everything else); only ADMIN may change a review's status.
 adminRouter.get('/reviews', validate({ query: adminReviewListQuery }), reviewController.listForModeration);
 adminRouter.get('/exports/reviews', validate({ query: adminReviewListQuery }), reviewController.exportReviewsCsv);
-adminRouter.post('/reviews/:id/moderate', validate({ params: reviewIdParam, body: moderateSchema }), authorize('ADMIN'), reviewController.moderate);
+adminRouter.post('/reviews/:id/moderate', validate({ params: reviewIdParam, body: moderateSchema }), requirePermission('review.moderate'), reviewController.moderate);
 
 // Partner (HOTEL_OWNER) application review queue. ADMIN only -- approving a partner grants them the
 // same hotel-management access as a HOTEL_OWNER, so this is an admin-level action like /settings.
-adminRouter.get('/partners', validate({ query: partnerApplicationListQuery }), authorize('ADMIN'), partnerReviewController.list);
-adminRouter.get('/partners/:userId', validate({ params: partnerUserIdParam }), authorize('ADMIN'), partnerReviewController.detail);
-adminRouter.post('/partners/:userId/approve', validate({ params: partnerUserIdParam }), authorize('ADMIN'), partnerReviewController.approve);
+adminRouter.get('/partners', validate({ query: partnerApplicationListQuery }), requirePermission('partner.review'), partnerReviewController.list);
+adminRouter.get('/partners/:userId', validate({ params: partnerUserIdParam }), requirePermission('partner.review'), partnerReviewController.detail);
+adminRouter.post('/partners/:userId/approve', validate({ params: partnerUserIdParam }), requirePermission('partner.review'), partnerReviewController.approve);
 adminRouter.post(
   '/partners/:userId/reject',
   validate({ params: partnerUserIdParam, body: partnerDecisionSchema }),
-  authorize('ADMIN'),
+  requirePermission('partner.review'),
   partnerReviewController.reject,
 );
 adminRouter.get(
   '/partners/:userId/documents/:docId/file',
   validate({ params: partnerDocumentParam }),
-  authorize('ADMIN'),
+  requirePermission('partner.review'),
   partnerReviewController.getDocumentFile,
 );

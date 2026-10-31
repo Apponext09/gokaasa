@@ -7,7 +7,7 @@ function actorOf(req) {
   return { id: req.user.id, roles: req.user.roles, ip: req.ip };
 }
 
-/** ADMIN-only partner-application review queue (routes are already gated by authorize('ADMIN')). */
+/** Partner-application review routes are gated by the `partner.review` permission. */
 export const partnerReviewController = {
   async list(req, res) {
     return res.json(await partnerApplicationService.listForAdmin(req.validated.query));

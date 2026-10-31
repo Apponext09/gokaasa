@@ -48,6 +48,11 @@ export const resetPasswordSchema = z.object({
   password,
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required').max(128),
+  newPassword: password,
+});
+
 export const emailChangeRequestSchema = z.object({
   newEmail: email,
   currentPassword: z.string().min(1, 'Current password is required').max(128),

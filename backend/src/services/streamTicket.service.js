@@ -20,7 +20,12 @@ export const streamTicketService = {
   issue(actor) {
     sweep();
     const ticket = crypto.randomBytes(24).toString('base64url');
-    tickets.set(ticket, { userId: actor.id, roles: actor.roles, expiresAt: Date.now() + TICKET_TTL_MS });
+    tickets.set(ticket, {
+      userId: actor.id,
+      roles: actor.roles,
+      permissions: actor.permissions,
+      expiresAt: Date.now() + TICKET_TTL_MS,
+    });
     return { ticket, expiresInMs: TICKET_TTL_MS };
   },
 
@@ -30,6 +35,6 @@ export const streamTicketService = {
     if (!entry) return null;
     tickets.delete(ticket);
     if (entry.expiresAt < Date.now()) return null;
-    return { userId: entry.userId, roles: entry.roles };
+    return { userId: entry.userId, roles: entry.roles, permissions: entry.permissions };
   },
 };

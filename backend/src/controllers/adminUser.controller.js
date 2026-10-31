@@ -4,7 +4,7 @@ import { presenceEvents, PRESENCE_SESSION_ENDED, PRESENCE_SESSION_UPDATED } from
 import { AppError } from '../utils/AppError.js';
 
 function actorOf(req) {
-  return { id: req.user.id, roles: req.user.roles, ip: req.ip };
+  return { id: req.user.id, roles: req.user.roles, permissions: req.user.permissions, ip: req.ip };
 }
 
 export const adminUserController = {
@@ -51,7 +51,7 @@ export const adminUserController = {
     const ticket = typeof req.query.ticket === 'string' ? req.query.ticket : '';
     const identity = streamTicketService.consume(ticket);
     if (!identity) throw AppError.unauthorized('This live connection has expired. Reconnecting…');
-    if (!identity.roles.includes('ADMIN')) throw AppError.forbidden();
+    if (!identity.permissions.includes('user.manage')) throw AppError.forbidden();
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',

@@ -37,6 +37,7 @@ describe('registration and login', () => {
     assert.equal(res.status, 201);
     assert.equal(res.body.user.email, 'asha.test@example.com');
     assert.deepEqual(res.body.user.roles, ['CUSTOMER']);
+    assert.deepEqual(res.body.user.permissions, []);
     assert.ok(res.body.accessToken);
     assert.equal(res.body.refreshToken, undefined, 'refresh token must never be in the JSON body');
 
@@ -191,6 +192,49 @@ describe('password reset', () => {
   });
 });
 
+describe('authenticated password change', () => {
+  it('verifies the current password, changes it, audits it and revokes every session', async () => {
+    const email = 'profile.password@example.com';
+    const newPassword = 'Changed-pass-456';
+    const userId = await createUserWithRole({ email, password: PASSWORD, roleCode: 'CUSTOMER' });
+    const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+    const oldCookie = cookieFrom(login);
+
+    assert.equal((await request(app).post('/api/auth/change-password').send({ currentPassword: PASSWORD, newPassword })).status, 401);
+
+    const wrong = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .send({ currentPassword: 'Wrong-pass-123', newPassword });
+    assert.equal(wrong.status, 400);
+
+    const unchanged = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .send({ currentPassword: PASSWORD, newPassword: PASSWORD });
+    assert.equal(unchanged.status, 400);
+
+    const changed = await request(app)
+      .post('/api/auth/change-password')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .send({ currentPassword: PASSWORD, newPassword });
+    assert.equal(changed.status, 200);
+    assert.match(changed.headers['set-cookie'][0], /gk_refresh=;/);
+
+    assert.equal((await request(app).post('/api/auth/refresh').set('Cookie', oldCookie)).status, 401);
+    assert.equal((await request(app).post('/api/auth/login').send({ email, password: PASSWORD })).status, 401);
+    assert.equal((await request(app).post('/api/auth/login').send({ email, password: newPassword })).status, 200);
+
+    const { pool } = await import('../../src/db/pool.js');
+    const audit = await pool.query(
+      `SELECT new_value FROM audit_logs WHERE action = 'user.password_changed' AND entity_id = $1`,
+      [String(userId)],
+    );
+    assert.equal(audit.rowCount, 1);
+    assert.deepEqual(audit.rows[0].new_value, { sessionsRevoked: true });
+  });
+});
+
 describe('staff email change', () => {
   beforeEach(() => {
     sentMail.length = 0;
@@ -267,7 +311,7 @@ describe('staff email change', () => {
   });
 });
 
-describe('role-based access control', () => {
+describe('database permission access control', () => {
   it('denies customers access to admin routes', async () => {
     const login = await request(app).post('/api/auth/login').send({ email: 'asha.test@example.com', password: 'Another-pass-456' });
     const res = await request(app).get('/api/admin/hotels').set('Authorization', `Bearer ${login.body.accessToken}`);
@@ -280,8 +324,45 @@ describe('role-based access control', () => {
 
     for (const email of ['admin@example.com', 'manager@example.com']) {
       const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+      assert.ok(login.body.user.permissions.includes('console.access'));
       const res = await request(app).get('/api/admin/hotels').set('Authorization', `Bearer ${login.body.accessToken}`);
       assert.equal(res.status, 200, `${email} should reach admin routes`);
+    }
+  });
+
+  it('takes a changed role-permission assignment into account on the next login', async () => {
+    const email = 'permission.sales@example.com';
+    await createUserWithRole({ email, password: PASSWORD, roleCode: 'SALES_EXECUTIVE' });
+    const { pool } = await import('../../src/db/pool.js');
+
+    const allowedLogin = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+    assert.ok(allowedLogin.body.user.permissions.includes('console.access'));
+    assert.equal(
+      (await request(app).get('/api/admin/bookings').set('Authorization', `Bearer ${allowedLogin.body.accessToken}`)).status,
+      200,
+    );
+
+    try {
+      await pool.query(
+        `DELETE FROM role_permissions rp
+          USING roles r, permissions p
+          WHERE rp.role_id = r.id AND rp.permission_id = p.id
+            AND r.code = 'SALES_EXECUTIVE' AND p.code = 'console.access'`,
+      );
+
+      const deniedLogin = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+      assert.equal(deniedLogin.body.user.permissions.includes('console.access'), false);
+      assert.equal(
+        (await request(app).get('/api/admin/bookings').set('Authorization', `Bearer ${deniedLogin.body.accessToken}`)).status,
+        403,
+      );
+    } finally {
+      await pool.query(
+        `INSERT INTO role_permissions (role_id, permission_id)
+         SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+          WHERE r.code = 'SALES_EXECUTIVE' AND p.code = 'console.access'
+         ON CONFLICT DO NOTHING`,
+      );
     }
   });
 });

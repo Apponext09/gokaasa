@@ -5,7 +5,7 @@ function actorOf(req) {
   return { id: req.user.id, roles: req.user.roles };
 }
 
-/** ADMIN-only coupon management (every route is gated with authorize('ADMIN') in admin.routes.js). */
+/** Coupon management is gated by the route's offer permissions. */
 export const couponController = {
   async list(req, res) {
     return res.json(await couponService.list(req.validated.query));

@@ -75,12 +75,12 @@ const NAV = [
 ];
 
 function SidebarNav({ onNavigate, collapsed }) {
-  const { isAdmin, user } = useAuth();
+  const { user } = useAuth();
   const isHotelOwner = Boolean(user?.roles?.includes('HOTEL_OWNER'));
   return (
     <nav aria-label="Admin" className="admin-sidebar-nav flex flex-col gap-5">
       {NAV.map((group, index) => {
-        const items = group.items.filter((item) => (!item.adminOnly || isAdmin) && canAccessAdminPath(user, item.to));
+        const items = group.items.filter((item) => canAccessAdminPath(user, item.to));
         if (items.length === 0) return null;
         return (
           <div key={group.section ?? index} className="flex flex-col gap-1.5">

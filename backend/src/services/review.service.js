@@ -190,7 +190,7 @@ export const reviewService = {
     ]);
   },
 
-  /** ADMIN only, enforced by the route (authorize('ADMIN')) -- a HOTEL_OWNER never reaches here. */
+  /** Guest-review moderation is enforced by the route's `review.moderate` permission. */
   async moderate(reviewId, action, reason, actor) {
     const nextStatus = { APPROVE: REVIEW_STATUS.APPROVED, REJECT: REVIEW_STATUS.REJECTED, HIDE: REVIEW_STATUS.HIDDEN, RESTORE: REVIEW_STATUS.APPROVED }[action];
     const auditVerb = { APPROVE: 'approved', REJECT: 'rejected', HIDE: 'hidden', RESTORE: 'restored' }[action];

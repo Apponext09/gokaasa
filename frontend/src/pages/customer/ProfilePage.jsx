@@ -9,6 +9,7 @@ import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/featur
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { homePathFor } from '@/features/auth/routing.js';
 import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
+import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel.jsx';
 import { setStaffCustomerView } from '@/features/auth/viewMode.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { bookingApi } from '@/services/endpoints.js';
@@ -168,10 +169,11 @@ export function ProfilePage() {
             </button>
           )}
         </Card>
-        <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet -- contact support if you need a change.</p>
+        <p className="text-xs text-[var(--text-muted)]">Contact support if you need to change your name.</p>
       </section>
 
       {isNonCustomer && <StaffEmailChangePanel />}
+      <ChangePasswordPanel />
     </div>
   );
 }

@@ -14,21 +14,13 @@ import { createLogger } from '../utils/logger.js';
 
 const log = createLogger('email-change');
 const MINUTE_MS = 60 * 1000;
-const STAFF_ROLES = new Set([
-  'ADMIN',
-  'HOTEL_OWNER',
-  'SALES_EXECUTIVE',
-  'HOTEL_ONBOARDING_EXECUTIVE',
-  'HOTEL_REVIEW_EXECUTIVE',
-]);
-
 function generateCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, '0');
 }
 
 function assertStaff(user) {
   if (!user?.isActive) throw AppError.unauthorized();
-  if (!user.roles.some((role) => STAFF_ROLES.has(role))) {
+  if (!user.permissions.includes('console.access')) {
     throw AppError.forbidden('Email changes are available to staff accounts only');
   }
 }

@@ -10,6 +10,7 @@ export const authApi = {
   me: () => api.get('/auth/me').then((r) => r.data.user),
   forgotPassword: (body) => api.post('/auth/forgot-password', body).then((r) => r.data),
   resetPassword: (body) => api.post('/auth/reset-password', body).then((r) => r.data),
+  changePassword: (body) => api.post('/auth/change-password', body).then((r) => r.data),
   pendingEmailChange: () => api.get('/auth/email-change').then((r) => r.data.pending),
   requestEmailChange: (body) => api.post('/auth/email-change/request', body).then((r) => r.data),
   resendEmailChange: () => api.post('/auth/email-change/resend').then((r) => r.data),

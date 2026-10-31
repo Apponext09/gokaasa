@@ -2,9 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { restrictSpecializedStaff } from '../../src/middleware/adminConsoleAccess.js';
 
+const profilePermissions = {
+  ADMIN: ['console.full'],
+  HOTEL_OWNER: ['console.owner'],
+  SALES_EXECUTIVE: ['console.sales'],
+  HOTEL_ONBOARDING_EXECUTIVE: ['console.onboarding'],
+  HOTEL_REVIEW_EXECUTIVE: ['console.review'],
+};
+
 function decision(role, method, path) {
   let outcome = 'allowed';
-  restrictSpecializedStaff({ user: { roles: [role] }, method, path }, {}, (error) => {
+  restrictSpecializedStaff({ user: { roles: [role], permissions: profilePermissions[role] ?? [] }, method, path }, {}, (error) => {
     if (error) outcome = error.status;
   });
   return outcome;
@@ -34,7 +42,7 @@ test('onboarding API allow-list permits hotel preparation but not inventory or o
   assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'GET', '/bookings'), 403);
 });
 
-test('legacy staff roles continue through to existing route-level authorization', () => {
+test('full and owner permission profiles continue through to route-level authorization', () => {
   assert.equal(decision('ADMIN', 'GET', '/users'), 'allowed');
   assert.equal(decision('HOTEL_OWNER', 'GET', '/settings'), 'allowed');
   assert.equal(decision('HOTEL_OWNER', 'GET', '/dashboard/summary'), 'allowed');
