@@ -74,7 +74,7 @@ describe('AssistantScreen conversation flows', () => {
 
   async function goFromDestinationToBudget() {
     fireEvent.press(screen.getByText('Goa'));
-    await advance('Continue', 'Check-in');
+    await advance('Continue', 'Select check-in');
     await advance('Continue', /room.*adult/i);
     await advance('Continue', 'Amenities');
     await advance('Continue', 'Under ₹2,000 / night');
@@ -175,7 +175,7 @@ describe('AssistantScreen conversation flows', () => {
 
     await waitFor(() => expect(hotelsApi.suggestDestinations).toHaveBeenCalledWith('goa'));
     // Destination resolved to a real place; next required answer (dates) is asked for.
-    await waitFor(() => expect(screen.getByText('Check-in')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Select check-in')).toBeTruthy());
     expect(assistantApi.extract).not.toHaveBeenCalled();
   });
 

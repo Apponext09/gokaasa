@@ -144,7 +144,7 @@ export function previousStep(step) {
 
 /** Builds the exact shape hotelsApi.search (via searchParams-style params) already knows how to consume
  * -- the assistant never invents its own filter shape, it only mirrors the real search screen's. */
-export function toSearchParams(assistant) {
+export function toSearchParams(assistant, page = 1) {
   return {
     destination: assistant.destination?.destination,
     area: assistant.destination?.area ?? undefined,
@@ -152,7 +152,7 @@ export function toSearchParams(assistant) {
     checkOut: assistant.checkOut,
     occ: assistant.occupancy.map((room) => `${room.adults}${room.childAges.length ? `-${room.childAges.join('.')}` : ''}`).join('|'),
     sort: 'recommended',
-    page: 1,
+    page,
     minPrice: assistant.minPrice,
     maxPrice: assistant.maxPrice,
     stars: assistant.stars?.length ? assistant.stars.join(',') : undefined,

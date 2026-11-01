@@ -1,17 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/ScreenContainer.js';
-import { DateField } from '../components/DateField.js';
 import { DestinationInput } from '../components/DestinationInput.js';
-import { GuestsModal } from '../components/GuestsModal.js';
 import { HotelCard, HotelCardSkeleton } from '../components/HotelCard.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { AssistantHeader } from '../components/assistant/AssistantHeader.js';
 import { AssistantWelcome } from '../components/assistant/AssistantWelcome.js';
 import { AssistantBubble, UserBubble, TypingIndicator } from '../components/assistant/MessageBubble.js';
 import { MessageComposer } from '../components/assistant/MessageComposer.js';
+import { InlineDateRangePicker } from '../components/assistant/InlineDateRangePicker.js';
+import { InlineRoomsGuestsEditor } from '../components/assistant/InlineRoomsGuestsEditor.js';
 import { hotelsApi } from '../api/hotelsApi.js';
 import { assistantApi } from '../api/assistantApi.js';
 import {
@@ -35,8 +35,6 @@ import { parseUtterance, parseVoiceCommand } from '../features/assistant/bilingu
 import { todayIso, addDaysIso, occupancyLabel } from '../utils/format.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
-
-const DEFAULT_ROOM = { adults: 2, childAges: [] };
 
 function buildLocalClarification(missingInformation, destinationCandidates, destinationQuery, lang) {
   if (destinationCandidates.length > 1) {
@@ -138,8 +136,7 @@ export default function AssistantScreen({ navigation }) {
   const [destinationText, setDestinationText] = useState('');
   const [destinations, setDestinations] = useState([]);
   const [searchStatus, setSearchStatus] = useState('idle');
-  const [searchResult, setSearchResult] = useState({ items: [], total: 0 });
-  const [guestsOpen, setGuestsOpen] = useState(false);
+  const [searchResult, setSearchResult] = useState({ items: [], total: 0, page: 1, hasMore: false });
   const [customBudget, setCustomBudget] = useState('');
 
   const scrollRef = useRef(null);
@@ -226,25 +223,40 @@ export default function AssistantScreen({ navigation }) {
 
   const searchAbortRef = useRef(null);
 
-  const runSearch = async () => {
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const runSearch = async (page = 1) => {
     searchAbortRef.current?.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
-    setSearchStatus('loading');
+    if (page === 1) setSearchStatus('loading');
+    else setLoadingMore(true);
     try {
-      const data = await hotelsApi.search(toSearchParams(state), { signal: controller.signal });
+      const data = await hotelsApi.search(toSearchParams(state, page), { signal: controller.signal });
       if (!mountedRef.current) return;
-      setSearchResult({ items: data.items ?? [], total: data.total ?? 0 });
+      const freshItems = data.items ?? [];
+      const total = data.total ?? 0;
+      setSearchResult((prev) => {
+        // Dedupe by id -- a page-2+ response must never repeat a hotel already shown on an earlier page,
+        // even if the backend's own paging happens to overlap under concurrent writes.
+        const seen = new Set(page === 1 ? [] : prev.items.map((h) => h.id));
+        const items = page === 1 ? freshItems : [...prev.items, ...freshItems.filter((h) => !seen.has(h.id))];
+        return { items, total, page, hasMore: items.length < total };
+      });
       setSearchStatus('ready');
     } catch (err) {
       if (err?.code === 'CANCELED' || !mountedRef.current) return; // superseded by a newer search, or the screen closed
-      setSearchResult({ items: [], total: 0, error: err.message });
-      setSearchStatus('error');
+      if (page === 1) {
+        setSearchResult({ items: [], total: 0, page: 1, hasMore: false, error: err.message });
+        setSearchStatus('error');
+      }
+    } finally {
+      if (mountedRef.current) setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    if (state.step === STEP.RESULTS && searchStatus === 'idle') runSearch();
+    if (state.step === STEP.RESULTS && searchStatus === 'idle') runSearch(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.step]);
 
@@ -440,8 +452,9 @@ export default function AssistantScreen({ navigation }) {
     setDestinationText('');
     setHistory([]);
     lastStepKeyRef.current = null;
-    setSearchResult({ items: [], total: 0 });
+    setSearchResult({ items: [], total: 0, page: 1, hasMore: false });
     setSearchStatus('idle');
+    setLoadingMore(false);
     setAiState({ status: 'idle', error: null, note: null, candidates: [] });
     setComposerText('');
   };
@@ -552,10 +565,12 @@ export default function AssistantScreen({ navigation }) {
 
           {state.step === STEP.DATES && (
             <View style={styles.stepBlock}>
-              <View style={styles.row}>
-                <DateField label="Check-in" value={state.checkIn} onChange={(v) => patch({ checkIn: v })} minimumDate={todayIso()} />
-                <DateField label="Check-out" value={state.checkOut} onChange={(v) => patch({ checkOut: v })} minimumDate={addDaysIso(state.checkIn ?? todayIso(), 1)} />
-              </View>
+              <InlineDateRangePicker
+                checkIn={state.checkIn}
+                checkOut={state.checkOut}
+                onChange={({ checkIn, checkOut }) => patch({ checkIn, checkOut })}
+                min={todayIso()}
+              />
               <StepFooter
                 onBack={goBackStep}
                 onNext={() => {
@@ -571,11 +586,8 @@ export default function AssistantScreen({ navigation }) {
 
           {state.step === STEP.GUESTS && (
             <View style={styles.stepBlock}>
-              <Pressable style={styles.guestsRow} onPress={() => setGuestsOpen(true)}>
-                <Ionicons name="people-outline" size={16} color={colors.brand600} />
-                <Text style={styles.guestsText}>{occupancyLabel(state.occupancy)}</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={styles.flexAuto} />
-              </Pressable>
+              <InlineRoomsGuestsEditor rooms={state.occupancy} onChange={(occupancy) => patch({ occupancy })} />
+              <Text style={styles.caption}>{occupancyLabel(state.occupancy)}</Text>
               <StepFooter
                 onBack={goBackStep}
                 onNext={() => {
@@ -703,6 +715,20 @@ export default function AssistantScreen({ navigation }) {
               )}
               {searchStatus === 'ready' &&
                 searchResult.items.map((hotel) => <HotelCard key={hotel.id} hotel={hotel} onPress={() => openHotel(hotel)} />)}
+              {searchStatus === 'ready' && searchResult.hasMore && (
+                <Pressable
+                  style={styles.loadMoreButton}
+                  disabled={loadingMore}
+                  onPress={() => runSearch(searchResult.page + 1)}
+                  accessibilityRole="button"
+                >
+                  {loadingMore ? (
+                    <ActivityIndicator color={colors.brand600} />
+                  ) : (
+                    <Text style={styles.loadMoreText}>{t('loadMoreHotels', lang)}</Text>
+                  )}
+                </Pressable>
+              )}
               <StepFooter onBack={goBackStep} onNext={restart} backLabel={t('backLabel', lang)} nextLabel={t('startNewSearch', lang)} />
             </View>
           )}
@@ -722,8 +748,6 @@ export default function AssistantScreen({ navigation }) {
           />
         )}
       </KeyboardAvoidingView>
-
-      <GuestsModal visible={guestsOpen} room={state.occupancy[0] ?? DEFAULT_ROOM} onChange={(room) => patch({ occupancy: [room] })} onClose={() => setGuestsOpen(false)} />
     </ScreenContainer>
   );
 }
@@ -741,12 +765,11 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.white },
   sectionLabel: { ...typography.tiny, color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   caption: { ...typography.caption, color: colors.textMuted },
-  guestsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 48, borderRadius: radius.control,
-    borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: spacing.md, backgroundColor: colors.surfaceCard,
+  loadMoreButton: {
+    height: 44, borderRadius: radius.control, borderWidth: 1, borderColor: colors.borderSubtle,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceCard,
   },
-  guestsText: { ...typography.body, color: colors.textStrong },
-  flexAuto: { marginLeft: 'auto' },
+  loadMoreText: { ...typography.bodyStrong, color: colors.brand600 },
   footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 2 },
   backButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   backButtonText: { ...typography.caption, color: colors.textBody, fontWeight: '600' },

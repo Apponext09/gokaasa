@@ -23,7 +23,7 @@ const USER_KEY = 'gokaasa_user';
 /** The live Gokaasa backend (Nginx-fronted over HTTPS; the app never talks to the private :5015 port
  * directly). This is the safe fallback -- used only if EXPO_PUBLIC_API_URL is missing or malformed, which
  * should never happen in a real build but must never silently resolve to a dev-only address either. */
-export const PRODUCTION_API_URL = 'https://gokaasa.apponext.in/api';
+export const PRODUCTION_API_URL = 'https://gokaasa.com/api';
 
 /** Validates EXPO_PUBLIC_API_URL instead of trusting it blindly: rejects anything that isn't a real
  * http(s) URL, strips a trailing slash, and fixes an accidentally duplicated "/api/api" suffix (a common
