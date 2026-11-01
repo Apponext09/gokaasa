@@ -21,12 +21,6 @@ import {
 
 import {
   Alert,
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/surfaces.jsx';
 
 import { Button } from '@/components/ui/button.jsx';
@@ -65,6 +59,22 @@ const AUTH_IMAGES = [
   'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1800&q=90',
   'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1800&q=90',
   'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=1800&q=90',
+];
+
+/* ==========================================================================
+   BACKGROUND COLLAGE IMAGES
+   ========================================================================== */
+
+const AUTH_COLLAGE_IMAGES = [
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1518732714860-b62714ce0c59?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1564501049412-61c2a3083791?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=900&q=85',
+  'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=900&q=85',
 ];
 
 /* ==========================================================================
@@ -160,58 +170,90 @@ function AuthShell({
   }, []);
 
   return (
-    <div className="customer-auth-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gray-950">
+    <div className="customer-auth-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#101E35]">
 
       {/* ================================================================
-          BACKGROUND DECORATION
+          HOTEL & HILL STATION BACKGROUND COLLAGE
           ================================================================ */}
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden="true"
+      >
+        {/* Image album grid */}
 
-        {/* ── Random organic blobs — various sizes & positions ── */}
-        <div className="absolute top-[-80px] left-[-60px]  w-64 h-64 rounded-[60%_40%_30%_70%/60%_30%_70%_40%] bg-blue-300/40 blur-2xl" />
-        <div className="absolute top-[10%]  right-[5%]    w-40 h-40 rounded-[40%_60%_70%_30%/40%_50%_60%_50%] bg-sky-300/35  blur-xl"  />
-        <div className="absolute top-[35%] left-[3%]      w-28 h-28 rounded-[70%_30%_50%_50%/30%_60%_40%_70%] bg-indigo-200/40 blur-xl" />
-        <div className="absolute top-[20%] left-[35%]     w-20 h-20 rounded-[50%_50%_30%_70%/60%_40%_60%_40%] bg-blue-200/35  blur-lg"  />
-        <div className="absolute top-[55%] right-[8%]     w-32 h-32 rounded-[30%_70%_70%_30%/30%_30%_70%_70%] bg-sky-200/40   blur-xl"  />
-        <div className="absolute top-[65%] left-[12%]     w-24 h-24 rounded-[60%_40%_60%_40%/50%_60%_40%_50%] bg-blue-300/30  blur-xl"  />
-        <div className="absolute bottom-[-60px] right-[-50px] w-56 h-56 rounded-[40%_60%_30%_70%/50%_40%_60%_50%] bg-sky-300/35  blur-2xl" />
-        <div className="absolute bottom-[20%] left-[40%]  w-16 h-16 rounded-[50%_50%_40%_60%/40%_60%_50%_50%] bg-indigo-200/30 blur-lg"  />
-        <div className="absolute bottom-[8%]  left-[-20px] w-36 h-36 rounded-[60%_40%_50%_50%/40%_60%_40%_60%] bg-blue-200/35  blur-xl"  />
+        <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-1.5 opacity-45 sm:gap-2">
 
-        {/* ── Random thin floating rings ── */}
-        <div className="absolute top-[8%]   left-[20%] w-16 h-16 rounded-full border-2 border-blue-400/30" />
-        <div className="absolute top-[45%]  right-[15%] w-10 h-10 rounded-full border   border-sky-400/35" />
-        <div className="absolute bottom-[25%] left-[25%] w-14 h-14 rounded-full border-2 border-indigo-300/30" />
-        <div className="absolute top-[70%]  right-[30%] w-8  h-8  rounded-full border   border-blue-300/40" />
-        <div className="absolute top-[18%]  right-[35%] w-6  h-6  rounded-full border   border-sky-300/35" />
+          {AUTH_COLLAGE_IMAGES.map((image, index) => {
+            const roundedClasses = [
+              'rounded-br-[35px]',
+              'rounded-bl-[30px] rounded-tr-[30px]',
+              'rounded-bl-[35px]',
+              'rounded-tr-[35px]',
+              'rounded-[30px]',
+              'rounded-bl-[35px]',
+              'rounded-tr-[35px]',
+              'rounded-[30px]',
+              'rounded-tl-[35px]',
+            ];
 
+            return (
+              <div
+                key={image}
+                className={`overflow-hidden ${roundedClasses[index]}`}
+              >
+                <img
+                  src={image}
+                  alt=""
+                  loading="lazy"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            );
+          })}
 
-        {/* ── Soft wave — bottom only ── */}
-        <svg className="absolute bottom-0 left-0 w-full opacity-35" viewBox="0 0 1440 110" preserveAspectRatio="none">
-          <path d="M0,55 C240,10 480,100 720,55 C960,10 1200,90 1440,50 L1440,110 L0,110 Z" fill="#1877f2" fillOpacity="0.20"/>
-          <path d="M0,80 C360,40 720,110 1080,65 C1260,45 1380,85 1440,75 L1440,110 L0,110 Z" fill="#0a42ba" fillOpacity="0.12"/>
-        </svg>
+        </div>
 
+        {/* Dark overlay */}
+
+        <div className="absolute inset-0 bg-[#101E35]/75" />
+
+        {/* Brand gradient */}
+
+        <div className="absolute inset-0 bg-gradient-to-br from-[#14243B]/55 via-transparent to-[#0B1729]/70" />
+
+        {/* Bottom depth */}
+
+        <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-[#0B1729]/50 to-transparent" />
       </div>
 
       {/* ================================================================
           MAIN CONTAINER
           ================================================================ */}
 
-      <div className={`relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center justify-center px-4 sm:px-6 lg:px-8 ${compact ? 'py-0 sm:py-2' : 'py-8'}`}>
-
-        <div className={`grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface-card)] shadow-[0_30px_100px_rgba(0,0,0,0.30)] ${compact ? 'max-w-5xl lg:scale-[0.8] lg:origin-center lg:grid-cols-[0.9fr_1.1fr]' : 'max-w-6xl lg:grid-cols-[0.92fr_1.08fr]'}`}>
+      <div
+        className={`relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center justify-center px-4 sm:px-6 lg:px-8 ${
+          compact ? 'py-0 sm:py-2' : 'py-8'
+        }`}
+      >
+        <div
+          className={`grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface-card)] shadow-[0_30px_100px_rgba(0,0,0,0.30)] ${
+            compact
+              ? 'max-w-5xl lg:scale-[0.8] lg:origin-center lg:grid-cols-[0.9fr_1.1fr]'
+              : 'max-w-6xl lg:grid-cols-[0.92fr_1.08fr]'
+          }`}
+        >
 
           {/* ============================================================
               PREMIUM IMAGE PANEL
               ============================================================ */}
 
-          <div className={`relative hidden overflow-hidden lg:block ${compact ? 'min-h-[560px]' : 'min-h-[720px]'}`}>
-
-            {/* ----------------------------------------------------------
-                SLIDESHOW IMAGES
-                ---------------------------------------------------------- */}
+          <div
+            className={`relative hidden overflow-hidden lg:block ${
+              compact ? 'min-h-[560px]' : 'min-h-[720px]'
+            }`}
+          >
+            {/* SLIDESHOW IMAGES */}
 
             {AUTH_IMAGES.map((image, index) => (
               <img
@@ -227,58 +269,53 @@ function AuthShell({
               />
             ))}
 
-            {/* ----------------------------------------------------------
-                IMAGE OVERLAYS
-                Strong overlays ensure text is always readable.
-                ---------------------------------------------------------- */}
+            {/* IMAGE OVERLAYS */}
 
-            {/* Overall dark overlay */}
             <div className="absolute inset-0 bg-black/40" />
 
-            {/* Left side dark gradient */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/70 to-slate-950/25" />
 
-            {/* Bottom cinematic gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/20 to-slate-950/35" />
 
-            {/* Brand tint */}
             <div className="absolute inset-0 bg-brand-950/15" />
 
-            {/* ==========================================================
-                IMAGE CONTENT
-                ========================================================== */}
+            {/* IMAGE CONTENT */}
 
-            <div className={`relative z-10 flex h-full flex-col justify-between text-white ${compact ? 'p-7 xl:p-8' : 'p-8 xl:p-12'}`}>
-
-              {/* ========================================================
-                  TOP CONTENT
-                  ======================================================== */}
+            <div
+              className={`relative z-10 flex h-full flex-col justify-between text-white ${
+                compact ? 'p-7 xl:p-8' : 'p-8 xl:p-12'
+              }`}
+            >
+              {/* TOP CONTENT */}
 
               <div>
+                {/* LOGO */}
 
-                {/* ------------------------------------------------------
-                    LOGO
-                    ------------------------------------------------------ */}
-
-                <div className={`inline-flex rounded-2xl bg-white px-5 py-3.5 shadow-[0_10px_35px_rgba(0,0,0,0.30)] ring-1 ring-white/30 ${compact ? 'mb-7' : 'mb-12'}`}>
+                <div
+                  className={`inline-flex rounded-2xl bg-white px-5 py-3.5 shadow-[0_10px_35px_rgba(0,0,0,0.30)] ring-1 ring-white/30 ${
+                    compact ? 'mb-7' : 'mb-12'
+                  }`}
+                >
                   <Logo />
                 </div>
 
-                {/* ------------------------------------------------------
-                    HERO CONTENT
-                    ------------------------------------------------------ */}
+                {/* HERO CONTENT */}
 
                 <div className="max-w-xl">
-
-                  {/* Eyebrow */}
-                  <div className={`inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-md ${compact ? 'mb-4' : 'mb-6'}`}>
+                  <div
+                    className={`inline-flex items-center gap-2 rounded-full border border-white/25 bg-black/30 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white shadow-lg backdrop-blur-md ${
+                      compact ? 'mb-4' : 'mb-6'
+                    }`}
+                  >
                     <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-
                     Premium stays
                   </div>
 
-                  {/* Main heading */}
-                  <h2 className={`font-[var(--font-display)] font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_14px_rgba(0,0,0,0.65)] ${compact ? 'text-3xl xl:text-4xl' : 'text-4xl xl:text-5xl'}`}>
+                  <h2
+                    className={`font-[var(--font-display)] font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_3px_14px_rgba(0,0,0,0.65)] ${
+                      compact ? 'text-3xl xl:text-4xl' : 'text-4xl xl:text-5xl'
+                    }`}
+                  >
                     Your next
                     <br />
                     unforgettable stay
@@ -286,32 +323,28 @@ function AuthShell({
                     starts here.
                   </h2>
 
-                  {/* Description */}
-                  <p className={`max-w-lg font-medium text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)] ${compact ? 'mt-4 text-sm leading-6' : 'mt-6 text-base leading-7'}`}>
+                  <p
+                    className={`max-w-lg font-medium text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.75)] ${
+                      compact ? 'mt-4 text-sm leading-6' : 'mt-6 text-base leading-7'
+                    }`}
+                  >
                     Discover exceptional hotels, exclusive deals,
                     flexible bookings and memorable experiences
                     with Gokaasa.
                   </p>
-
                 </div>
               </div>
 
-              {/* ========================================================
-                  BOTTOM CONTENT
-                  ======================================================== */}
+              {/* BOTTOM CONTENT */}
 
               <div>
-
                 <div className="mb-7 h-px bg-white/20" />
 
-                {/* Stats */}
                 <div className="grid grid-cols-3 gap-5">
-
                   <div>
                     <p className="text-xl font-bold text-white">
                       Premium
                     </p>
-
                     <p className="mt-1 text-xs font-medium text-white/65">
                       Hotel stays
                     </p>
@@ -321,7 +354,6 @@ function AuthShell({
                     <p className="text-xl font-bold text-white">
                       Secure
                     </p>
-
                     <p className="mt-1 text-xs font-medium text-white/65">
                       Payments
                     </p>
@@ -331,20 +363,15 @@ function AuthShell({
                     <p className="text-xl font-bold text-white">
                       24/7
                     </p>
-
                     <p className="mt-1 text-xs font-medium text-white/65">
                       Support
                     </p>
                   </div>
-
                 </div>
 
-                {/* ------------------------------------------------------
-                    SLIDESHOW CONTROLS
-                    ------------------------------------------------------ */}
+                {/* SLIDESHOW CONTROLS */}
 
                 <div className="mt-8 flex items-center gap-2">
-
                   {AUTH_IMAGES.map((image, index) => (
                     <button
                       key={image}
@@ -358,13 +385,8 @@ function AuthShell({
                       }`}
                     />
                   ))}
-
-                  <span className="ml-2 text-[10px] font-medium uppercase tracking-wider text-white/50">
-                  </span>
-
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -372,13 +394,19 @@ function AuthShell({
               FORM PANEL
               ============================================================ */}
 
-          <div className={`flex flex-col justify-center bg-[var(--surface-card)] ${compact ? 'min-h-[560px]' : 'min-h-[650px]'}`}>
-
-            <div className={compact ? 'px-5 py-5 sm:px-8 sm:py-6 xl:px-10' : 'px-5 py-8 sm:px-10 sm:py-10 xl:px-14'}>
-
-              {/* --------------------------------------------------------
-                  MOBILE LOGO
-                  -------------------------------------------------------- */}
+          <div
+            className={`flex flex-col justify-center bg-[var(--surface-card)] ${
+              compact ? 'min-h-[560px]' : 'min-h-[650px]'
+            }`}
+          >
+            <div
+              className={
+                compact
+                  ? 'px-5 py-5 sm:px-8 sm:py-6 xl:px-10'
+                  : 'px-5 py-8 sm:px-10 sm:py-10 xl:px-14'
+              }
+            >
+              {/* MOBILE LOGO */}
 
               <div className="mb-8 flex justify-center lg:hidden">
                 <div className="rounded-2xl bg-white px-5 py-3 shadow-md ring-1 ring-[var(--border-subtle)]">
@@ -387,27 +415,30 @@ function AuthShell({
               </div>
 
               <div className={`mx-auto w-full ${compact ? 'max-w-sm' : 'max-w-md'}`}>
-
-                {/* ------------------------------------------------------
-                    FORM HEADER
-                    ------------------------------------------------------ */}
+                {/* FORM HEADER */}
 
                 <div className={compact ? 'mb-4' : 'mb-8'}>
-
                   <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-600">
                     {eyebrow}
                   </p>
 
-                  <h1 className={`font-[var(--font-display)] font-bold tracking-tight text-[var(--text-strong)] ${compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
+                  <h1
+                    className={`font-[var(--font-display)] font-bold tracking-tight text-[var(--text-strong)] ${
+                      compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'
+                    }`}
+                  >
                     {title}
                   </h1>
 
                   {description && (
-                    <p className={`text-[var(--text-muted)] ${compact ? 'mt-1.5 text-xs' : 'mt-3 text-sm leading-6'}`}>
+                    <p
+                      className={`text-[var(--text-muted)] ${
+                        compact ? 'mt-1.5 text-xs' : 'mt-3 text-sm leading-6'
+                      }`}
+                    >
                       {description}
                     </p>
                   )}
-
                 </div>
 
                 {children}
@@ -415,17 +446,20 @@ function AuthShell({
                 <div className={compact ? 'mt-4' : 'mt-8'}>
                   <TrustPoints />
                 </div>
-
               </div>
             </div>
 
-            {/* Footer */}
+            {/* FOOTER */}
+
             {footer && (
-              <div className={`border-t border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 px-5 text-center sm:px-10 ${compact ? 'py-3' : 'py-5'}`}>
+              <div
+                className={`border-t border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 px-5 text-center sm:px-10 ${
+                  compact ? 'py-3' : 'py-5'
+                }`}
+              >
                 {footer}
               </div>
             )}
-
           </div>
         </div>
       </div>
@@ -467,16 +501,18 @@ export function LoginPage() {
       const target = resolvePostLoginTarget(user, location.state?.from);
 
       if (import.meta.env.DEV) {
-        console.debug('[auth] login navigation', { roles: user.roles, from: location.state?.from, target });
+        console.debug('[auth] login navigation', {
+          roles: user.roles,
+          from: location.state?.from,
+          target,
+        });
       }
 
       navigate(target, {
         replace: true,
       });
     } catch (error) {
-      setFormError(
-        normalizeError(error).message,
-      );
+      setFormError(normalizeError(error).message);
     }
   };
 
@@ -500,9 +536,7 @@ export function LoginPage() {
     >
       {formError && (
         <div className="mb-5">
-          <Alert tone="error">
-            {formError}
-          </Alert>
+          <Alert tone="error">{formError}</Alert>
         </div>
       )}
 
@@ -565,6 +599,7 @@ export function LoginPage() {
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-[var(--border-subtle)]" />
           </div>
+
           <span className="relative bg-white px-3 text-xs uppercase tracking-wider text-[var(--text-muted)]">
             or continue with
           </span>
@@ -580,7 +615,10 @@ export function LoginPage() {
 
         <p className="text-center text-sm text-[var(--text-muted)]">
           Own a hotel?{' '}
-          <Link to="/partner/register" className="font-semibold text-brand-600 hover:text-brand-700 hover:underline">
+          <Link
+            to="/partner/register"
+            className="font-semibold text-brand-600 hover:text-brand-700 hover:underline"
+          >
             List your property
           </Link>
         </p>
@@ -645,12 +683,9 @@ export function RegisterPage() {
 
       toast.success('Welcome to Gokaasa');
 
-      navigate(
-        location.state?.from ?? '/',
-        {
-          replace: true,
-        },
-      );
+      navigate(location.state?.from ?? '/', {
+        replace: true,
+      });
     } catch (error) {
       const normalized = normalizeError(error);
 
@@ -659,9 +694,7 @@ export function RegisterPage() {
           type: 'server',
           message: normalized.message,
         });
-      } else if (
-        !applyServerFieldErrors(form, normalized)
-      ) {
+      } else if (!applyServerFieldErrors(form, normalized)) {
         setFormError(normalized.message);
       }
     }
@@ -687,9 +720,7 @@ export function RegisterPage() {
     >
       {formError && (
         <div className="mb-5">
-          <Alert tone="error">
-            {formError}
-          </Alert>
+          <Alert tone="error">{formError}</Alert>
         </div>
       )}
 
@@ -698,7 +729,8 @@ export function RegisterPage() {
         noValidate
         className="space-y-3"
       >
-        {/* Name */}
+        {/* NAME */}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField
             id="firstName"
@@ -729,7 +761,8 @@ export function RegisterPage() {
           </FormField>
         </div>
 
-        {/* Email & Phone */}
+        {/* EMAIL & PHONE */}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField
             id="email"
@@ -763,7 +796,8 @@ export function RegisterPage() {
           </FormField>
         </div>
 
-        {/* Password & Confirm password */}
+        {/* PASSWORD & CONFIRM PASSWORD */}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField
             id="password"
@@ -792,9 +826,7 @@ export function RegisterPage() {
           </FormField>
         </div>
 
-        {/* ==============================================================
-            DPDP / PRIVACY CONSENT
-            ============================================================== */}
+        {/* DPDP / PRIVACY CONSENT */}
 
         <div
           className={`rounded-xl border p-3 transition-colors ${
@@ -811,9 +843,7 @@ export function RegisterPage() {
               id="privacy-consent"
               type="checkbox"
               checked={consent}
-              onChange={(event) =>
-                setConsent(event.target.checked)
-              }
+              onChange={(event) => setConsent(event.target.checked)}
               className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-brand-700 accent-brand-700 focus:ring-brand-600"
             />
 
@@ -839,7 +869,8 @@ export function RegisterPage() {
           </label>
         </div>
 
-        {/* Create account */}
+        {/* CREATE ACCOUNT */}
+
         <Button
           type="submit"
           className="group w-full"
@@ -856,6 +887,7 @@ export function RegisterPage() {
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-[var(--border-subtle)]" />
           </div>
+
           <span className="relative bg-white px-2.5 text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
             or continue with
           </span>
@@ -902,9 +934,7 @@ export function ForgotPasswordPage() {
       await authApi.forgotPassword(values);
       setSent(true);
     } catch (error) {
-      setFormError(
-        normalizeError(error).message,
-      );
+      setFormError(normalizeError(error).message);
     }
   };
 
@@ -916,11 +946,7 @@ export function ForgotPasswordPage() {
     >
       {sent ? (
         <div className="space-y-5">
-
-          <Alert
-            tone="success"
-            title="Check your inbox"
-          >
+          <Alert tone="success" title="Check your inbox">
             If an account exists for that email, a reset
             link is on its way. The link expires in 30
             minutes.
@@ -933,7 +959,6 @@ export function ForgotPasswordPage() {
             Back to sign in
             <ArrowRight className="h-4 w-4" />
           </Link>
-
         </div>
       ) : (
         <form
@@ -942,9 +967,7 @@ export function ForgotPasswordPage() {
           className="space-y-5"
         >
           {formError && (
-            <Alert tone="error">
-              {formError}
-            </Alert>
+            <Alert tone="error">{formError}</Alert>
           )}
 
           <FormField
@@ -1032,9 +1055,7 @@ export function ResetPasswordPage() {
         replace: true,
       });
     } catch (error) {
-      setFormError(
-        normalizeError(error).message,
-      );
+      setFormError(normalizeError(error).message);
     }
   };
 
@@ -1046,7 +1067,6 @@ export function ResetPasswordPage() {
         eyebrow="Account recovery"
       >
         <div className="space-y-5">
-
           <Alert tone="error">
             This reset link is incomplete. Request a
             new one from the sign-in page.
@@ -1059,7 +1079,6 @@ export function ResetPasswordPage() {
             Request a new link
             <ArrowRight className="h-4 w-4" />
           </Link>
-
         </div>
       </AuthShell>
     );
@@ -1077,9 +1096,7 @@ export function ResetPasswordPage() {
         className="space-y-5"
       >
         {formError && (
-          <Alert tone="error">
-            {formError}
-          </Alert>
+          <Alert tone="error">{formError}</Alert>
         )}
 
         <FormField

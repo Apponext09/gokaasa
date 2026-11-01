@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarDays, ChevronRight, Heart, Luggage, Mail, ShieldCheck, Tag, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, Heart, LogOut, Luggage, Mail, ShieldCheck, Tag, Users } from 'lucide-react';
 import { Card, Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { PageHeader } from '@/components/shared/index.jsx';
@@ -74,9 +74,14 @@ function RecentTripRow({ trip }) {
 }
 
 export function ProfilePage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [upcoming, setUpcoming] = useState(null);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/', { replace: true });
+  };
 
   useDocumentMeta({ title: 'My Account | Gokaasa', description: 'Your Gokaasa account and upcoming stays.' });
 
@@ -163,6 +168,14 @@ export function ProfilePage() {
               <ChevronRight className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
             </button>
           )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 p-5 text-left text-danger-600 transition-colors hover:bg-danger-50"
+          >
+            <LogOut className="h-5 w-5" aria-hidden="true" />
+            <span className="text-sm font-medium">Logout</span>
+          </button>
         </Card>
       </section>
 

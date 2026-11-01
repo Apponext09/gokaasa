@@ -30,6 +30,7 @@ import { Reveal } from '@/components/shared/Reveal.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { HeroSection } from '@/features/home/HeroSection.jsx';
 import { DestinationCard } from '@/features/home/DestinationCard.jsx';
+import { useHomepageBackground } from '@/features/home/HomepageBackgroundContext.jsx';
 import { useGeolocation } from '@/features/home/useGeolocation.js';
 import { distanceFromCoordinatesKm } from '@/features/hotels/distance.js';
 import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPanel.jsx';
@@ -494,13 +495,16 @@ export function HomePage() {
   const { status, user, isStaff } = useAuth();
   const customerView = !isStaff || isStaffCustomerView();
   const geolocation = useGeolocation({ autoRequest: status !== 'loading' && customerView });
+  // `.customer-home` (index.css) has its own opaque background. When the shared Navbar+Hero backdrop
+  // (CustomerLayout's HomepageHeroBackdrop) is active, this root div sits directly in front of it in the
+  // DOM, so its opaque background would otherwise hide the backdrop everywhere HeroSection is transparent.
+  const { heroSlides } = useHomepageBackground();
+  const useSharedBackdrop = heroSlides.length > 0;
 
   const [areaDestinations, setAreaDestinations] = useState(null);
   const [stayTypes, setStayTypes] = useState(null);
   const [stats, setStats] = useState(null);
   const [offers, setOffers] = useState(null);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [homepageBackgrounds, setHomepageBackgrounds] = useState(null);
   const [hotelSearch, setHotelSearch] = useState(null);
   const [hotelSearchVersion, setHotelSearchVersion] = useState(0);
   const [openHomeFaq, setOpenHomeFaq] = useState(0);
@@ -511,25 +515,6 @@ export function HomePage() {
       'Discover exceptional stays with Gokaasa. Explore destinations, find handpicked hotels, and plan your next getaway.',
     canonicalPath: '/',
   });
-
-  const heroSlides = useMemo(
-    () => (homepageBackgrounds ?? []).map((image) => ({
-      src: image.url,
-      label: image.altText || `Homepage background ${image.slot}`,
-      heroText: image.heroText,
-    })),
-    [homepageBackgrounds],
-  );
-
-  useEffect(() => {
-    setHeroIndex(0);
-    if (heroSlides.length <= 1) return undefined;
-    const interval = window.setInterval(() => {
-      setHeroIndex((current) => (current + 1) % heroSlides.length);
-    }, 6000);
-
-    return () => window.clearInterval(interval);
-  }, [heroSlides.length]);
 
   useEffect(() => {
     if (!customerView) return undefined;
@@ -568,11 +553,8 @@ export function HomePage() {
       })
       .catch(() => { });
 
-    discoveryApi.homepageBackgrounds().then((images) => {
-      if (!cancelled) setHomepageBackgrounds(images);
-    }).catch(() => {
-      if (!cancelled) setHomepageBackgrounds([]);
-    });
+    // Homepage background images are fetched once in HomepageBackgroundContext (shared with Navbar.jsx),
+    // not duplicated here.
 
     return () => {
       cancelled = true;
@@ -585,11 +567,8 @@ export function HomePage() {
 
   const extraStats = buildStats(stats);
   return (
-    <div className="customer-home min-h-screen text-[var(--text-body)]">
+    <div className="customer-home min-h-screen text-[var(--text-body)]" style={useSharedBackdrop ? { background: 'transparent' } : undefined}>
       <HeroSection
-        heroSlides={heroSlides}
-        heroIndex={heroIndex}
-        setHeroIndex={setHeroIndex}
         onSearch={(nextSearch) => {
           setHotelSearch(nextSearch);
           setHotelSearchVersion((version) => version + 1);

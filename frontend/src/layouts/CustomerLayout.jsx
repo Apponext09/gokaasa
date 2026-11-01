@@ -26,6 +26,7 @@ import { SupportLauncher } from '@/features/support/SupportLauncher.jsx';
 import { cn } from '@/lib/utils.js';
 import { supportPhoneHref, supportPhoneLabel } from '@/config/support.js';
 import { Navbar, IndiaFlagIcon, ProductNavLinks } from '@/layouts/Navbar.jsx';
+import { HomepageBackgroundProvider, useHomepageBackground } from '@/features/home/HomepageBackgroundContext.jsx';
 
 /* =========================================================
    SOCIAL ICONS
@@ -1155,6 +1156,78 @@ function Footer() {
    CUSTOMER LAYOUT
 ========================================================= */
 
+/* =========================================================
+   HOMEPAGE HERO BACKDROP
+   The ONE shared background image behind both Navbar and
+   HeroSection on the home route -- not two independently
+   cropped copies. Sized to their combined, always-current
+   height (Navbar + HeroSection each report their own rendered
+   height into HomepageBackgroundContext), so `background-size:
+   contain` here shows the complete uploaded image, uncropped,
+   across the whole Navbar+Hero area with no seam between them.
+   `position: absolute` (not `fixed`) so it scrolls away with
+   the page exactly like normal content once the user scrolls
+   past the hero -- nothing needs to explicitly hide it.
+========================================================= */
+
+function HomepageHeroBackdrop() {
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  const { heroSlides, heroIndex, heroAreaHeight } = useHomepageBackground();
+
+  if (!isHome || heroSlides.length === 0 || heroAreaHeight <= 0) return null;
+
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 overflow-hidden"
+      // Matches `.customer-hero-arch`'s own curved bottom edge (index.css) so this separate, shared layer
+      // still clips to the same scalloped shape the hero previously clipped its own background to.
+      style={{ height: heroAreaHeight, borderRadius: '0 0 50% 50% / 0 0 2.75rem 2.75rem' }}
+      aria-hidden="true"
+    >
+      {/* `bg-cover` -- not `bg-contain` -- so the image always fills the full width with no colored side
+          panels. `contain` only avoids cropping when the box's aspect ratio happens to match the image's;
+          this box is much wider than it is tall (full page width, a few hundred px tall), so `contain`
+          against a typical landscape photo fits it to the box's height and leaves bare color down both
+          sides instead. `cover` fills both dimensions, with the now-correctly-measured (border-box,
+          padding included) `heroAreaHeight` keeping the box as tall as the original design so `cover`
+          only has to crop a little off the top/bottom, not the sides. */}
+      {heroSlides.map((slide, index) => (
+        <div
+          key={slide.src}
+          className={cn(
+            'absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out animate-[heroZoom_18s_ease-in-out_infinite_alternate]',
+            index === heroIndex ? 'opacity-100' : 'opacity-0',
+          )}
+          style={{ backgroundImage: `url("${slide.src}")`, backgroundColor: '#0a2d70' }}
+        />
+      ))}
+      {/* Soft gradient, not a heavy dark wash -- keeps the uploaded image's own colors while still giving
+          the navbar's white text and the hero copy enough contrast to read. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0A1526]/35 via-transparent to-[#0A1526]/40" />
+    </div>
+  );
+}
+
+function CustomerMain({ children }) {
+  // `.customer-main` (index.css) has its own opaque `background: var(--surface-page)`. It is a direct
+  // sibling of HomepageHeroBackdrop above, painted after it -- so on the home route, while the shared
+  // backdrop is active, that background would otherwise hide the backdrop for the whole page, regardless
+  // of anything HomePage.jsx itself does. `--surface-page` and `.customer-home`'s own background (also
+  // made transparent in this case, in HomePage.jsx) are the identical color, so nothing below the hero
+  // changes visually -- `.customer-ui`'s own background (the same color) simply shows through instead.
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+  const { heroSlides } = useHomepageBackground();
+  const useSharedBackdrop = isHome && heroSlides.length > 0;
+
+  return (
+    <main id="main" className="customer-main flex-1" style={useSharedBackdrop ? { background: 'transparent' } : undefined}>
+      {children}
+    </main>
+  );
+}
+
 export function CustomerLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -1167,50 +1240,55 @@ export function CustomerLayout() {
   }, [location.pathname]);
 
   return (
-    <div
-      className="
-        customer-ui
-        assistant-dock-shift
-        flex
-        min-h-screen
-        flex-col
-        bg-[var(--surface-page)]
-      "
-    >
-      {/* =====================================================
-          NAVBAR (single unified header, all breakpoints)
-      ===================================================== */}
-
-      <Navbar
-        drawerOpen={drawerOpen}
-        onToggleDrawer={() => setDrawerOpen((open) => !open)}
-      />
-
-      {/* Mobile Drawer */}
-
-      <MobileDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      />
-
-      {/* Main */}
-
-      <main
-        id="main"
-        className="customer-main flex-1"
+    // Provided here, above both Navbar and the routed page, so the homepage hero and the Navbar's own
+    // (home-route-only) background read the exact same fetched images and the exact same active index.
+    <HomepageBackgroundProvider>
+      <div
+        className="
+          customer-ui
+          assistant-dock-shift
+          relative
+          z-0
+          flex
+          min-h-screen
+          flex-col
+          bg-[var(--surface-page)]
+        "
       >
-        <Suspense fallback={<FullPageSpinner label="Loading page" />}>
-          <Outlet />
-        </Suspense>
-      </main>
+        <HomepageHeroBackdrop />
 
-      {/* Footer */}
+        {/* =====================================================
+            NAVBAR (single unified header, all breakpoints)
+        ===================================================== */}
 
-      <Footer />
+        <Navbar
+          drawerOpen={drawerOpen}
+          onToggleDrawer={() => setDrawerOpen((open) => !open)}
+        />
 
-      {/* Floating support launcher (WhatsApp / Booking Assistant) -- customer-facing pages only */}
-      <SupportLauncher />
-    </div>
+        {/* Mobile Drawer */}
+
+        <MobileDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
+
+        {/* Main */}
+
+        <CustomerMain>
+          <Suspense fallback={<FullPageSpinner label="Loading page" />}>
+            <Outlet />
+          </Suspense>
+        </CustomerMain>
+
+        {/* Footer */}
+
+        <Footer />
+
+        {/* Floating support launcher (WhatsApp / Booking Assistant) -- customer-facing pages only */}
+        <SupportLauncher />
+      </div>
+    </HomepageBackgroundProvider>
   );
 }
 
