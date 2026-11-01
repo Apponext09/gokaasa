@@ -48,7 +48,7 @@ function Stars({ value }) {
   );
 }
 
-/** Reviews moderation. ADMIN sees every hotel; a HOTEL_MANAGER is scoped server-side to their own and cannot moderate. */
+/** Reviews moderation. ADMIN sees every hotel; a HOTEL_OWNER is scoped to their own and cannot moderate. */
 export function ReviewsPage() {
   const { isAdmin } = useAuth();
   const [filters, updateFilters] = useFilters();

@@ -80,8 +80,8 @@ function assertRealPdf(res) {
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
-  await createUserWithRole({ email: 'managerB@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
+  await createUserWithRole({ email: 'managerB@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'invoice.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   await createUserWithRole({ email: 'invoice.other@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   adminToken = await loginAs('admin@example.com');
@@ -178,13 +178,13 @@ describe('GET /api/admin/bookings/:id/invoice (staff)', () => {
     assertRealPdf(res);
   });
 
-  it('a HOTEL_MANAGER can download an invoice for their own hotel’s booking', async () => {
+  it('a HOTEL_OWNER can download an invoice for their own hotel’s booking', async () => {
     const booking = await confirmedBooking(guestToken, { offset: 14 });
     const res = await request(app).get(`/api/admin/bookings/${booking.id}/invoice`).set(bearer(managerAToken));
     assertRealPdf(res);
   });
 
-  it('a HOTEL_MANAGER cannot download an invoice for another hotel’s booking (cross-hotel IDOR)', async () => {
+  it('a HOTEL_OWNER cannot download an invoice for another hotel’s booking (cross-hotel IDOR)', async () => {
     const booking = await confirmedBooking(guestToken, { offset: 16 });
     const res = await request(app).get(`/api/admin/bookings/${booking.id}/invoice`).set(bearer(managerBToken));
     assert.equal(res.status, 404);

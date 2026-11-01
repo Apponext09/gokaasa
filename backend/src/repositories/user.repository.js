@@ -5,7 +5,7 @@ const USER_COLUMNS = `
   u.phone, u.is_active, u.email_verified_at, u.created_at, u.is_guest
 `;
 
-function toUser(row, roles) {
+function toUser(row, roles, permissions) {
   return {
     id: row.id,
     email: row.email,
@@ -18,6 +18,7 @@ function toUser(row, roles) {
     createdAt: row.created_at,
     isGuest: row.is_guest,
     roles,
+    permissions,
   };
 }
 
@@ -25,16 +26,21 @@ async function loadUserWithRoles(rows, client = pool) {
   if (rows.length === 0) return null;
   const [row] = rows;
   const { rows: roleRows } = await client.query(
-    `SELECT r.code
+    `SELECT r.code,
+            COALESCE(array_agg(DISTINCT p.code ORDER BY p.code) FILTER (WHERE p.code IS NOT NULL), '{}') AS permissions
        FROM user_roles ur
        JOIN roles r ON r.id = ur.role_id
+       LEFT JOIN role_permissions rp ON rp.role_id = r.id
+       LEFT JOIN permissions p ON p.id = rp.permission_id
       WHERE ur.user_id = $1
+      GROUP BY r.code
       ORDER BY r.code`,
     [row.id],
   );
   return toUser(
     row,
     roleRows.map((role) => role.code),
+    [...new Set(roleRows.flatMap((role) => role.permissions))].sort(),
   );
 }
 

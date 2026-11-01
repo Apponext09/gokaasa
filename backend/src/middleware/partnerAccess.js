@@ -5,7 +5,7 @@ import { AppError } from '../utils/AppError.js';
 /**
  * Gates every /api/admin/* route for a HOTEL_OWNER: only an APPROVED partner may reach any of them
  * (hotel creation included), not merely have them hidden client-side. A no-op for every other role --
- * ADMIN and HOTEL_MANAGER are unaffected, exactly as before this feature existed.
+ * ADMIN and internal staff roles are unaffected.
  */
 export async function requirePartnerApproved(req, _res, next) {
   try {
@@ -27,7 +27,7 @@ export async function requireOwnDocumentOrAdmin(req, _res, next) {
   try {
     const doc = await partnerDocumentRepository.findById(req.validated.params.docId);
     if (!doc) return next(AppError.notFound('Document not found'));
-    if (!req.user.roles.includes('ADMIN') && doc.user_id !== req.user.id) {
+    if (!req.user.permissions.includes('partner.review') && doc.user_id !== req.user.id) {
       return next(AppError.notFound('Document not found'));
     }
     req.partnerDocument = doc;

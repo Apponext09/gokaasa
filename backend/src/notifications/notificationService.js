@@ -27,8 +27,8 @@ async function adminUserIds() {
   return rows.map((row) => row.id);
 }
 
-/** Avoids importing manager.service.js, which itself calls into this module to notify a newly-assigned manager. */
-async function managerUserIdsForHotel(hotelId) {
+/** Returns the owners linked to a hotel. The legacy table name is retained for migration safety. */
+async function ownerUserIdsForHotel(hotelId) {
   const { rows } = await pool.query(`SELECT user_id FROM hotel_managers WHERE hotel_id = $1`, [hotelId]);
   return rows.map((row) => row.user_id);
 }
@@ -40,8 +40,8 @@ export const notificationService = {
     const hotelName = booking.hotel_name ?? booking.hotel?.name ?? '';
     await notify({ userId: booking.user_id, type: 'booking.confirmed', title: 'Booking confirmed', message: `Your stay at ${hotelName} is confirmed. Booking ref ${bookingRef}.`, entityType: 'booking', entityId: booking.id });
 
-    const managerIds = await managerUserIdsForHotel(booking.hotel_id);
-    await Promise.all(managerIds.map((userId) =>
+    const ownerIds = await ownerUserIdsForHotel(booking.hotel_id);
+    await Promise.all(ownerIds.map((userId) =>
       notify({ userId, type: 'booking.created', title: 'New booking', message: `A new booking (${bookingRef}) was confirmed at ${hotelName}.`, entityType: 'booking', entityId: booking.id })));
   },
 
@@ -51,8 +51,8 @@ export const notificationService = {
     const hotelName = booking.hotel_name ?? booking.hotel?.name ?? '';
     await notify({ userId: booking.user_id, type: 'booking.cancelled', title: 'Booking cancelled', message: `Your booking ${bookingRef} at ${hotelName} has been cancelled.`, entityType: 'booking', entityId: booking.id });
 
-    const managerIds = await managerUserIdsForHotel(booking.hotel_id);
-    await Promise.all(managerIds.map((userId) =>
+    const ownerIds = await ownerUserIdsForHotel(booking.hotel_id);
+    await Promise.all(ownerIds.map((userId) =>
       notify({ userId, type: 'booking.cancelled', title: 'Booking cancelled', message: `Booking ${bookingRef} at ${hotelName} was cancelled.`, entityType: 'booking', entityId: booking.id })));
   },
 
@@ -96,11 +96,11 @@ export const notificationService = {
     });
   },
 
-  /** Sent to every manager of the hotel being reviewed, and every ADMIN, so a new review reaches someone who can moderate it. */
+  /** Sent to every owner of the hotel being reviewed, and every ADMIN, so a new review reaches someone who can moderate it. */
   async sendReviewSubmitted(hotelId, hotelName, reviewId) {
-    const [managerIds, admins] = await Promise.all([managerUserIdsForHotel(hotelId), adminUserIds()]);
+    const [ownerIds, admins] = await Promise.all([ownerUserIdsForHotel(hotelId), adminUserIds()]);
     const payload = { type: 'review.submitted', title: 'New review awaiting moderation', message: `A new review was submitted for ${hotelName}.`, entityType: 'review', entityId: reviewId };
-    await Promise.all([...managerIds, ...admins].map((userId) => notify({ ...payload, userId })));
+    await Promise.all([...ownerIds, ...admins].map((userId) => notify({ ...payload, userId })));
   },
 
   /** Sent to every ADMIN once a hotel is submitted for review, so the onboarding queue is visible without polling the dashboard. */
@@ -108,11 +108,6 @@ export const notificationService = {
     const admins = await adminUserIds();
     await Promise.all(admins.map((userId) =>
       notify({ userId, type: 'hotel.submitted', title: 'New hotel submitted', message: `${hotel.name} was submitted for review.`, entityType: 'hotel', entityId: hotel.id })));
-  },
-
-  /** Sent to the manager themselves, so they know which hotel they can now operate. */
-  async sendManagerAssigned(userId, hotel) {
-    await notify({ userId, type: 'manager.assigned', title: 'New hotel assigned', message: `You have been assigned to manage ${hotel.name}.`, entityType: 'hotel', entityId: hotel.id });
   },
 
   /** Sent to every ADMIN once a partner submits their application, so the approval queue is visible without polling. */

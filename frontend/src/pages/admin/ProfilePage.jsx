@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/shared/index.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { ProfileNameEditor } from '@/features/auth/ProfileNameEditor.jsx';
 import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
+import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel.jsx';
 import { setStaffCustomerView } from '@/features/auth/viewMode.js';
 
 export function AdminProfilePage() {
@@ -51,6 +52,8 @@ export function AdminProfilePage() {
       </Card>
       <StaffEmailChangePanel />
       <p className="text-xs text-[var(--text-muted)]">Editing your password isn't available yet.</p>
+      <ChangePasswordPanel />
+      <p className="text-xs text-[var(--text-muted)]">Contact support if you need to change your name.</p>
     </div>
   );
 }

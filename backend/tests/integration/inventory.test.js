@@ -94,7 +94,7 @@ async function availability(hid, checkIn, checkOut, extra = '') {
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   adminToken = await loginAs('admin@example.com');
   managerToken = await loginAs('manager@example.com');
@@ -488,7 +488,7 @@ describe('9-10. visibility: inactive rooms and draft hotels', () => {
   });
 });
 
-describe('11. only administrators and hotel managers change inventory', () => {
+describe('11. only administrators and hotel owners change inventory', () => {
   let roomId;
 
   before(async () => {
@@ -511,7 +511,7 @@ describe('11. only administrators and hotel managers change inventory', () => {
     assert.equal(calendar.status, 401);
   });
 
-  it('lets hotel managers manage inventory', async () => {
+  it('lets hotel owners manage inventory', async () => {
     const res = await request(app).patch(`/api/admin/room-types/${roomId}`).set(bearer(managerToken)).send({ view: 'Garden' });
     assert.equal(res.status, 200);
   });

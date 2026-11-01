@@ -31,21 +31,15 @@ async function bookingContext(client, bookingId) {
   const payment = payments.find((row) => ['SUCCESS', 'REFUNDED'].includes(row.status)) ?? payments.at(-1) ?? null;
   const contacts = await client.query(
     `SELECT u.id, u.email::text AS email, u.first_name, u.last_name,
-            CASE WHEN EXISTS (
-              SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-               WHERE ur.user_id = u.id AND r.code = 'HOTEL_OWNER'
-            ) THEN 'HOTEL_OWNER' ELSE 'HOTEL_MANAGER' END AS role
+            'HOTEL_OWNER' AS role
        FROM hotel_managers hm
        JOIN users u ON u.id = hm.user_id AND u.is_active AND u.deleted_at IS NULL
       WHERE hm.hotel_id = $1
         AND EXISTS (
           SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-           WHERE ur.user_id = u.id AND r.code IN ('HOTEL_OWNER', 'HOTEL_MANAGER')
+           WHERE ur.user_id = u.id AND r.code = 'HOTEL_OWNER'
         )
-      ORDER BY CASE WHEN EXISTS (
-        SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-         WHERE ur.user_id = u.id AND r.code = 'HOTEL_OWNER'
-      ) THEN 0 ELSE 1 END, u.id`,
+      ORDER BY u.id`,
     [booking.hotel_id],
   );
   const hotel = await client.query(`SELECT email::text AS email, phone FROM hotels WHERE id = $1`, [booking.hotel_id]);
@@ -138,7 +132,7 @@ export const emailNotificationService = {
          FROM hotel_managers hm JOIN users u ON u.id = hm.user_id AND u.is_active AND u.deleted_at IS NULL
         WHERE hm.hotel_id = $1 AND EXISTS (
           SELECT 1 FROM user_roles ur JOIN roles r ON r.id = ur.role_id
-           WHERE ur.user_id = u.id AND r.code IN ('HOTEL_OWNER', 'HOTEL_MANAGER')
+           WHERE ur.user_id = u.id AND r.code = 'HOTEL_OWNER'
         )`, [hotel.id],
     );
     const event = approved ? 'property.approved' : 'property.rejected';

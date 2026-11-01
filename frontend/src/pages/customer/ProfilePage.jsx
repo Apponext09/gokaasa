@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { homePathFor } from '@/features/auth/routing.js';
 import { ProfileNameEditor } from '@/features/auth/ProfileNameEditor.jsx';
 import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
+import { ChangePasswordPanel } from '@/features/auth/ChangePasswordPanel.jsx';
 import { setStaffCustomerView } from '@/features/auth/viewMode.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
 import { bookingApi } from '@/services/endpoints.js';
@@ -163,10 +164,10 @@ export function ProfilePage() {
             </button>
           )}
         </Card>
-        <p className="text-xs text-[var(--text-muted)]">Editing your password isn't available yet -- contact support if you need a change.</p>
       </section>
 
       {isNonCustomer && <StaffEmailChangePanel />}
+      <ChangePasswordPanel />
     </div>
   );
 }

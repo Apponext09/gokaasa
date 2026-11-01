@@ -61,7 +61,7 @@ async function upload(buffer, { filename = 'photo.jpg', mimetype = 'image/jpeg',
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   onboardingUserId = await createUserWithRole({ email: 'onboarding@example.com', password: PASSWORD, roleCode: 'HOTEL_ONBOARDING_EXECUTIVE' });
   await createUserWithRole({ email: 'unassigned.onboarding@example.com', password: PASSWORD, roleCode: 'HOTEL_ONBOARDING_EXECUTIVE' });
@@ -127,7 +127,7 @@ describe('2. publish gate', () => {
     const res = await request(app).post(`/api/admin/hotels/${id}/status`).set(bearer(adminToken)).send({ action: 'MARK_READY' });
     assert.equal(res.status, 422);
     const fields = res.body.error.details.map((detail) => detail.field);
-    for (const required of ['Address', 'Map location', 'Description', 'Star rating', 'At least one image', 'At least one amenity']) {
+    for (const required of ['Address', 'Map location', 'Description', 'At least one image', 'At least one amenity']) {
       assert.ok(fields.includes(required), `missing blocker: ${required}`);
     }
   });
@@ -348,7 +348,7 @@ describe('8-10. upload security', () => {
 });
 
 describe('11-12. publishing', () => {
-  it('does not let a hotel manager publish', async () => {
+  it('does not let a hotel owner publish', async () => {
     const submitted = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
     assert.equal(submitted.status, 200);
     const blocked = await request(app).post(`/api/admin/hotels/${hotelId}/status`).set(bearer(onboardingToken)).send({ action: 'MARK_READY' });

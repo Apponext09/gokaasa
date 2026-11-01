@@ -129,7 +129,7 @@ export const commissionService = {
   },
 
   async setHotelRate(hotelId, { ratePercent, reason }, actor) {
-    if (actor.roles.includes('HOTEL_OWNER') || actor.roles.includes('HOTEL_MANAGER')) {
+    if (actor.roles.includes('HOTEL_OWNER')) {
       throw AppError.forbidden('Only administrators can change commission rates');
     }
     return withTransaction(async (client) => {

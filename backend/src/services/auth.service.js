@@ -12,6 +12,7 @@ import { createLogger } from '../utils/logger.js';
 import { partnerProfileRepository } from '../repositories/partnerProfile.repository.js';
 import { emailNotificationService } from './emailNotification.service.js';
 import { renderEmail } from '../email/templates.js';
+import { auditService } from './audit.service.js';
 
 const log = createLogger('auth');
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -31,6 +32,7 @@ async function toPublicUser(user) {
     lastName: user.lastName,
     phone: user.phone,
     roles: user.roles,
+    permissions: user.permissions,
     isGuest: user.isGuest,
     partnerStatus,
   };
@@ -244,6 +246,31 @@ export const authService = {
       await authRepository.markResetTokenUsed(client, reset.id);
       // A password reset signs the user out everywhere.
       await authRepository.revokeAllForUser(client, reset.user_id);
+    });
+  },
+
+  async changePassword(userId, { currentPassword, newPassword }, actor) {
+    const user = await userRepository.findById(userId);
+    if (!user || !user.isActive) throw AppError.unauthorized();
+    if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
+      throw AppError.badRequest('Current password is incorrect');
+    }
+    if (await bcrypt.compare(newPassword, user.passwordHash)) {
+      throw AppError.badRequest('New password must be different from your current password');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, config.auth.bcryptRounds);
+    await withTransaction(async (client) => {
+      await userRepository.updatePassword(client, userId, passwordHash);
+      await authRepository.invalidateResetTokens(client, userId);
+      await authRepository.revokeAllForUser(client, userId);
+      await auditService.record(client, {
+        actor,
+        action: 'user.password_changed',
+        entity: 'user',
+        entityId: String(userId),
+        newValue: { sessionsRevoked: true },
+      });
     });
   },
 

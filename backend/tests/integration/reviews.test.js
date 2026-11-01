@@ -130,7 +130,7 @@ async function completedBooking(token, hotelId, roomId, planId, offset) {
 before(async () => {
   app = await prepareTestDatabase();
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'managerA@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   for (const email of ['review.guest@example.com', 'review.other@example.com', 'review.third@example.com', 'review.fourth@example.com', 'review.fifth@example.com', 'review.sixth@example.com']) {
     await createUserWithRole({ email, password: PASSWORD, roleCode: 'CUSTOMER' });
   }
@@ -498,7 +498,7 @@ describe('moderation: admin only, hotel-manager read scoping', () => {
     assert.equal(res.status, 404);
   });
 
-  it('a HOTEL_MANAGER cannot moderate even a review that belongs to their own assigned hotel', async () => {
+  it('a HOTEL_OWNER cannot moderate even a review that belongs to their own hotel', async () => {
     const booking = await completedBooking(fourthToken, hotelA, roomA, planA, 24);
     const created = await request(app).post('/api/reviews').set(bearer(fourthToken)).send({ bookingId: booking.id, rating: 3, body: 'Hotel manager must not be able to approve this.' });
     assert.equal(created.status, 201, JSON.stringify(created.body));
@@ -508,7 +508,7 @@ describe('moderation: admin only, hotel-manager read scoping', () => {
     assert.equal(stillPending.rows[0].status, 'PENDING');
   });
 
-  it('a HOTEL_MANAGER sees only reviews for their assigned hotel, never another hotel’s (cross-hotel IDOR)', async () => {
+  it('a HOTEL_OWNER sees only reviews for their hotel, never another hotel’s (cross-hotel IDOR)', async () => {
     const bookingA = await completedBooking(fifthToken, hotelA, roomA, planA, 26);
     const bookingB = await completedBooking(sixthToken, hotelB, roomB, planB, 28);
     const reviewA = await request(app).post('/api/reviews').set(bearer(fifthToken)).send({ bookingId: bookingA.id, rating: 5, body: 'Belongs to Hotel A, which this manager can see.' });

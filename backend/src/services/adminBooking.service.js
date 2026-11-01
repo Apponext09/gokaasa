@@ -85,7 +85,7 @@ export const adminBookingService = {
   },
 
   /**
-   * Staff-initiated cancellation. A HOTEL_MANAGER may cancel a booking at one of its own hotels; ADMIN
+   * Staff-initiated cancellation. A HOTEL_OWNER may cancel a booking at one of their hotels; ADMIN
    * may cancel any booking. Reuses the exact same refund logic the guest's own cancel uses.
    */
   async cancel(bookingId, body, actor) {

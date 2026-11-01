@@ -14,7 +14,7 @@ function hotelScope(hotelIds, params, column = 'b.hotel_id') {
 }
 
 export const adminBookingRepository = {
-  /** Every booking across every customer, optionally scoped to a HOTEL_MANAGER's assigned hotels. */
+  /** Every booking across every customer, optionally scoped to a HOTEL_OWNER's hotels. */
   async list(filters, hotelIds) {
     const params = [];
     const clauses = [];

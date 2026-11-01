@@ -125,8 +125,8 @@ describe('importing a real image from a free/public URL', () => {
     assert.equal(countAfter, countBefore, 'no second row was inserted for the same image content');
   });
 
-  it('a HOTEL_MANAGER cannot import an image onto a hotel they are not assigned to (IDOR)', async () => {
-    await createUserWithRole({ email: 'image.manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  it('a HOTEL_OWNER cannot import an image onto a hotel they do not own (IDOR)', async () => {
+    await createUserWithRole({ email: 'image.manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
     const managerToken = (await request(app).post('/api/auth/login').send({ email: 'image.manager@example.com', password: PASSWORD })).body.accessToken;
     const res = await request(app).post(`/api/admin/hotels/${hotelId}/images/from-url`).set(bearer(managerToken)).send({
       sourceUrl: `${baseUrl}/real-photo.png`, sourceProvider: 'wikimedia_commons',

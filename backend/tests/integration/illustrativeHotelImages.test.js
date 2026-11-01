@@ -150,9 +150,9 @@ describe('illustrative images in pilot mode', () => {
     assert.equal(entry.image.isIllustrative, true);
   });
 
-  it('a HOTEL_MANAGER not assigned to the hotel cannot import an illustrative image onto it (ownership still enforced)', async () => {
+  it('a HOTEL_OWNER who does not own the hotel cannot import an illustrative image onto it', async () => {
     const id = await newDraftHotel('Ownership Test');
-    await createUserWithRole({ email: 'illustrative.manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+    await createUserWithRole({ email: 'illustrative.manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
     const managerToken = (await request(app).post('/api/auth/login').send({ email: 'illustrative.manager@example.com', password: PASSWORD })).body.accessToken;
     const res = await request(app).post(`/api/admin/hotels/${id}/images/from-url`).set(bearer(managerToken)).send({
       sourceUrl: `${baseUrl}/photo.png`, sourceProvider: 'unsplash', imageType: 'ILLUSTRATIVE',

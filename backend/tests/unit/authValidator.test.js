@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { emailChangeRequestSchema, emailChangeVerifySchema, googleAuthSchema } from '../../src/validators/auth.validator.js';
+import { changePasswordSchema, emailChangeRequestSchema, emailChangeVerifySchema, googleAuthSchema } from '../../src/validators/auth.validator.js';
 
 describe('staff email change validation', () => {
   it('normalises the requested email and accepts a six-digit code', () => {
@@ -23,6 +23,13 @@ describe('staff email change validation', () => {
     assert.equal(googleAuthSchema.safeParse({ accessToken: 'valid-google-access-token-abc' }).success, true);
     assert.equal(googleAuthSchema.safeParse({}).success, false);
     assert.equal(googleAuthSchema.safeParse({ credential: 'short' }).success, false);
+  });
+
+  it('requires the current password and applies the normal password policy to a new password', () => {
+    assert.equal(changePasswordSchema.safeParse({ currentPassword: 'Old-pass-123', newPassword: 'New-pass-456' }).success, true);
+    assert.equal(changePasswordSchema.safeParse({ currentPassword: '', newPassword: 'New-pass-456' }).success, false);
+    assert.equal(changePasswordSchema.safeParse({ currentPassword: 'Old-pass-123', newPassword: 'too-short' }).success, false);
+    assert.equal(changePasswordSchema.safeParse({ currentPassword: 'Old-pass-123', newPassword: 'letters-only-password' }).success, false);
   });
 });
 

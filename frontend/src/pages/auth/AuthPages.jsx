@@ -160,31 +160,54 @@ function AuthShell({
   }, []);
 
   return (
-    <div className="customer-auth-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-slate-950">
+    <div className="customer-auth-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-gray-950">
 
       {/* ================================================================
           BACKGROUND DECORATION
           ================================================================ */}
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-700/10 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
 
-        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-accent-400/10 blur-3xl" />
+        {/* ── Random organic blobs — various sizes & positions ── */}
+        <div className="absolute top-[-80px] left-[-60px]  w-64 h-64 rounded-[60%_40%_30%_70%/60%_30%_70%_40%] bg-blue-300/40 blur-2xl" />
+        <div className="absolute top-[10%]  right-[5%]    w-40 h-40 rounded-[40%_60%_70%_30%/40%_50%_60%_50%] bg-sky-300/35  blur-xl"  />
+        <div className="absolute top-[35%] left-[3%]      w-28 h-28 rounded-[70%_30%_50%_50%/30%_60%_40%_70%] bg-indigo-200/40 blur-xl" />
+        <div className="absolute top-[20%] left-[35%]     w-20 h-20 rounded-[50%_50%_30%_70%/60%_40%_60%_40%] bg-blue-200/35  blur-lg"  />
+        <div className="absolute top-[55%] right-[8%]     w-32 h-32 rounded-[30%_70%_70%_30%/30%_30%_70%_70%] bg-sky-200/40   blur-xl"  />
+        <div className="absolute top-[65%] left-[12%]     w-24 h-24 rounded-[60%_40%_60%_40%/50%_60%_40%_50%] bg-blue-300/30  blur-xl"  />
+        <div className="absolute bottom-[-60px] right-[-50px] w-56 h-56 rounded-[40%_60%_30%_70%/50%_40%_60%_50%] bg-sky-300/35  blur-2xl" />
+        <div className="absolute bottom-[20%] left-[40%]  w-16 h-16 rounded-[50%_50%_40%_60%/40%_60%_50%_50%] bg-indigo-200/30 blur-lg"  />
+        <div className="absolute bottom-[8%]  left-[-20px] w-36 h-36 rounded-[60%_40%_50%_50%/40%_60%_40%_60%] bg-blue-200/35  blur-xl"  />
+
+        {/* ── Random thin floating rings ── */}
+        <div className="absolute top-[8%]   left-[20%] w-16 h-16 rounded-full border-2 border-blue-400/30" />
+        <div className="absolute top-[45%]  right-[15%] w-10 h-10 rounded-full border   border-sky-400/35" />
+        <div className="absolute bottom-[25%] left-[25%] w-14 h-14 rounded-full border-2 border-indigo-300/30" />
+        <div className="absolute top-[70%]  right-[30%] w-8  h-8  rounded-full border   border-blue-300/40" />
+        <div className="absolute top-[18%]  right-[35%] w-6  h-6  rounded-full border   border-sky-300/35" />
+
+
+        {/* ── Soft wave — bottom only ── */}
+        <svg className="absolute bottom-0 left-0 w-full opacity-35" viewBox="0 0 1440 110" preserveAspectRatio="none">
+          <path d="M0,55 C240,10 480,100 720,55 C960,10 1200,90 1440,50 L1440,110 L0,110 Z" fill="#1877f2" fillOpacity="0.20"/>
+          <path d="M0,80 C360,40 720,110 1080,65 C1260,45 1380,85 1440,75 L1440,110 L0,110 Z" fill="#0a42ba" fillOpacity="0.12"/>
+        </svg>
+
       </div>
 
       {/* ================================================================
           MAIN CONTAINER
           ================================================================ */}
 
-      <div className={`relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center justify-center px-4 sm:px-6 lg:px-8 ${compact ? 'py-4' : 'py-8'}`}>
+      <div className={`relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center justify-center px-4 sm:px-6 lg:px-8 ${compact ? 'py-0 sm:py-2' : 'py-8'}`}>
 
-        <div className={`grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface-card)] shadow-[0_30px_100px_rgba(0,0,0,0.30)] ${compact ? 'max-w-5xl lg:scale-[0.8] lg:grid-cols-[0.9fr_1.1fr]' : 'max-w-6xl lg:grid-cols-[0.92fr_1.08fr]'}`}>
+        <div className={`grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[var(--surface-card)] shadow-[0_30px_100px_rgba(0,0,0,0.30)] ${compact ? 'max-w-5xl lg:scale-[0.8] lg:origin-center lg:grid-cols-[0.9fr_1.1fr]' : 'max-w-6xl lg:grid-cols-[0.92fr_1.08fr]'}`}>
 
           {/* ============================================================
               PREMIUM IMAGE PANEL
               ============================================================ */}
 
-          <div className={`relative hidden overflow-hidden lg:block ${compact ? 'min-h-[590px]' : 'min-h-[720px]'}`}>
+          <div className={`relative hidden overflow-hidden lg:block ${compact ? 'min-h-[560px]' : 'min-h-[720px]'}`}>
 
             {/* ----------------------------------------------------------
                 SLIDESHOW IMAGES
@@ -349,9 +372,9 @@ function AuthShell({
               FORM PANEL
               ============================================================ */}
 
-          <div className={`flex flex-col justify-center bg-[var(--surface-card)] ${compact ? 'min-h-[590px]' : 'min-h-[650px]'}`}>
+          <div className={`flex flex-col justify-center bg-[var(--surface-card)] ${compact ? 'min-h-[560px]' : 'min-h-[650px]'}`}>
 
-            <div className={compact ? 'px-5 py-6 sm:px-8 sm:py-7 xl:px-10' : 'px-5 py-8 sm:px-10 sm:py-10 xl:px-14'}>
+            <div className={compact ? 'px-5 py-5 sm:px-8 sm:py-6 xl:px-10' : 'px-5 py-8 sm:px-10 sm:py-10 xl:px-14'}>
 
               {/* --------------------------------------------------------
                   MOBILE LOGO
@@ -369,18 +392,18 @@ function AuthShell({
                     FORM HEADER
                     ------------------------------------------------------ */}
 
-                <div className={compact ? 'mb-6' : 'mb-8'}>
+                <div className={compact ? 'mb-4' : 'mb-8'}>
 
                   <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-brand-600">
                     {eyebrow}
                   </p>
 
-                  <h1 className={`font-[var(--font-display)] font-bold tracking-tight text-[var(--text-strong)] ${compact ? 'text-3xl' : 'text-3xl sm:text-4xl'}`}>
+                  <h1 className={`font-[var(--font-display)] font-bold tracking-tight text-[var(--text-strong)] ${compact ? 'text-2xl sm:text-3xl' : 'text-3xl sm:text-4xl'}`}>
                     {title}
                   </h1>
 
                   {description && (
-                    <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+                    <p className={`text-[var(--text-muted)] ${compact ? 'mt-1.5 text-xs' : 'mt-3 text-sm leading-6'}`}>
                       {description}
                     </p>
                   )}
@@ -389,7 +412,7 @@ function AuthShell({
 
                 {children}
 
-                <div className={compact ? 'mt-6' : 'mt-8'}>
+                <div className={compact ? 'mt-4' : 'mt-8'}>
                   <TrustPoints />
                 </div>
 
@@ -398,7 +421,7 @@ function AuthShell({
 
             {/* Footer */}
             {footer && (
-              <div className={`border-t border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 px-5 text-center sm:px-10 ${compact ? 'py-4' : 'py-5'}`}>
+              <div className={`border-t border-[var(--border-subtle)] bg-[var(--surface-muted)]/50 px-5 text-center sm:px-10 ${compact ? 'py-3' : 'py-5'}`}>
                 {footer}
               </div>
             )}
@@ -673,10 +696,10 @@ export function RegisterPage() {
       <form
         onSubmit={handleSubmit(onSubmit)}
         noValidate
-        className="space-y-4"
+        className="space-y-3"
       >
         {/* Name */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField
             id="firstName"
             label="First name"
@@ -706,74 +729,75 @@ export function RegisterPage() {
           </FormField>
         </div>
 
-        {/* Email */}
-        <FormField
-          id="email"
-          label="Email address"
-          error={errors.email?.message}
-        >
-          <Input
+        {/* Email & Phone */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField
             id="email"
-            type="email"
-            autoComplete="email"
-            placeholder="you@example.com"
-            invalid={!!errors.email}
-            {...register('email')}
-          />
-        </FormField>
+            label="Email address"
+            error={errors.email?.message}
+          >
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              invalid={!!errors.email}
+              {...register('email')}
+            />
+          </FormField>
 
-        {/* Phone */}
-        <FormField
-          id="phone"
-          label="Mobile number"
-          error={errors.phone?.message}
-          hint="Optional"
-        >
-          <Input
+          <FormField
             id="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder="+91 98765 43210"
-            invalid={!!errors.phone}
-            {...register('phone')}
-          />
-        </FormField>
+            label="Mobile number"
+            error={errors.phone?.message}
+            hint="Optional"
+          >
+            <Input
+              id="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+91 98765 43210"
+              invalid={!!errors.phone}
+              {...register('phone')}
+            />
+          </FormField>
+        </div>
 
-        {/* Password */}
-        <FormField
-          id="password"
-          label="Password"
-          error={errors.password?.message}
-          hint="At least 10 characters, with a letter and a number."
-        >
-          <PasswordInput
+        {/* Password & Confirm password */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField
             id="password"
-            autoComplete="new-password"
-            invalid={!!errors.password}
-            registerField={register('password')}
-          />
-        </FormField>
+            label="Password"
+            error={errors.password?.message}
+          >
+            <PasswordInput
+              id="password"
+              autoComplete="new-password"
+              invalid={!!errors.password}
+              registerField={register('password')}
+            />
+          </FormField>
 
-        {/* Confirm password */}
-        <FormField
-          id="confirmPassword"
-          label="Confirm password"
-          error={errors.confirmPassword?.message}
-        >
-          <PasswordInput
+          <FormField
             id="confirmPassword"
-            autoComplete="new-password"
-            invalid={!!errors.confirmPassword}
-            registerField={register('confirmPassword')}
-          />
-        </FormField>
+            label="Confirm password"
+            error={errors.confirmPassword?.message}
+          >
+            <PasswordInput
+              id="confirmPassword"
+              autoComplete="new-password"
+              invalid={!!errors.confirmPassword}
+              registerField={register('confirmPassword')}
+            />
+          </FormField>
+        </div>
 
         {/* ==============================================================
             DPDP / PRIVACY CONSENT
             ============================================================== */}
 
         <div
-          className={`rounded-xl border p-4 transition-colors ${
+          className={`rounded-xl border p-3 transition-colors ${
             !consent && formError
               ? 'border-red-300 bg-red-50/50'
               : 'border-[var(--border-subtle)] bg-[var(--surface-muted)]/60'
@@ -781,7 +805,7 @@ export function RegisterPage() {
         >
           <label
             htmlFor="privacy-consent"
-            className="flex cursor-pointer items-start gap-3"
+            className="flex cursor-pointer items-start gap-2.5"
           >
             <input
               id="privacy-consent"
@@ -793,7 +817,7 @@ export function RegisterPage() {
               className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-gray-300 text-brand-700 accent-brand-700 focus:ring-brand-600"
             />
 
-            <span className="text-xs leading-5 text-[var(--text-muted)]">
+            <span className="text-[11px] leading-4 text-[var(--text-muted)]">
               I agree to Gokaasa&apos;s{' '}
               <Link
                 to="/privacy"
@@ -810,11 +834,7 @@ export function RegisterPage() {
               >
                 Terms &amp; Conditions
               </Link>
-              . I understand that my personal information
-              will be processed to provide account, booking
-              and support services in accordance with the
-              applicable privacy framework, including the
-              Digital Personal Data Protection Act, 2023.
+              , and consent to processing of my information under the DPDP Act, 2023.
             </span>
           </label>
         </div>
@@ -823,7 +843,6 @@ export function RegisterPage() {
         <Button
           type="submit"
           className="group w-full"
-          size="lg"
           loading={formState.isSubmitting}
         >
           Create account
@@ -833,11 +852,11 @@ export function RegisterPage() {
           )}
         </Button>
 
-        <div className="relative my-4 flex items-center justify-center">
+        <div className="relative my-2.5 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-[var(--border-subtle)]" />
           </div>
-          <span className="relative bg-white px-3 text-xs uppercase tracking-wider text-[var(--text-muted)]">
+          <span className="relative bg-white px-2.5 text-[11px] uppercase tracking-wider text-[var(--text-muted)]">
             or continue with
           </span>
         </div>

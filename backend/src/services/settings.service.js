@@ -7,7 +7,7 @@ import { config } from '../config/index.js';
 const EDITABLE_KEYS = ['company_name', 'support_phone', 'support_email'];
 
 export const settingsService = {
-  /** ADMIN and HOTEL_MANAGER can both read this; only ADMIN can write (enforced at the route). */
+  /** ADMIN-only platform settings; authorization is enforced at the route. */
   async get() {
     const stored = await settingsRepository.getAll();
     return {

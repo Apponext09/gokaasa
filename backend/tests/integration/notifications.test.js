@@ -35,8 +35,8 @@ async function loginAs(email) {
   return (await request(app).post('/api/auth/login').send({ email, password: PASSWORD })).body.accessToken;
 }
 
-async function publishedHotel(name) {
-  const created = await request(app).post('/api/admin/hotels').set(bearer(adminToken)).send({ name, city: 'Mumbai', countryCode: 'IN' });
+async function publishedHotel(name, creatorToken = adminToken) {
+  const created = await request(app).post('/api/admin/hotels').set(bearer(creatorToken)).send({ name, city: 'Mumbai', countryCode: 'IN' });
   const id = created.body.hotel.id;
   await request(app)
     .patch(`/api/admin/hotels/${id}`)
@@ -79,7 +79,7 @@ before(async () => {
   app = await prepareTestDatabase();
   mailService.send = captureMail;
   await createUserWithRole({ email: 'admin@example.com', password: PASSWORD, roleCode: 'ADMIN' });
-  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
+  await createUserWithRole({ email: 'manager@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
   await createUserWithRole({ email: 'notify.guest@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   await createUserWithRole({ email: 'notify.other@example.com', password: PASSWORD, roleCode: 'CUSTOMER' });
   adminToken = await loginAs('admin@example.com');
@@ -87,7 +87,7 @@ before(async () => {
   guestToken = await loginAs('notify.guest@example.com');
   otherToken = await loginAs('notify.other@example.com');
 
-  hotelId = await publishedHotel('Notification Test Hotel');
+  hotelId = await publishedHotel('Notification Test Hotel', managerToken);
   const room = await request(app).post(`/api/admin/hotels/${hotelId}/room-types`).set(bearer(adminToken)).send({
     name: 'Deluxe Room', roomCode: 'DLX', category: 'DELUXE', bedType: 'KING', bedCount: 1,
     maxAdults: 2, maxChildren: 1, maxOccupancy: 3, smoking: 'NON_SMOKING', totalUnits: 4,
@@ -101,8 +101,6 @@ before(async () => {
   planId = plan.body.ratePlan.id;
   await request(app).post(`/api/admin/room-types/${roomId}/calendar/bulk`).set(bearer(adminToken)).send({ from: day(0), to: day(60), ratePlanId: planId, basePriceMinor: 1_000_000 });
 
-  const managerId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['manager@example.com'])).rows[0].id;
-  await pool.query(`INSERT INTO hotel_managers (user_id, hotel_id) VALUES ($1, $2)`, [managerId, hotelId]);
 });
 
 after(async () => {
@@ -122,7 +120,7 @@ async function waitForNotification(userId, type, { timeoutMs = 3000 } = {}) {
 }
 
 describe('booking events create real, persisted notifications', () => {
-  it('a confirmed booking notifies the guest and the hotel’s assigned manager', async () => {
+  it('a confirmed booking notifies the guest and the hotel owner', async () => {
     sentMail.length = 0;
     const booking = await confirmedBooking(guestToken, 0);
     const guestId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['notify.guest@example.com'])).rows[0].id;
@@ -197,7 +195,7 @@ describe('booking events create real, persisted notifications', () => {
 });
 
 describe('review events notify the right audience', () => {
-  it('submitting a review notifies the hotel’s manager and every admin; moderating it notifies the author', async () => {
+  it('submitting a review notifies the hotel owner and every admin; moderating it notifies the author', async () => {
     const booking = await confirmedBooking(guestToken, 4);
     await pool.query(`UPDATE bookings SET check_in = $2, check_out = $3 WHERE id = $1`, [booking.id, addDays(TODAY, -3), addDays(TODAY, -2)]);
 
@@ -218,24 +216,10 @@ describe('review events notify the right audience', () => {
   });
 });
 
-describe('manager assignment notifies the manager', () => {
-  it('assigning a manager to a hotel notifies that manager', async () => {
-    const freshHotel = await publishedHotel('Notification Second Hotel');
-    await createUserWithRole({ email: 'manager.second@example.com', password: PASSWORD, roleCode: 'HOTEL_MANAGER' });
-    const secondManagerId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['manager.second@example.com'])).rows[0].id;
-
-    const assigned = await request(app).post(`/api/admin/hotels/${freshHotel}/managers`).set(bearer(adminToken)).send({ userId: secondManagerId });
-    assert.equal(assigned.status, 201, JSON.stringify(assigned.body));
-
-    const notice = await waitForNotification(secondManagerId, 'manager.assigned');
-    assert.ok(notice.message.includes('Notification Second Hotel'));
-  });
-});
-
 describe('partner and property lifecycle email', () => {
   it('emails the approved owner and sends property decisions only to that property contact', async () => {
     sentMail.length = 0;
-    const ownerId = await createUserWithRole({ email: 'owner.notify@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER' });
+    const ownerId = await createUserWithRole({ email: 'owner.notify@example.com', password: PASSWORD, roleCode: 'HOTEL_OWNER', partnerApproved: false });
     await pool.query(
       `INSERT INTO partner_profiles
          (user_id, status, business_name, business_type, contact_phone, property_name, property_city, submitted_at)
@@ -246,12 +230,10 @@ describe('partner and property lifecycle email', () => {
     assert.equal(approved.status, 200, JSON.stringify(approved.body));
     assert.ok(sentMail.some((message) => message.to === 'owner.notify@example.com' && message.subject.includes('partner application has been approved')));
 
-    const ownedHotelId = await publishedHotel('Owner Lifecycle Hotel');
-    const assigned = await request(app).post(`/api/admin/hotels/${ownedHotelId}/managers`).set(bearer(adminToken)).send({ userId: ownerId });
-    assert.equal(assigned.status, 201, JSON.stringify(assigned.body));
-    assert.ok(sentMail.some((message) => message.to === 'owner.notify@example.com' && message.subject === 'Your hotel has been onboarded to Gokaasa'));
-
+    const ownerToken = await loginAs('owner.notify@example.com');
+    const ownedHotelId = await publishedHotel('Owner Lifecycle Hotel', ownerToken);
     await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'UNPUBLISH' });
+    await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'SAVE_DRAFT' });
     await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'SUBMIT_FOR_REVIEW' });
     sentMail.length = 0;
     const ready = await request(app).post(`/api/admin/hotels/${ownedHotelId}/status`).set(bearer(adminToken)).send({ action: 'MARK_READY' });

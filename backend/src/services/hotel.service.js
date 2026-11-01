@@ -15,7 +15,7 @@ import { reviewService } from './review.service.js';
 import { AppError } from '../utils/AppError.js';
 import { slugify } from '../utils/slug.js';
 import { toHotelDetail, toHotelSummary, toPage } from './presenters.js';
-import { assignManagerIfNeeded } from '../middleware/hotelAccess.js';
+import { assignCreatorAccessIfNeeded } from '../middleware/hotelAccess.js';
 import { toCsv } from '../utils/csv.js';
 import { emailNotificationService } from './emailNotification.service.js';
 import { catalogService } from './catalog.service.js';
@@ -148,7 +148,7 @@ export const hotelService = {
         created_by: actor.id,
         updated_by: actor.id,
       });
-      await assignManagerIfNeeded(client, { creatorId: actor.id, hotelId: id });
+      await assignCreatorAccessIfNeeded(client, { creatorId: actor.id, hotelId: id });
       await auditService.record(client, {
         actor,
         action: 'hotel.created',

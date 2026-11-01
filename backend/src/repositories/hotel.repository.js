@@ -207,7 +207,7 @@ export const hotelRepository = {
     return Object.fromEntries(rows.map((row) => [row.status, row.count]));
   },
 
-  /** Hotel ids a HOTEL_MANAGER is assigned to. Used to scope bookings/payments/customers to "my hotels". */
+  /** Hotel ids owned by a HOTEL_OWNER. Used to scope bookings/payments/customers to "my hotels". */
   async managedHotelIds(userId, client = pool) {
     const { rows } = await client.query(`SELECT hotel_id FROM hotel_managers WHERE user_id = $1`, [userId]);
     return rows.map((row) => row.hotel_id);

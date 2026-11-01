@@ -54,8 +54,6 @@ const CustomersPage = lazy(() => import('@/pages/admin/CustomersPage.jsx').then(
 const CustomerDetailPage = lazy(() => import('@/pages/admin/CustomerDetailPage.jsx').then((m) => ({ default: m.CustomerDetailPage })));
 const AuditLogsPage = lazy(() => import('@/pages/admin/AuditLogsPage.jsx').then((m) => ({ default: m.AuditLogsPage })));
 const ReviewsPage = lazy(() => import('@/pages/admin/ReviewsPage.jsx').then((m) => ({ default: m.ReviewsPage })));
-const ManagersPage = lazy(() => import('@/pages/admin/ManagersPage.jsx').then((m) => ({ default: m.ManagersPage })));
-const ManagerDetailPage = lazy(() => import('@/pages/admin/ManagerDetailPage.jsx').then((m) => ({ default: m.ManagerDetailPage })));
 const ReportsPage = lazy(() => import('@/pages/admin/ReportsPage.jsx').then((m) => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import('@/pages/admin/SettingsPage.jsx').then((m) => ({ default: m.SettingsPage })));
 const AdminProfilePage = lazy(() => import('@/pages/admin/ProfilePage.jsx').then((m) => ({ default: m.AdminProfilePage })));
@@ -166,8 +164,6 @@ export function App() {
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="masters" element={<MasterDataPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
-        <Route path="managers" element={<ManagersPage />} />
-        <Route path="managers/:id" element={<ManagerDetailPage />} />
         <Route path="partners" element={<PartnerApplicationsPage />} />
         <Route path="partners/:userId" element={<PartnerApplicationDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
