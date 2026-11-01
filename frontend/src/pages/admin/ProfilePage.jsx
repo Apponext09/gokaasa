@@ -1,8 +1,9 @@
-import { ChevronRight, Mail, ShieldCheck, UserRound, Users } from 'lucide-react';
+import { ChevronRight, Mail, ShieldCheck, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/surfaces.jsx';
 import { PageHeader } from '@/components/shared/index.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
+import { ProfileNameEditor } from '@/features/auth/ProfileNameEditor.jsx';
 import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
 import { setStaffCustomerView } from '@/features/auth/viewMode.js';
 
@@ -15,13 +16,7 @@ export function AdminProfilePage() {
       <PageHeader title="My Profile" description="Your Gokaasa staff account." />
 
       <Card className="divide-y divide-[var(--border-subtle)]">
-        <div className="flex items-center gap-3 p-5">
-          <UserRound className="h-5 w-5 text-brand-700" aria-hidden="true" />
-          <div>
-            <p className="text-xs text-[var(--text-muted)]">Name</p>
-            <p className="text-sm font-medium text-[var(--text-strong)]">{user?.firstName} {user?.lastName}</p>
-          </div>
-        </div>
+        <ProfileNameEditor />
         <div className="flex items-center gap-3 p-5">
           <Mail className="h-5 w-5 text-brand-700" aria-hidden="true" />
           <div>
@@ -55,7 +50,7 @@ export function AdminProfilePage() {
         )}
       </Card>
       <StaffEmailChangePanel />
-      <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet.</p>
+      <p className="text-xs text-[var(--text-muted)]">Editing your password isn't available yet.</p>
     </div>
   );
 }

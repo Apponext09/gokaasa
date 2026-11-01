@@ -267,6 +267,114 @@ describe('staff email change', () => {
   });
 });
 
+describe('self-service profile name edit', () => {
+  // HOTEL_OWNER additionally needs a partner_profiles row for toPublicUser()'s partnerStatus lookup to
+  // resolve cleanly; every other role here has none and is unaffected by it.
+  const ROLE_TESTS = ['ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'CUSTOMER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
+
+  for (const roleCode of ROLE_TESTS) {
+    it(`lets a ${roleCode} update their own name`, async () => {
+      const email = `profile.${roleCode.toLowerCase()}@example.com`;
+      await createUserWithRole({ email, password: PASSWORD, roleCode });
+      const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+      assert.equal(login.status, 200);
+
+      const res = await request(app)
+        .patch('/api/auth/me')
+        .set('Authorization', `Bearer ${login.body.accessToken}`)
+        .send({ firstName: 'Updated', lastName: 'Name' });
+
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      assert.equal(res.body.user.firstName, 'Updated');
+      assert.equal(res.body.user.lastName, 'Name');
+      assert.deepEqual(res.body.user.roles, [roleCode]);
+    });
+  }
+
+  it('rejects unauthenticated requests', async () => {
+    const res = await request(app).patch('/api/auth/me').send({ firstName: 'Nobody', lastName: 'Home' });
+    assert.equal(res.status, 401);
+  });
+
+  it('persists the new name after refresh and never accepts a role/status field from the body', async () => {
+    const email = 'profile.persist@example.com';
+    await createUserWithRole({ email, password: PASSWORD, roleCode: 'CUSTOMER' });
+    const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+
+    const updated = await request(app)
+      .patch('/api/auth/me')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      // roles/isActive/id are not accepted fields -- the validator strips anything not in the schema.
+      .send({ firstName: 'Persisted', lastName: 'Customer', roles: ['ADMIN'], isActive: false, id: 999 });
+    assert.equal(updated.status, 200);
+    assert.deepEqual(updated.body.user.roles, ['CUSTOMER']);
+
+    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${login.body.accessToken}`);
+    assert.equal(me.status, 200);
+    assert.equal(me.body.user.firstName, 'Persisted');
+    assert.equal(me.body.user.lastName, 'Customer');
+    assert.deepEqual(me.body.user.roles, ['CUSTOMER']);
+  });
+
+  it('a user cannot update another user\'s name -- the target is always the authenticated caller', async () => {
+    const victimEmail = 'profile.victim@example.com';
+    const attackerEmail = 'profile.attacker@example.com';
+    const victimId = await createUserWithRole({ email: victimEmail, password: PASSWORD, roleCode: 'CUSTOMER' });
+    await createUserWithRole({ email: attackerEmail, password: PASSWORD, roleCode: 'CUSTOMER' });
+    const attackerLogin = await request(app).post('/api/auth/login').send({ email: attackerEmail, password: PASSWORD });
+
+    // There is no userId field this endpoint reads from the body -- it only ever targets req.user.id.
+    const res = await request(app)
+      .patch('/api/auth/me')
+      .set('Authorization', `Bearer ${attackerLogin.body.accessToken}`)
+      .send({ firstName: 'Hacked', lastName: 'Name', userId: victimId, id: victimId });
+    assert.equal(res.status, 200);
+
+    const victimLogin = await request(app).post('/api/auth/login').send({ email: victimEmail, password: PASSWORD });
+    const victimMe = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${victimLogin.body.accessToken}`);
+    assert.equal(victimMe.body.user.firstName, 'Test', 'the victim\'s own name must be untouched');
+  });
+
+  it('rejects empty, overlong and script-injection name input', async () => {
+    const email = 'profile.invalid@example.com';
+    await createUserWithRole({ email, password: PASSWORD, roleCode: 'CUSTOMER' });
+    const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+    const token = login.body.accessToken;
+
+    const empty = await request(app).patch('/api/auth/me').set('Authorization', `Bearer ${token}`).send({ firstName: '   ', lastName: 'Kumar' });
+    assert.equal(empty.status, 422);
+
+    const overlong = await request(app)
+      .patch('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ firstName: 'A'.repeat(81), lastName: 'Kumar' });
+    assert.equal(overlong.status, 422);
+
+    const scriptInjection = await request(app)
+      .patch('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ firstName: '<script>alert(1)</script>', lastName: 'Kumar' });
+    assert.equal(scriptInjection.status, 422);
+
+    const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${token}`);
+    assert.equal(me.body.user.firstName, 'Test', 'rejected updates must not have changed the stored name');
+  });
+
+  it('trims whitespace around a valid name', async () => {
+    const email = 'profile.trim@example.com';
+    await createUserWithRole({ email, password: PASSWORD, roleCode: 'CUSTOMER' });
+    const login = await request(app).post('/api/auth/login').send({ email, password: PASSWORD });
+
+    const res = await request(app)
+      .patch('/api/auth/me')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .send({ firstName: '  Asha  ', lastName: '  Kumar  ' });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.user.firstName, 'Asha');
+    assert.equal(res.body.user.lastName, 'Kumar');
+  });
+});
+
 describe('role-based access control', () => {
   it('denies customers access to admin routes', async () => {
     const login = await request(app).post('/api/auth/login').send({ email: 'asha.test@example.com', password: 'Another-pass-456' });

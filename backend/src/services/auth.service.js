@@ -253,6 +253,19 @@ export const authService = {
     return toPublicUser(user);
   },
 
+  /**
+   * Self-service name edit, open to every authenticated role. userId always comes from the verified
+   * access token (req.user.id), never from the request body, so a user can only ever update their own
+   * row -- role, status and every other account field are untouched by this path.
+   */
+  async updateProfile(userId, { firstName, lastName }) {
+    const user = await userRepository.findById(userId);
+    if (!user || !user.isActive) throw AppError.unauthorized();
+    await userRepository.updateName(pool, userId, { firstName, lastName });
+    const updated = await userRepository.findById(userId);
+    return toPublicUser(updated);
+  },
+
   async googleLogin(input, meta) {
     const { credential, accessToken } = input;
     if (!credential && !accessToken) {

@@ -53,6 +53,11 @@ export const emailChangeRequestSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required').max(128),
 });
 
+export const updateProfileSchema = z.object({
+  firstName: name('First name'),
+  lastName: name('Last name'),
+});
+
 export const emailChangeVerifySchema = z.object({
   code: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit verification code'),
 });

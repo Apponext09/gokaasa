@@ -48,6 +48,11 @@ export const registerSchema = z
     message: 'Passwords do not match',
   });
 
+export const updateProfileSchema = z.object({
+  firstName: nameField('First name'),
+  lastName: nameField('Last name'),
+});
+
 export const forgotPasswordSchema = z.object({ email: emailField });
 
 export const resetPasswordSchema = z

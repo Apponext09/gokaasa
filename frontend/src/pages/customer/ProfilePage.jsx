@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CalendarDays, ChevronRight, Heart, Luggage, Mail, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
+import { CalendarDays, ChevronRight, Heart, Luggage, Mail, ShieldCheck, Tag, Users } from 'lucide-react';
 import { Card, Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { PageHeader } from '@/components/shared/index.jsx';
@@ -8,6 +8,7 @@ import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { homePathFor } from '@/features/auth/routing.js';
+import { ProfileNameEditor } from '@/features/auth/ProfileNameEditor.jsx';
 import { StaffEmailChangePanel } from '@/features/auth/StaffEmailChangePanel.jsx';
 import { setStaffCustomerView } from '@/features/auth/viewMode.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
@@ -129,13 +130,7 @@ export function ProfilePage() {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Account</h2>
         <Card className="divide-y divide-[var(--border-subtle)]">
-          <div className="flex items-center gap-3 p-5">
-            <UserRound className="h-5 w-5 text-brand-700" aria-hidden="true" />
-            <div>
-              <p className="text-xs text-[var(--text-muted)]">Name</p>
-              <p className="text-sm font-medium text-[var(--text-strong)]">{user?.firstName} {user?.lastName}</p>
-            </div>
-          </div>
+          <ProfileNameEditor />
           <div className="flex items-center gap-3 p-5">
             <Mail className="h-5 w-5 text-brand-700" aria-hidden="true" />
             <div>
@@ -168,7 +163,7 @@ export function ProfilePage() {
             </button>
           )}
         </Card>
-        <p className="text-xs text-[var(--text-muted)]">Editing your name or password isn't available yet -- contact support if you need a change.</p>
+        <p className="text-xs text-[var(--text-muted)]">Editing your password isn't available yet -- contact support if you need a change.</p>
       </section>
 
       {isNonCustomer && <StaffEmailChangePanel />}

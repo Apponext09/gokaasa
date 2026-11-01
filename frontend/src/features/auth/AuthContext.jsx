@@ -82,6 +82,12 @@ export function AuthProvider({ children }) {
     [applySession],
   );
 
+  const updateProfile = useCallback(async (details) => {
+    const updated = await authApi.updateProfile(details);
+    setUser(updated);
+    return updated;
+  }, []);
+
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
@@ -106,9 +112,10 @@ export function AuthProvider({ children }) {
       register,
       guestCheckout,
       verifyPartnerOtp,
+      updateProfile,
       logout,
     }),
-    [user, status, login, loginWithGoogle, register, guestCheckout, verifyPartnerOtp, logout],
+    [user, status, login, loginWithGoogle, register, guestCheckout, verifyPartnerOtp, updateProfile, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

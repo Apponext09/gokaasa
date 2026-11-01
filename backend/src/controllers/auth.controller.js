@@ -52,6 +52,11 @@ export const authController = {
     return res.json({ user });
   },
 
+  async updateProfile(req, res) {
+    const user = await authService.updateProfile(req.user.id, req.validated.body);
+    return res.json({ user });
+  },
+
   async pendingEmailChange(req, res) {
     const pending = await emailChangeService.pending(req.user.id);
     return res.json({ pending });

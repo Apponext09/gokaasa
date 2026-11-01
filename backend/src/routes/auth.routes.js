@@ -12,6 +12,7 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  updateProfileSchema,
 } from '../validators/auth.validator.js';
 
 const STAFF_ROLES = ['ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
@@ -27,6 +28,7 @@ authRouter.post('/logout', authController.logout);
 authRouter.post('/forgot-password', authLimiter, validate({ body: forgotPasswordSchema }), authController.forgotPassword);
 authRouter.post('/reset-password', authLimiter, validate({ body: resetPasswordSchema }), authController.resetPassword);
 authRouter.get('/me', authenticate, authController.me);
+authRouter.patch('/me', authenticate, validate({ body: updateProfileSchema }), authController.updateProfile);
 authRouter.get('/email-change', authenticate, authorize(...STAFF_ROLES), authController.pendingEmailChange);
 authRouter.post('/email-change/request', otpLimiter, authenticate, authorize(...STAFF_ROLES), validate({ body: emailChangeRequestSchema }), authController.requestEmailChange);
 authRouter.post('/email-change/resend', otpLimiter, authenticate, authorize(...STAFF_ROLES), authController.resendEmailChange);

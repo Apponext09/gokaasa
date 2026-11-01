@@ -8,6 +8,7 @@ export const authApi = {
   guestCheckout: (body) => api.post('/auth/guest-checkout', body).then((r) => r.data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me').then((r) => r.data.user),
+  updateProfile: (body) => api.patch('/auth/me', body).then((r) => r.data.user),
   forgotPassword: (body) => api.post('/auth/forgot-password', body).then((r) => r.data),
   resetPassword: (body) => api.post('/auth/reset-password', body).then((r) => r.data),
   pendingEmailChange: () => api.get('/auth/email-change').then((r) => r.data.pending),

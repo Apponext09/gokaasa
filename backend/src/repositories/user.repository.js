@@ -106,6 +106,14 @@ export const userRepository = {
     );
   },
 
+  /** Self-service profile edit: the authenticated user changing their own display name. */
+  async updateName(client, userId, { firstName, lastName }) {
+    await client.query(
+      `UPDATE users SET first_name = $2, last_name = $3, updated_at = now() WHERE id = $1`,
+      [userId, firstName, lastName],
+    );
+  },
+
   async touchLastLogin(userId) {
     await pool.query(`UPDATE users SET last_login_at = now() WHERE id = $1`, [userId]);
   },
