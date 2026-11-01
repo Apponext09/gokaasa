@@ -18,14 +18,14 @@ const UNAVAILABLE_TEXT = {
 };
 
 /** Each rate plan, compared side by side: what it includes, its refund rule, and the price breakdown. */
-function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
+function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled, compact = false }) {
   const [open, setOpen] = useState(false);
   const cancelText = plan.cancellationPolicy?.description ?? 'Cancellation terms are not set for this rate.';
   const freeCancel = plan.refundable && plan.cancellationPolicy && !plan.cancellationPolicy.isNonRefundable && plan.cancellationPolicy.refundPercent === 100;
 
   return (
     <li className={cn('customer-rate-plan rounded-[var(--radius-control)] border p-3 transition-colors', selected ? 'is-selected border-brand-500 bg-brand-50/60' : 'border-[var(--border-subtle)]')}>
-      <div className="rate-plan-layout flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between">
+      <div className={cn('rate-plan-layout flex flex-col gap-2.5', !compact && 'sm:flex-row sm:items-start sm:justify-between')}>
         <div className="rate-plan-copy min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold text-[var(--text-strong)]">{plan.name}</p>
@@ -45,7 +45,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
           <p className="line-clamp-2 text-xs leading-5 text-[var(--text-muted)]">{cancelText}</p>
         </div>
 
-        <div className="rate-plan-price flex shrink-0 flex-col items-start gap-2 sm:items-end">
+        <div className={cn('rate-plan-price flex shrink-0 flex-col items-start gap-2', !compact && 'sm:items-end')}>
           <p className="text-right">
             <span className="text-lg font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(plan.pricePerNight)}</span>
             <span className="text-sm text-[var(--text-muted)]"> / night</span>
@@ -63,7 +63,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
         <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', open && 'rotate-180')} aria-hidden="true" /> Price breakdown
       </button>
       {open && (
-        <dl className="mt-2 grid max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
+        <dl className={cn('mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm', !compact && 'max-w-sm gap-x-6')}>
           <dt className="text-[var(--text-muted)]">Room charge ({nights} Night{nights === 1 ? '' : 's'})</dt>
           <dd className="text-right">{formatMoney(plan.subtotal)}</dd>
           {plan.discount > 0 && (
@@ -84,8 +84,13 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled }) {
   );
 }
 
-/** A room type with its rate plans. Unavailable rooms are listed with the reason, never silently removed. */
-export function RoomCard({ room, nights, rooms, onSelect, selection, disabled }) {
+/**
+ * A room type with its rate plans. Unavailable rooms are listed with the reason, never silently removed.
+ * `compact`, used inside the booking assistant chat panel, keeps the image-beside-content grid from
+ * switching to its desktop columns via a viewport-width `md:` breakpoint while the card itself sits in a
+ * much narrower box, and stacks each rate plan's price under its details instead of beside them.
+ */
+export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, compact = false }) {
   const [photo, setPhoto] = useState(0);
   const images = room.images ?? [];
   const current = images[photo];
@@ -93,9 +98,15 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
 
   return (
     <article className="customer-room-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
-      <div className="grid gap-0 md:grid-cols-[13rem_minmax(0,1fr)]">
+      <div className={cn('grid gap-0', !compact && 'md:grid-cols-[13rem_minmax(0,1fr)]')}>
         <div className="room-card-media relative">
-          <SafeImage src={current?.url} alt={current?.altText ?? room.name} className="aspect-[16/7] w-full md:h-full md:aspect-auto md:min-h-40" sizes="(min-width: 768px) 208px, 100vw" fallbackLabel={`${room.name}: photos coming soon`} />
+          <SafeImage
+            src={current?.url}
+            alt={current?.altText ?? room.name}
+            className={cn('aspect-[16/7] w-full', !compact && 'md:h-full md:aspect-auto md:min-h-40')}
+            sizes={compact ? '100vw' : '(min-width: 768px) 208px, 100vw'}
+            fallbackLabel={`${room.name}: photos coming soon`}
+          />
           {images.length > 1 && (
             <div className="absolute bottom-2 left-2 right-2 flex gap-1 overflow-x-auto">
               {images.map((image, i) => (
@@ -142,6 +153,7 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled })
                 disabled={disabled}
                 selected={selection?.roomTypeId === room.id && selection?.ratePlanId === plan.ratePlanId}
                 onSelect={(p) => onSelect(room, p)}
+                compact={compact}
               />
             ))}
           </ul>

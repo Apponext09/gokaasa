@@ -36,8 +36,15 @@ export function hotelPath(hotel, state) {
   return `/hotels/${slugifyPlace(hotel.city)}/${hotel.slug}${query ? `?${query}` : ''}`;
 }
 
-/** One hotel in the results. Every value shown comes from the search response; nothing is estimated. */
-export function HotelCard({ hotel, state }) {
+/**
+ * `compact` renders a single-column card sized for the narrow booking-assistant chat panel, instead of the
+ * default two/three-column page layout whose `md:`/`lg:` classes are viewport-width-based and would apply
+ * their desktop layout even while the card sits inside the chat panel's much narrower box. It also drops
+ * the "View Rooms & Deals" / "Quick Reserve" actions (page navigation and an immediate hold, both of which
+ * bypass the chat's own room-selection step) in favor of a compact price summary -- hotel selection inside
+ * the chat is handled by the "Select this stay" action the assistant renders next to each card.
+ */
+export function HotelCard({ hotel, state, compact = false }) {
   const navigate = useNavigate();
   const { status: authStatus } = useAuth();
   const offer = hotel.bestOffer;
@@ -172,9 +179,12 @@ export function HotelCard({ hotel, state }) {
 
   return (
     <>
-      <article className="customer-hotel-card group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500 hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row">
+      <article className={cn(
+        'customer-hotel-card group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500',
+        compact ? 'w-full' : 'hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row',
+      )}>
       <div
-        className="relative aspect-[4/3] w-full shrink-0 overflow-hidden md:aspect-auto md:w-72 lg:w-80"
+        className={cn('relative aspect-[4/3] w-full shrink-0 overflow-hidden', !compact && 'md:aspect-auto md:w-72 lg:w-80')}
         onMouseEnter={() => {
           setHovered(true);
           loadDetails();
@@ -242,7 +252,7 @@ export function HotelCard({ hotel, state }) {
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4 md:p-5">
+      <div className={cn('flex min-w-0 flex-1 flex-col gap-3', compact ? 'p-3' : 'p-4 md:p-5')}>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
             {hotel.starRating ? (
@@ -254,7 +264,7 @@ export function HotelCard({ hotel, state }) {
             ) : (
               <span className="text-xs text-[var(--text-muted)]">{hotel.propertyTypeName ?? PROPERTY_LABEL[hotel.propertyType] ?? hotel.propertyType?.replaceAll('_', ' ').toLowerCase() ?? 'Stay'}</span>
             )}
-            <h3 className="truncate text-lg font-semibold tracking-tight text-[var(--text-strong)]">
+            <h3 className={cn('truncate font-semibold tracking-tight text-[var(--text-strong)]', compact ? 'text-base' : 'text-lg')}>
               <Link to={fullPath} className="hover:text-brand-700 focus-visible:outline-2 focus-visible:outline-brand-500">
                 {hotel.name}
               </Link>
@@ -296,7 +306,7 @@ export function HotelCard({ hotel, state }) {
         </div>
 
         {allAmenities.length > 0 && (
-          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
+          <ul className={cn('flex flex-wrap items-center gap-y-1 text-[var(--text-body)]', compact ? 'gap-x-3 text-xs' : 'gap-x-4 text-sm')}>
             {visibleAmenities.map((name) => (
               <li key={name} className="flex items-center gap-1">
                 <Check className="h-3.5 w-3.5 shrink-0 text-success-600" aria-hidden="true" /> {name}
@@ -386,8 +396,27 @@ export function HotelCard({ hotel, state }) {
           </div>
         )}
 
+        {/* Compact price summary for the chat panel: no page-navigation or quick-reserve actions here --
+            the assistant's own "Select this stay" action (rendered beside the card) drives selection. */}
+        {offer && compact && (
+          <div className="space-y-0.5 border-t border-[var(--border-subtle)] pt-2">
+            <p className="text-xs text-[var(--text-muted)] truncate">{offer.roomName} · {offer.mealPlanName ?? mealLabel(offer.mealPlan)}</p>
+            <p className="flex flex-wrap items-baseline gap-1.5">
+              <span className="text-xs text-[var(--text-muted)]">Starting at</span>
+              {originalPerNightMinor > 0 && (
+                <span className="text-xs text-[var(--text-muted)] line-through">{formatMoney(originalPerNightMinor)}</span>
+              )}
+              <span className="text-lg font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(pricePerNightMinor)}</span>
+              <span className="text-xs text-[var(--text-muted)]">/ night</span>
+            </p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {offer.nights} night{offer.nights === 1 ? '' : 's'} total {formatMoney(offer.finalTotalMinor)}
+            </p>
+          </div>
+        )}
+
         {/* Pricing + CTA: shown in 2-col layout (search results page). Hidden when hotel-card is in 3-col hotels page. */}
-        {offer && (
+        {offer && !compact && (
           <div className="hcard-price-cta-inline flex flex-wrap items-end justify-between gap-4">
             <div className="space-y-0.5">
               <p className="text-xs text-[var(--text-muted)]">{offer.roomName}</p>

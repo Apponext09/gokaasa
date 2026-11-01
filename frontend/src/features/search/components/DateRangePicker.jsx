@@ -33,16 +33,28 @@ function monthGrid(year, month) {
 /**
  * Date-only range picker for hotel stays. Check-out can never be on or before check-in, past days are
  * disabled, and the nights count is shown. Works with touch and keyboard.
+ *
+ * `inline` renders a compact, always-in-flow calendar instead of a floating popover -- used inside the
+ * booking assistant chat panel, where a viewport-width-based popover can get clipped by the panel's small,
+ * fixed size. Once both dates are picked it collapses to a one-line summary with a "Change" action, which
+ * is the "automatically close the calendar and show the selected range" behavior; picking check-in alone
+ * keeps the same calendar visible and switches its hint to check-out, which is the "automatically open
+ * checkout" behavior without a second popup.
  */
-export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = 'stay', disabled = false, bare = false }) {
+export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = 'stay', disabled = false, bare = false, inline = false }) {
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(() => !(checkIn && checkOut));
   const anchor = checkIn && isIsoDate(checkIn) ? checkIn : min;
   const [cursor, setCursor] = useState(() => ({ year: Number(anchor.slice(0, 4)), month: Number(anchor.slice(5, 7)) - 1 }));
   const ref = useRef(null);
   const nights = nightsBetween(checkIn, checkOut);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (inline && !checkIn && !checkOut) setEditing(true);
+  }, [inline, checkIn, checkOut]);
+
+  useEffect(() => {
+    if (!open || inline) return undefined;
     const onDown = (event) => {
       if (ref.current && !ref.current.contains(event.target)) setOpen(false);
     };
@@ -53,7 +65,7 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, inline]);
 
   const cells = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
   const monthLabel = new Date(Date.UTC(cursor.year, cursor.month, 1)).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -68,6 +80,7 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
     }
     onChange({ checkIn, checkOut: day });
     setOpen(false);
+    setEditing(false);
   };
 
   const shift = (delta) => {
@@ -78,6 +91,81 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
   };
 
   const hint = !checkIn ? 'Select check-in' : !checkOut ? 'Now select check-out' : null;
+
+  if (inline) {
+    if (!editing && checkIn && checkOut) {
+      return (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-card)] px-3 py-2">
+          <div className="min-w-0 text-sm">
+            <span className="font-semibold text-[var(--text-strong)]">{referenceDate(checkIn)}</span>
+            <span className="px-1 text-[var(--text-muted)]">→</span>
+            <span className="font-semibold text-[var(--text-strong)]">{referenceDate(checkOut)}</span>
+            <span className="ml-1.5 text-xs text-[var(--text-muted)]">({nights} night{nights === 1 ? '' : 's'})</span>
+          </div>
+          <button type="button" onClick={() => setEditing(true)} className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-brand-500">
+            Change
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-card)] p-2.5">
+        <div className="mb-2 flex items-center justify-between">
+          <button type="button" aria-label="Previous month" disabled={shownMonth <= minMonth} onClick={() => shift(-1)} className="grid h-6 w-6 place-items-center rounded-full hover:bg-[var(--surface-muted)] disabled:opacity-30">
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <p className="text-xs font-semibold text-[var(--text-strong)]">{monthLabel}</p>
+          <button type="button" aria-label="Next month" onClick={() => shift(1)} className="grid h-6 w-6 place-items-center rounded-full hover:bg-[var(--surface-muted)]">
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <div className="grid grid-cols-7 gap-y-0.5 text-center text-[10px] font-medium text-[var(--text-muted)]">
+          {WEEKDAYS.map((w) => (
+            <span key={w}>{w}</span>
+          ))}
+        </div>
+        <div role="grid" aria-label={monthLabel} className="mt-0.5 grid grid-cols-7 gap-y-0.5">
+          {cells.map((day, index) => {
+            if (!day) return <span key={`blank-${index}`} />;
+            const isPast = day < min;
+            const isStart = day === checkIn;
+            const isEnd = day === checkOut;
+            const inRange = checkIn && checkOut && day > checkIn && day < checkOut;
+            return (
+              <button
+                key={day}
+                type="button"
+                role="gridcell"
+                aria-label={longDate(day)}
+                aria-selected={isStart || isEnd || undefined}
+                disabled={isPast}
+                onClick={() => pick(day)}
+                className={cn(
+                  'mx-auto grid h-7 w-7 place-items-center rounded-full text-xs transition-colors focus-visible:outline-2 focus-visible:outline-brand-500',
+                  isPast && 'cursor-not-allowed text-[var(--text-muted)]/50 line-through',
+                  !isPast && 'hover:bg-brand-50',
+                  inRange && 'rounded-none bg-brand-50 text-brand-800 w-full',
+                  (isStart || isEnd) && 'bg-brand-600 font-semibold text-white hover:bg-brand-700',
+                  day === min && !isStart && 'ring-1 ring-brand-200',
+                )}
+              >
+                {Number(day.slice(8))}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-2 text-xs">
+          <span className="text-[var(--text-muted)]" aria-live="polite">{hint ?? (nights ? `${nights} night${nights === 1 ? '' : 's'}` : '')}</span>
+          {checkIn && (
+            <button type="button" onClick={() => onChange({ checkIn: null, checkOut: null })} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]">
+              <X className="h-3 w-3" /> Clear
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className={cn('relative', bare && 'customer-date-range')}>

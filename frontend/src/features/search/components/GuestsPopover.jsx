@@ -27,8 +27,12 @@ function Stepper({ label, hint, value, min, max, onChange, id }) {
 /**
  * Rooms and guests. Every room has its own adults and children, and each child has an age, because hotels
  * price and allocate by occupancy. The limits here match the server, so a valid form is always a valid search.
+ *
+ * `inline` renders the room/guest steppers directly in flow, with no trigger button, popup, or backdrop --
+ * used inside the booking assistant chat panel, where a fixed-width floating dialog can get clipped by the
+ * panel's small size. The step's own Continue action (outside this component) replaces the popup's "Done".
  */
-export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'guests', bare = false, stayNights = 0 }) {
+export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'guests', bare = false, stayNights = 0, inline = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -52,6 +56,68 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
       : current.slice(0, count);
     updateRoom(index, { childAges: ages });
   };
+
+  if (inline) {
+    return (
+      <div className="w-full space-y-3">
+        {rooms.map((room, index) => (
+          <section key={index} className="rounded-lg border border-[var(--border-subtle)] p-2.5" aria-label={`Room ${index + 1}`}>
+            <header className="mb-1 flex items-center justify-between">
+              <p className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
+                <BedDouble className="h-4 w-4 text-brand-700" aria-hidden="true" /> Room {index + 1}
+              </p>
+              {rooms.length > 1 && (
+                <button type="button" onClick={() => onChange(rooms.filter((_, i) => i !== index))} className="inline-flex items-center gap-1 text-xs text-danger-600 hover:underline">
+                  <Trash2 className="h-3.5 w-3.5" /> Remove
+                </button>
+              )}
+            </header>
+            <Stepper
+              id={`${idPrefix}-${index}-adults`}
+              label="Adults"
+              hint="Ages 13 and above"
+              value={room.adults}
+              min={LIMITS.minAdults}
+              max={LIMITS.maxAdults}
+              onChange={(adults) => updateRoom(index, { adults })}
+            />
+            <Stepper
+              id={`${idPrefix}-${index}-children`}
+              label="Children"
+              hint="Ages 0 to 17"
+              value={room.childAges.length}
+              min={0}
+              max={LIMITS.maxChildrenPerRoom}
+              onChange={(count) => setChildren(index, count)}
+            />
+            {room.childAges.length > 0 && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {room.childAges.map((age, childIndex) => (
+                  <label key={childIndex} className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
+                    Age of child {childIndex + 1}
+                    <select
+                      value={age}
+                      onChange={(event) =>
+                        updateRoom(index, { childAges: room.childAges.map((a, i) => (i === childIndex ? Number(event.target.value) : a)) })
+                      }
+                      className="h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-card)] px-2 text-sm text-[var(--text-strong)]"
+                    >
+                      {Array.from({ length: LIMITS.maxAge + 1 }, (_, n) => (
+                        <option key={n} value={n}>{n} {n === 1 ? 'year' : 'years'}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
+        <Button type="button" variant="ghost" size="sm" disabled={rooms.length >= LIMITS.maxRooms} onClick={() => onChange([...rooms, { adults: 2, childAges: [] }])}>
+          <Plus className="h-4 w-4" aria-hidden="true" /> Add room
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className={cn('relative', bare && 'customer-guests-field')}>

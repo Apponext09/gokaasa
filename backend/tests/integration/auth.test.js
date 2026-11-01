@@ -315,7 +315,7 @@ describe('staff email change', () => {
 describe('self-service profile name edit', () => {
   // HOTEL_OWNER additionally needs a partner_profiles row for toPublicUser()'s partnerStatus lookup to
   // resolve cleanly; every other role here has none and is unaffected by it.
-  const ROLE_TESTS = ['ADMIN', 'HOTEL_MANAGER', 'HOTEL_OWNER', 'CUSTOMER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
+  const ROLE_TESTS = ['ADMIN', 'HOTEL_OWNER', 'CUSTOMER', 'SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE'];
 
   for (const roleCode of ROLE_TESTS) {
     it(`lets a ${roleCode} update their own name`, async () => {

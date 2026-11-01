@@ -236,21 +236,45 @@ export function BookingAssistant({ onClose, open = true }) {
 
   const stayProblem = validateStay(state, today);
 
+  // A small page size keeps each round of real, published hotel results readable inside the narrow chat
+  // panel; "Show more stays" below fetches and appends the next page rather than replacing what's shown.
+  const CHAT_PAGE_SIZE = 5;
+  const [loadMoreStatus, setLoadMoreStatus] = useState('idle');
+
+  const searchPage = async (page) => {
+    const searchState = toSearchState(state);
+    const params = toSearchParams(searchState);
+    const destinationSlug = state.destination?.destination;
+    if (destinationSlug) params.set('destination', destinationSlug);
+    if (state.destination?.area) params.set('area', state.destination.area);
+    params.set('limit', String(CHAT_PAGE_SIZE));
+    params.set('page', String(page));
+    return discoveryApi.search(Object.fromEntries(params));
+  };
+
   const runSearch = async () => {
     setSearchStatus('loading');
     setSearchError(null);
     try {
-      const searchState = toSearchState(state);
-      const params = toSearchParams(searchState);
-      const destinationSlug = state.destination?.destination;
-      if (destinationSlug) params.set('destination', destinationSlug);
-      if (state.destination?.area) params.set('area', state.destination.area);
-      const data = await discoveryApi.search(Object.fromEntries(params));
+      const data = await searchPage(1);
       setSearchResult(data);
       setSearchStatus('ready');
     } catch (err) {
       setSearchError(normalizeError(err).message);
       setSearchStatus('error');
+    }
+  };
+
+  const loadMoreResults = async () => {
+    setLoadMoreStatus('loading');
+    try {
+      const nextPage = Math.floor((searchResult?.items?.length ?? 0) / CHAT_PAGE_SIZE) + 1;
+      const data = await searchPage(nextPage);
+      setSearchResult((prev) => ({ ...data, items: [...(prev?.items ?? []), ...data.items] }));
+      setLoadMoreStatus('idle');
+    } catch (err) {
+      setLoadMoreStatus('idle');
+      setAiState((s) => ({ ...s, error: normalizeError(err).message }));
     }
   };
 
@@ -673,6 +697,7 @@ export function BookingAssistant({ onClose, open = true }) {
               checkIn={state.checkIn}
               checkOut={state.checkOut}
               onChange={({ checkIn, checkOut }) => patch({ checkIn, checkOut })}
+              inline
             />
             {stayProblem && state.checkIn && <p className="text-xs text-danger-600">{stayProblem}</p>}
             <StepFooter
@@ -690,7 +715,7 @@ export function BookingAssistant({ onClose, open = true }) {
 
         {state.step === STEP.GUESTS && (
           <div className="space-y-2">
-            <GuestsPopover idPrefix="assistant-guests" rooms={state.occupancy} onChange={(occupancy) => patch({ occupancy })} />
+            <GuestsPopover idPrefix="assistant-guests" rooms={state.occupancy} onChange={(occupancy) => patch({ occupancy })} inline />
             <p className="text-xs text-[var(--text-muted)]">{summarizeOccupancy(state.occupancy)}</p>
             <StepFooter
               onBack={goBack}
@@ -907,7 +932,7 @@ export function BookingAssistant({ onClose, open = true }) {
 
                 {items.map((hotel) => (
                   <div key={hotel.id} className="space-y-2">
-                    <HotelCard hotel={hotel} state={chatSearchState} />
+                    <HotelCard hotel={hotel} state={chatSearchState} compact />
                     <div className="flex items-center justify-between gap-2 px-1">
                       <Checkbox
                         label={t('compareUpTo', lang, MAX_COMPARE)}
@@ -922,6 +947,11 @@ export function BookingAssistant({ onClose, open = true }) {
                   </div>
                 ))}
                 <p className="text-center text-xs text-[var(--text-muted)]">{t('showingResults', lang, items.length, searchResult?.total ?? items.length)}</p>
+                {items.length < (searchResult?.total ?? 0) && (
+                  <Button type="button" variant="secondary" size="sm" className="w-full" loading={loadMoreStatus === 'loading'} onClick={loadMoreResults}>
+                    Show more stays
+                  </Button>
+                )}
               </div>
             )}
 
@@ -954,7 +984,7 @@ export function BookingAssistant({ onClose, open = true }) {
                   <EmptyState icon={SearchX} title={t('noRoomsAvailable', lang)} description={t('tryDifferentDatesOrBack', lang)} />
                 )}
                 {availability.data.roomTypes.filter((r) => r.available).map((room) => (
-                  <RoomCard key={room.id} room={room} nights={nights} rooms={state.occupancy.length} selection={null} onSelect={selectRoom} />
+                  <RoomCard key={room.id} room={room} nights={nights} rooms={state.occupancy.length} selection={null} onSelect={selectRoom} compact />
                 ))}
                 <UnavailableRooms rooms={availability.data.roomTypes.filter((r) => !r.available)} />
               </div>
@@ -1017,9 +1047,9 @@ export function BookingAssistant({ onClose, open = true }) {
 
 function Row({ label, value }) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-[var(--text-muted)]">{label}</span>
-      <span className="text-right font-medium text-[var(--text-strong)]">{value}</span>
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-[var(--text-muted)]">{label}</span>
+      <span className="min-w-0 break-words text-right font-medium text-[var(--text-strong)]">{value}</span>
     </div>
   );
 }
