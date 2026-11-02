@@ -491,11 +491,11 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
           lg:grid lg:grid-cols-[auto_1fr_auto]
         "
       >
-        {/* DESKTOP LOGO — NO BACKGROUND / NO BLUR */}
+        {/* DESKTOP LOGO — WHITE BACKGROUND */}
 
         <Link
           to="/"
-          className="go-navbar-logo flex shrink-0 items-center rounded-[11px] px-2 py-1 transition-colors duration-200"
+          className="go-navbar-logo flex shrink-0 items-center rounded-[11px] bg-white px-2 py-1 transition-colors duration-200"
         >
           <img
             src={logoMark}
@@ -548,11 +548,11 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
           sm:h-[68px] sm:px-6 lg:hidden
         "
       >
-        {/* MOBILE LOGO — NO BACKGROUND / NO BLUR */}
+        {/* MOBILE LOGO — WHITE BACKGROUND */}
 
         <Link
           to="/"
-          className="go-navbar-logo flex shrink-0 items-center rounded-[11px] px-2 py-1 transition-colors duration-200"
+          className="go-navbar-logo flex shrink-0 items-center rounded-[11px] bg-white px-2 py-1 transition-colors duration-200"
         >
           <img
             src={logoMark}
