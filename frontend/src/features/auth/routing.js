@@ -19,6 +19,7 @@ export function isApprovedStaff(user) {
 }
 
 export function homePathFor(user) {
+  if (hasPermission(user, 'console.full')) return '/admin/dashboard';
   if (hasPermission(user, 'console.sales')) return '/admin/bookings';
   if (hasPermission(user, 'console.onboarding')) return '/admin/hotels';
   if (hasPermission(user, 'console.review')) return '/admin/hotel-reviews';

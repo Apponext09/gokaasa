@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Expand, Images, X } from 'lucide-react';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -16,21 +17,35 @@ function ImageCategoryTag({ image }) {
 }
 
 /**
- * Guest-facing photo gallery. Desktop: a large hero with a grid behind it. Mobile: a swipeable strip.
- * The lightbox supports keyboard arrows and Escape, and a fullscreen toggle where the browser allows it.
- * This reads photos only; the admin ImageGallery is the editing tool and is not reused here.
+ * Reusable full-screen photo lightbox modal matching Image 2 specifications:
+ * dark backdrop, header counter + fullscreen + close buttons, left/right nav,
+ * category badge, and bottom thumbnail selector.
  */
-export function PublicGallery({ images, name, compact = false }) {
-  const [index, setIndex] = useState(null);
+export function ImageLightbox({ images = [], initialIndex = 0, name = 'Photo', onClose }) {
+  const [index, setIndex] = useState(initialIndex);
   const [fullscreen, setFullscreen] = useState(false);
-  const [strip, setStrip] = useState(0);
-  const [desktopStart, setDesktopStart] = useState(0);
-  const stripRef = useRef(null);
   const lightboxRef = useRef(null);
   const count = images.length;
 
   useEffect(() => {
-    if (index == null) return undefined;
+    setIndex(initialIndex);
+  }, [initialIndex]);
+
+  const close = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    onClose?.();
+  };
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+    } else {
+      lightboxRef.current?.requestFullscreen?.().catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    if (index == null || count === 0) return undefined;
     const onKey = (event) => {
       if (event.key === 'Escape') close();
       if (event.key === 'ArrowRight') setIndex((i) => (i + 1) % count);
@@ -50,18 +65,122 @@ export function PublicGallery({ images, name, compact = false }) {
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
 
-  const close = () => {
-    if (document.fullscreenElement) document.exitFullscreen?.();
-    setIndex(null);
-  };
+  if (index == null || count === 0 || !images[index]) return null;
 
-  const toggleFullscreen = () => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.();
-    } else {
-      lightboxRef.current?.requestFullscreen?.().catch(() => {});
-    }
-  };
+  const content = (
+    <div
+      ref={lightboxRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${name} photos`}
+      className={cn('fixed inset-0 z-[60] flex flex-col bg-black/95 text-white', fullscreen && 'bg-black')}
+    >
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <p className="text-sm">
+          {index + 1} / {count}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/10"
+            aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            <Expand className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={close}
+            className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/10"
+            aria-label="Close gallery"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+      <div className="relative flex min-h-0 flex-1 items-center justify-center px-12 sm:px-16">
+        <button
+          type="button"
+          onClick={() => setIndex((index - 1 + count) % count)}
+          className="absolute left-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+          aria-label="Previous photo"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="relative max-h-full max-w-full">
+          <img
+            src={images[index].url}
+            alt={images[index].altText ?? name}
+            className="max-h-full max-w-full object-contain"
+            decoding="async"
+          />
+          {(() => {
+            const img = images[index];
+            const label =
+              img?.categoryName ||
+              (img?.category
+                ? img.category.charAt(0).toUpperCase() + img.category.slice(1).toLowerCase().replaceAll('_', ' ')
+                : null);
+            if (label) {
+              return (
+                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2.5 py-1 text-xs font-medium text-white/90">
+                  {label}
+                </span>
+              );
+            }
+            if (isIllustrativeImage(img)) {
+              return (
+                <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white/90">
+                  Illustrative -- not an actual photo of this property
+                </span>
+              );
+            }
+            return null;
+          })()}
+        </div>
+        <button
+          type="button"
+          onClick={() => setIndex((index + 1) % count)}
+          className="absolute right-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20"
+          aria-label="Next photo"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+      <div className="flex justify-center gap-1.5 overflow-x-auto px-4 py-3">
+        {images.map((image, i) => (
+          <button
+            key={(image.url ?? image.id) + i}
+            type="button"
+            onClick={() => setIndex(i)}
+            aria-label={`Photo ${i + 1}`}
+            aria-current={i === index}
+            className={cn(
+              'h-12 w-16 shrink-0 overflow-hidden rounded-md border-2',
+              i === index ? 'border-white' : 'border-transparent opacity-60',
+            )}
+          >
+            <img src={image.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : content;
+}
+
+/**
+ * Guest-facing photo gallery. Desktop: a large hero with a grid behind it. Mobile: a swipeable strip.
+ * The lightbox supports keyboard arrows and Escape, and a fullscreen toggle where the browser allows it.
+ * This reads photos only; the admin ImageGallery is the editing tool and is not reused here.
+ */
+export function PublicGallery({ images, name, compact = false }) {
+  const [index, setIndex] = useState(null);
+  const [strip, setStrip] = useState(0);
+  const [desktopStart, setDesktopStart] = useState(0);
+  const stripRef = useRef(null);
+  const count = images.length;
 
   if (count === 0) {
     return <SafeImage className="aspect-[16/9] w-full rounded-xl md:aspect-[3/1]" fallbackLabel={`${name}: photos coming soon`} eager />;
@@ -177,61 +296,12 @@ export function PublicGallery({ images, name, compact = false }) {
       </div>
 
       {index !== null && (
-        <div ref={lightboxRef} role="dialog" aria-modal="true" aria-label={`${name} photos`} className={cn('fixed inset-0 z-[60] flex flex-col bg-black/95 text-white', fullscreen && 'bg-black')}>
-          <div className="flex items-center justify-between gap-3 px-4 py-3">
-            <p className="text-sm">{index + 1} / {count}</p>
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={toggleFullscreen} className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/10" aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
-                <Expand className="h-4 w-4" />
-              </button>
-              <button type="button" onClick={close} className="grid h-9 w-9 place-items-center rounded-full hover:bg-white/10" aria-label="Close gallery">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-          <div className="relative flex min-h-0 flex-1 items-center justify-center px-12 sm:px-16">
-            <button type="button" onClick={() => setIndex((index - 1 + count) % count)} className="absolute left-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Previous photo">
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <div className="relative max-h-full max-w-full">
-              <img
-                src={images[index].url}
-                alt={images[index].altText ?? name}
-                className="max-h-full max-w-full object-contain"
-                decoding="async"
-              />
-              {(() => {
-                const img = images[index];
-                const label = img?.categoryName || (img?.category ? img.category.charAt(0).toUpperCase() + img.category.slice(1).toLowerCase().replaceAll('_', ' ') : null);
-                if (label) {
-                  return (
-                    <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2.5 py-1 text-xs font-medium text-white/90">
-                      {label}
-                    </span>
-                  );
-                }
-                if (isIllustrativeImage(img)) {
-                  return (
-                    <span className="absolute bottom-2 left-2 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white/90">
-                      Illustrative -- not an actual photo of this property
-                    </span>
-                  );
-                }
-                return null;
-              })()}
-            </div>
-            <button type="button" onClick={() => setIndex((index + 1) % count)} className="absolute right-2 grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20" aria-label="Next photo">
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="flex justify-center gap-1.5 overflow-x-auto px-4 py-3">
-            {images.map((image, i) => (
-              <button key={image.url + i} type="button" onClick={() => setIndex(i)} aria-label={`Photo ${i + 1}`} aria-current={i === index} className={cn('h-12 w-16 shrink-0 overflow-hidden rounded-md border-2', i === index ? 'border-white' : 'border-transparent opacity-60')}>
-                <img src={image.url} alt="" loading="lazy" className="h-full w-full object-cover" />
-              </button>
-            ))}
-          </div>
-        </div>
+        <ImageLightbox
+          images={images}
+          initialIndex={index}
+          name={name}
+          onClose={() => setIndex(null)}
+        />
       )}
     </div>
   );

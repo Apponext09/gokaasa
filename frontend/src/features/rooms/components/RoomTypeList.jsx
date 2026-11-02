@@ -15,7 +15,7 @@ const STATUS = {
 };
 
 /** Room types for one hotel. Used by the hotel's Rooms tab and by the standalone rooms page. */
-export function RoomTypeList({ hotelId, manageBasePath, readOnly = false }) {
+export function RoomTypeList({ hotelId, manageBasePath, readOnly = false, onRoomsLoaded }) {
   const [rooms, setRooms] = useState(null);
   const [error, setError] = useState(null);
   const [includeArchived, setIncludeArchived] = useState(false);
@@ -25,7 +25,12 @@ export function RoomTypeList({ hotelId, manageBasePath, readOnly = false }) {
     setRooms(null);
     roomApi
       .list(hotelId, includeArchived)
-      .then((items) => !cancelled && setRooms(items))
+      .then((items) => {
+        if (!cancelled) {
+          setRooms(items);
+          onRoomsLoaded?.(items);
+        }
+      })
       .catch((err) => !cancelled && setError(normalizeError(err).message));
     return () => {
       cancelled = true;

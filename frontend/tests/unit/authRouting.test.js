@@ -28,6 +28,7 @@ test('isApprovedStaff: a plain CUSTOMER, or no user at all, is never staff', () 
 });
 
 test('homePathFor: canonical destination per role', () => {
+  assert.equal(homePathFor({ roles: ['ADMIN'], permissions: ['console.access', 'console.full', 'console.sales', 'console.onboarding', 'console.review'] }), '/admin/dashboard');
   assert.equal(homePathFor(consoleUser('ADMIN', 'console.full')), '/admin/dashboard');
   assert.equal(homePathFor(consoleUser('HOTEL_OWNER', 'console.owner', { partnerStatus: 'APPROVED' })), '/admin/dashboard');
   assert.equal(homePathFor(consoleUser('HOTEL_OWNER', 'console.owner', { partnerStatus: 'PENDING_REVIEW' })), '/partner/status');

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { BedDouble, Check, ChevronDown, Maximize2, ShieldCheck, Undo2, UtensilsCrossed, Users, Eye } from 'lucide-react';
+import { BedDouble, Check, ChevronDown, Expand, Eye, Images, Maximize2, ShieldCheck, Undo2, Users, UtensilsCrossed } from 'lucide-react';
 import { Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { formatMoney } from '@/components/shared/index.jsx';
+import { ImageLightbox } from '@/features/hotels/components/PublicGallery.jsx';
 import { cn } from '@/lib/utils.js';
 
 const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HALF_BOARD: 'Half board', FULL_BOARD: 'Full board' };
@@ -92,6 +93,7 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled, compac
  */
 export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, compact = false }) {
   const [photo, setPhoto] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const images = room.images ?? [];
   const current = images[photo];
   const scarce = room.available && room.availableRooms > 0 && room.availableRooms <= 3;
@@ -99,18 +101,60 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, c
   return (
     <article className="customer-room-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
       <div className={cn('grid gap-0', !compact && 'md:grid-cols-[13rem_minmax(0,1fr)]')}>
-        <div className="room-card-media relative">
-          <SafeImage
-            src={current?.url}
-            alt={current?.altText ?? room.name}
-            className={cn('aspect-[16/7] w-full', !compact && 'md:h-full md:aspect-auto md:min-h-40')}
-            sizes={compact ? '100vw' : '(min-width: 768px) 208px, 100vw'}
-            fallbackLabel={`${room.name}: photos coming soon`}
-          />
+        <div className="room-card-media group relative">
+          {images.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setLightboxOpen(true)}
+              className="relative block h-full w-full cursor-pointer overflow-hidden text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+              aria-label={`View photos of ${room.name}`}
+            >
+              <SafeImage
+                src={current?.url}
+                alt={current?.altText ?? room.name}
+                className={cn(
+                  'aspect-[16/7] w-full transition-transform duration-300 group-hover:scale-105',
+                  !compact && 'md:h-full md:aspect-auto md:min-h-40',
+                )}
+                sizes={compact ? '100vw' : '(min-width: 768px) 208px, 100vw'}
+                fallbackLabel={`${room.name}: photos coming soon`}
+              />
+              <div className="pointer-events-none absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/15" />
+              <span className="pointer-events-none absolute top-2 right-2 flex items-center gap-1 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-medium text-white shadow-sm opacity-90 transition group-hover:bg-black/85">
+                <Images className="h-3 w-3" />
+                <span>{images.length}</span>
+              </span>
+            </button>
+          ) : (
+            <SafeImage
+              src={current?.url}
+              alt={current?.altText ?? room.name}
+              className={cn('aspect-[16/7] w-full', !compact && 'md:h-full md:aspect-auto md:min-h-40')}
+              sizes={compact ? '100vw' : '(min-width: 768px) 208px, 100vw'}
+              fallbackLabel={`${room.name}: photos coming soon`}
+            />
+          )}
           {images.length > 1 && (
-            <div className="absolute bottom-2 left-2 right-2 flex gap-1 overflow-x-auto">
+            <div className="absolute bottom-2 left-2 right-2 z-10 flex gap-1 overflow-x-auto">
               {images.map((image, i) => (
-                <button key={image.id} type="button" onClick={() => setPhoto(i)} aria-label={`Show photo ${i + 1}`} aria-current={i === photo} className={cn('h-8 w-12 shrink-0 overflow-hidden rounded border-2', i === photo ? 'border-white' : 'border-transparent opacity-70')}>
+                <button
+                  key={image.id ?? image.url ?? i}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (i === photo) {
+                      setLightboxOpen(true);
+                    } else {
+                      setPhoto(i);
+                    }
+                  }}
+                  aria-label={`Show photo ${i + 1}`}
+                  aria-current={i === photo}
+                  className={cn(
+                    'h-8 w-12 shrink-0 overflow-hidden rounded border-2 shadow-sm transition',
+                    i === photo ? 'border-white ring-1 ring-black/20' : 'border-transparent opacity-70 hover:opacity-100',
+                  )}
+                >
                   <img src={image.url} alt="" loading="lazy" className="h-full w-full object-cover" />
                 </button>
               ))}
@@ -159,6 +203,15 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, c
           </ul>
         </div>
       </div>
+
+      {lightboxOpen && images.length > 0 && (
+        <ImageLightbox
+          images={images}
+          initialIndex={photo}
+          name={room.name}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </article>
   );
 }

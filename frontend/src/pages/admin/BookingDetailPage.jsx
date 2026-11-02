@@ -125,7 +125,7 @@ export function BookingDetailPage() {
           <>
             <Badge tone={BOOKING_STATUS_LABEL[booking.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[booking.status]?.label ?? booking.status}</Badge>
             <Button variant="secondary" size="sm" onClick={downloadInvoice} loading={downloadingInvoice}><Download className="h-3.5 w-3.5" aria-hidden="true" /> Invoice</Button>
-            {canCancel && !isSalesExecutive && <Button variant="danger-outline" size="sm" onClick={() => setCancelOpen(true)}>Cancel booking</Button>}
+            {canCancel && (isAdmin || !isSalesExecutive) && <Button variant="danger-outline" size="sm" onClick={() => setCancelOpen(true)}>Cancel booking</Button>}
           </>
         }
       />

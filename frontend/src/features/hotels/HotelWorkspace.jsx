@@ -122,6 +122,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   const [catalog, setCatalog] = useState([]);
   const [selectedAmenities, setSelectedAmenities] = useState([]);
   const [savedAmenities, setSavedAmenities] = useState([]);
+  const [roomCount, setRoomCount] = useState(null);
   const [busy, setBusy] = useState(null);
   const [busyField, setBusyField] = useState(null);
   const [addingUrl, setAddingUrl] = useState(null);
@@ -332,6 +333,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   const blockers = hotel.publishBlockers ?? [];
   const imageCount = hotel.images.length;
   const isImported = Boolean(hotel.externalProvider);
+  const activeRoomCount = roomCount ?? hotel.roomTypeCount ?? 0;
 
   const body = (
     <div className="space-y-6">
@@ -417,7 +419,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
       </TabPanel>
 
       <TabPanel value="rooms" current={tab}>
-        <RoomTypeList hotelId={hotelId} manageBasePath={`/admin/hotels/${hotelId}/rooms`} readOnly={readOnly} />
+        <RoomTypeList hotelId={hotelId} manageBasePath={`/admin/hotels/${hotelId}/rooms`} readOnly={readOnly} onRoomsLoaded={(items) => setRoomCount(items.filter((r) => r.status !== 'ARCHIVED').length)} />
       </TabPanel>
 
       <TabPanel value="policies" current={tab}>
@@ -498,7 +500,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
         onChange={setTab}
         items={visibleTabs.map((item) => ({
           ...item,
-          badge: item.value === 'images' ? imageCount : item.value === 'amenities' ? selectedAmenities.length : undefined,
+          badge: item.value === 'images' ? imageCount : item.value === 'amenities' ? selectedAmenities.length : item.value === 'rooms' ? activeRoomCount : undefined,
         }))}
       />
 

@@ -70,7 +70,7 @@ function toBody(form) {
 }
 
 export function OfferFormPage() {
-  const { isSalesExecutive } = useAuth();
+  const { isAdmin, isSalesExecutive } = useAuth();
   const { id } = useParams();
   const isNew = id === undefined;
   const navigate = useNavigate();
@@ -199,7 +199,7 @@ export function OfferFormPage() {
           <>
             <Badge tone={coupon.isActive ? 'success' : 'neutral'}>{coupon.isActive ? 'Active' : 'Inactive'}</Badge>
             <Button variant="secondary" size="sm" onClick={toggleActive}>{coupon.isActive ? 'Deactivate' : 'Activate'}</Button>
-            {!isSalesExecutive && <Button variant="danger-outline" size="sm" onClick={() => setConfirmDelete(true)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete</Button>}
+            {(isAdmin || !isSalesExecutive) && <Button variant="danger-outline" size="sm" onClick={() => setConfirmDelete(true)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete</Button>}
           </>
         )}
       />

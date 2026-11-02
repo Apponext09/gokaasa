@@ -97,15 +97,17 @@ export function AuthProvider({ children }) {
   }, [clearSession]);
 
   const value = useMemo(
-    () => ({
-      user,
-      status,
-      isAuthenticated: status === 'authenticated',
-      isStaff: isApprovedStaff(user),
-      isAdmin: Boolean(user?.permissions?.includes('console.full')),
-      isSalesExecutive: Boolean(user?.permissions?.includes('console.sales')),
-      isOnboardingExecutive: Boolean(user?.permissions?.includes('console.onboarding')),
-      isReviewExecutive: Boolean(user?.permissions?.includes('console.review')),
+    () => {
+      const isAdmin = Boolean(user?.permissions?.includes('console.full'));
+      return {
+        user,
+        status,
+        isAuthenticated: status === 'authenticated',
+        isStaff: isApprovedStaff(user),
+        isAdmin,
+        isSalesExecutive: !isAdmin && Boolean(user?.permissions?.includes('console.sales')),
+        isOnboardingExecutive: !isAdmin && Boolean(user?.permissions?.includes('console.onboarding')),
+        isReviewExecutive: !isAdmin && Boolean(user?.permissions?.includes('console.review')),
       hasRole: (role) => Boolean(user?.roles?.includes(role)),
       hasPermission: (permission) => Boolean(user?.permissions?.includes(permission)),
       login,
@@ -115,7 +117,8 @@ export function AuthProvider({ children }) {
       verifyPartnerOtp,
       updateProfile,
       logout,
-    }),
+    };
+  },
     [user, status, login, loginWithGoogle, register, guestCheckout, verifyPartnerOtp, updateProfile, logout],
   );
 

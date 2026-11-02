@@ -32,7 +32,7 @@ const STATUS_LABEL = { ACTIVE: 'Active', INACTIVE: 'Inactive', ARCHIVED: 'Archiv
 
 /** One room type: details, amenities, images, and permanently-priced rate plans. */
 export function RoomEditorPage() {
-  const { isReviewExecutive } = useAuth();
+  const { isAdmin, isReviewExecutive } = useAuth();
   const { hotelId: hotelParam, roomId } = useParams();
   const hotelId = Number(hotelParam);
   const isNew = !roomId;
@@ -58,7 +58,8 @@ export function RoomEditorPage() {
 
   const form = useForm({ resolver: zodResolver(roomFormSchema), defaultValues: EMPTY_ROOM_FORM, mode: 'onTouched' });
   const { handleSubmit, reset, formState } = form;
-  const readOnly = isReviewExecutive || room?.status === 'ARCHIVED';
+  const isReviewOnly = Boolean(isReviewExecutive && !isAdmin);
+  const readOnly = isReviewOnly || room?.status === 'ARCHIVED';
   const amenitiesDirty = selectedAmenities.slice().sort().join(',') !== savedAmenities.slice().sort().join(',');
 
   const apply = useCallback(
@@ -200,8 +201,8 @@ export function RoomEditorPage() {
         }
       />
 
-      {isReviewExecutive && <Alert tone="info" title="Review mode">Room details and rates are read-only. Add any concerns in Internal review.</Alert>}
-      {!isReviewExecutive && room?.status === 'ARCHIVED' && <Alert tone="info" title="Archived">This room type is read-only. Its history is kept.</Alert>}
+      {isReviewOnly && <Alert tone="info" title="Review mode">Room details and rates are read-only. Add any concerns in Internal review.</Alert>}
+      {!isReviewOnly && room?.status === 'ARCHIVED' && <Alert tone="info" title="Archived">This room type is read-only. Its history is kept.</Alert>}
       {codeError && <Alert tone="error" title="Room code unavailable">{codeError}</Alert>}
 
       {!isNew && (
