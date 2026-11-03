@@ -50,34 +50,23 @@ function initialDestinationFor(initial) {
   return null;
 }
 
-/**
- * Where the search goes for a chosen destination.
- * Hotels open directly; places open the Hotels listing page.
- */
 function searchTargetFor(destination, stay, occupancy, coupon = null) {
   const params = stayParams({ ...stay, occupancy, coupon });
 
-  // A specific hotel — go straight to its detail page.
   if (destination.type === 'HOTEL' && destination.hotelSlug) {
     return `/hotels/${destination.destination}/${destination.hotelSlug}?${params}`;
   }
 
-  // Free text can be a hotel name.
   if (destination.type === 'TEXT' && destination.name) {
     params.set('name', destination.name);
   }
 
-  // A city/area — go to HotelsPage with destination as query param.
   if (destination.area) params.set('area', destination.area);
   if (destination.destination) params.set('destination', destination.destination);
 
   return `/hotels?${params}`;
 }
 
-/**
- * The search form used on the homepage (hero) and in the results header (compact).
- * The same component, so the rules are the same everywhere.
- */
 export function SearchWidget({
   variant = 'hero',
   initial,
@@ -177,11 +166,7 @@ export function SearchWidget({
     />
   );
 
-  /* =========================================================
-     COMPACT SEARCH
-     Original layout and positioning preserved.
-  ========================================================= */
-
+  // COMPACT SEARCH
   if (compact) {
     return (
       <form
@@ -245,10 +230,7 @@ export function SearchWidget({
         </Button>
 
         {error && (
-          <p
-            role="alert"
-            className="mt-1 text-sm text-danger-600 md:col-span-4"
-          >
+          <p role="alert" className="mt-1 text-sm text-danger-600 md:col-span-4">
             {error}
           </p>
         )}
@@ -256,11 +238,7 @@ export function SearchWidget({
     );
   }
 
-  /* =========================================================
-     HERO SEARCH
-     Original position, structure and grid preserved.
-  ========================================================= */
-
+  // SMALLER HERO SEARCH
   return (
     <form
       onSubmit={submit}
@@ -268,13 +246,14 @@ export function SearchWidget({
       aria-label="Search hotels"
       className="
         customer-search-widget
-        w-full rounded-[var(--radius-card)]
+        mx-auto w-full max-w-5xl
+        rounded-2xl
         border border-slate-200/80
-        bg-white p-1.5
-        shadow-[0_12px_35px_rgba(20,36,59,0.11)]
+        bg-white p-1
+        shadow-[0_8px_25px_rgba(20,36,59,0.10)]
         ring-1 ring-white/70
         transition-shadow duration-300
-        hover:shadow-[0_16px_42px_rgba(20,36,59,0.14)]
+        hover:shadow-[0_12px_30px_rgba(20,36,59,0.13)]
       "
     >
       <div
@@ -282,12 +261,11 @@ export function SearchWidget({
           grid grid-cols-1
           divide-y divide-slate-100
           lg:grid-cols-[1.5fr_1.4fr_1fr_auto]
-          lg:items-stretch
+          lg:items-center
           lg:divide-x lg:divide-y-0
         "
       >
         {/* DESTINATION */}
-
         <div className="min-w-0 rounded-l-xl transition-colors duration-200 hover:bg-slate-50/60">
           <DestinationField
             id={`destination-${variant}`}
@@ -302,13 +280,11 @@ export function SearchWidget({
         </div>
 
         {/* DATE RANGE */}
-
         <div className="min-w-0 transition-colors duration-200 hover:bg-slate-50/60">
           {dateRange}
         </div>
 
         {/* GUESTS */}
-
         <div className="min-w-0 transition-colors duration-200 hover:bg-slate-50/60">
           <GuestsPopover
             idPrefix={variant}
@@ -320,21 +296,20 @@ export function SearchWidget({
         </div>
 
         {/* SEARCH BUTTON */}
-
-        <div className="customer-search-submit flex items-center p-1.5 lg:pl-3">
+        <div className="customer-search-submit flex items-center p-1 lg:pl-2">
           <Button
             type="submit"
             size="lg"
             className="
-              h-14 w-full rounded-xl
+              h-11 w-full rounded-lg
               border border-[#D9B66F]/30
               bg-gradient-to-r from-[#14243B] to-[#203B5C]
-              font-semibold tracking-wide text-white
-              shadow-[0_5px_14px_rgba(20,36,59,0.16)]
+              px-5 text-sm font-semibold tracking-wide text-white
+              shadow-[0_4px_10px_rgba(20,36,59,0.14)]
               transition-all duration-300
               hover:-translate-y-0.5
               hover:from-[#1C3555] hover:to-[#29486B]
-              hover:shadow-[0_8px_20px_rgba(20,36,59,0.23)]
+              hover:shadow-[0_6px_15px_rgba(20,36,59,0.20)]
               active:translate-y-0
               focus-visible:outline-2
               focus-visible:outline-offset-2
@@ -351,7 +326,6 @@ export function SearchWidget({
       </div>
 
       {/* VALIDATION MESSAGE */}
-
       {error && (
         <p
           role="alert"
