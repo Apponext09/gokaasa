@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Plus, Search, Users, Wifi, WifiOff } from 'lucide-react';
 import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
-import { Input, Select } from '@/components/ui/form-controls.jsx';
+import { Input, PasswordInput, Select } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { EmptyState, Pagination, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
 import { adminApi } from '@/services/endpoints.js';
@@ -231,8 +231,8 @@ export function UsersPage() {
               <Input required placeholder="Last name" aria-label="Last name" value={staff.lastName} onChange={(e) => setStaff((v) => ({ ...v, lastName: e.target.value }))} />
               <Input required type="email" placeholder="Work email" aria-label="Work email" value={staff.email} onChange={(e) => setStaff((v) => ({ ...v, email: e.target.value }))} />
               <Input placeholder="Phone (optional)" aria-label="Phone" value={staff.phone} onChange={(e) => setStaff((v) => ({ ...v, phone: e.target.value }))} />
-              <Input required type="password" minLength={10} placeholder="Password (10+ characters)" aria-label="Password" value={staff.password} onChange={(e) => setStaff((v) => ({ ...v, password: e.target.value }))} />
-              <Input required type="password" minLength={10} placeholder="Confirm password" aria-label="Confirm password" value={staff.confirmPassword} onChange={(e) => setStaff((v) => ({ ...v, confirmPassword: e.target.value }))} />
+              <PasswordInput required minLength={10} placeholder="Password (10+ characters)" aria-label="Password" value={staff.password} onChange={(e) => setStaff((v) => ({ ...v, password: e.target.value }))} />
+              <PasswordInput required minLength={10} placeholder="Confirm password" aria-label="Confirm password" value={staff.confirmPassword} onChange={(e) => setStaff((v) => ({ ...v, confirmPassword: e.target.value }))} />
               <Select aria-label="Staff role" value={staff.role} onChange={(e) => setStaff((v) => ({ ...v, role: e.target.value }))}>
                 <option value="SALES_EXECUTIVE">Sales Executive</option>
                 <option value="HOTEL_ONBOARDING_EXECUTIVE">Hotel Onboarding Executive</option>

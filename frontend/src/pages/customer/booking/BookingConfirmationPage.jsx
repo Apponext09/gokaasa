@@ -109,7 +109,7 @@ export function BookingConfirmationPage() {
             <ul className="text-[var(--text-body)]">
               {booking.guests.map((guest) => (
                 <li key={`${guest.roomIndex}-${guest.name}`}>
-                  {guest.name} · {guest.age} · Room {guest.roomIndex + 1}
+                  {[guest.name, guest.age != null && guest.age !== '' ? `${guest.age} yrs` : null, `Room ${guest.roomIndex + 1}`].filter(Boolean).join(' · ')}
                 </li>
               ))}
             </ul>

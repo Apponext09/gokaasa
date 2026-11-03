@@ -46,6 +46,7 @@ function toReview(row, { events = [] } = {}) {
     submittedById: row.submitted_by,
     submittedBy: person(row.submitter_first_name, row.submitter_last_name),
     decidedBy: person(row.decision_first_name, row.decision_last_name),
+    publishedBy: person(row.publisher_first_name, row.publisher_last_name),
     decisionSummary: row.decision_summary,
     submittedAt: row.submitted_at,
     reviewedAt: row.reviewed_at,

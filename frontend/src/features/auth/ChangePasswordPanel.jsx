@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button.jsx';
-import { Input, Label } from '@/components/ui/form-controls.jsx';
+import { Input, Label, PasswordInput } from '@/components/ui/form-controls.jsx';
 import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/surfaces.jsx';
 import { authApi } from '@/services/endpoints.js';
 import { useAuth } from './AuthContext.jsx';
@@ -57,16 +57,16 @@ export function ChangePasswordPanel() {
             {error && <Alert tone="error">{error}</Alert>}
             <div className="space-y-1.5">
               <Label htmlFor="profile-current-password">Current password</Label>
-              <Input id="profile-current-password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" disabled={busy} required />
+              <PasswordInput id="profile-current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" disabled={busy} required />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="profile-new-password">New password</Label>
-              <Input id="profile-new-password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" disabled={busy} required />
+              <PasswordInput id="profile-new-password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" disabled={busy} required />
               <p className="text-xs text-[var(--text-muted)]">At least 10 characters, including a letter and a number.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="profile-confirm-password">Confirm new password</Label>
-              <Input id="profile-confirm-password" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" disabled={busy} required />
+              <PasswordInput id="profile-confirm-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} autoComplete="new-password" disabled={busy} required />
             </div>
             <Button type="submit" loading={busy} disabled={!currentPassword || !newPassword || !confirmPassword || busy}>Change password</Button>
           </form>

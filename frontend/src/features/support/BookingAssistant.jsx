@@ -1066,7 +1066,12 @@ function ComparisonTable({ hotels }) {
     { label: 'Star rating', get: (h) => (h.starRating ? `${h.starRating}★` : 'Not listed') },
     { label: 'Guest rating', get: (h) => (h.guestRating != null ? h.guestRating.toFixed(1) : h.rating ? h.rating.average.toFixed(1) : 'No reviews yet') },
     { label: 'Price per night', get: (h) => formatMoney(h.bestOffer.pricePerNightMinor) },
-    { label: `Total (${hotels[0]?.bestOffer?.nights ?? ''} nights)`, get: (h) => formatMoney(h.bestOffer.finalTotalMinor) },
+    {
+      label: hotels[0]?.bestOffer?.nights
+        ? `Total (${hotels[0].bestOffer.nights} night${hotels[0].bestOffer.nights === 1 ? '' : 's'})`
+        : 'Total price',
+      get: (h) => formatMoney(h.bestOffer.finalTotalMinor),
+    },
     { label: 'Free cancellation', get: (h) => (h.bestOffer.freeCancellation ? 'Yes' : 'No') },
     { label: 'Meal plan', get: (h) => h.bestOffer.mealPlanName ?? h.bestOffer.mealPlan?.replaceAll('_', ' ') },
     { label: 'Amenities', get: (h) => h.amenities?.slice(0, 4).join(', ') || 'Not listed' },

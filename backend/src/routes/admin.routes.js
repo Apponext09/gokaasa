@@ -263,7 +263,7 @@ adminRouter.delete('/coupons/:id', validate({ params: couponIdParam }), requireP
 // excludes addresses, contacts, status internals and editing links.
 adminRouter.get('/lookups/hotels', async (_req, res) => {
   const { rows } = await pool.query(
-    `SELECT id, name FROM hotels WHERE deleted_at IS NULL ORDER BY name, id LIMIT 500`,
+    `SELECT id, name, city FROM hotels WHERE deleted_at IS NULL ORDER BY name, id LIMIT 500`,
   );
   return res.json({ hotels: rows });
 });

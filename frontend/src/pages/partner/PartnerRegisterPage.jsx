@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowRight } from 'lucide-react';
 import { Alert, Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Input, Select } from '@/components/ui/form-controls.jsx';
+import { Input, PasswordInput, Select } from '@/components/ui/form-controls.jsx';
 import { FormField, Logo } from '@/components/shared/index.jsx';
 import { partnerRegisterSchema, BUSINESS_TYPE_OPTIONS } from '@/features/partner/schemas.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
@@ -80,7 +80,7 @@ export function PartnerRegisterPage() {
               <Input id="mobile" type="tel" autoComplete="tel" placeholder="+91 98765 43210" invalid={!!errors.mobile} {...register('mobile')} />
             </FormField>
             <FormField id="password" label="Password" error={errors.password?.message} hint="At least 10 characters, with a letter and a number." className="sm:col-span-2">
-              <Input id="password" type="password" autoComplete="new-password" invalid={!!errors.password} {...register('password')} />
+              <PasswordInput id="password" autoComplete="new-password" invalid={!!errors.password} {...register('password')} />
             </FormField>
           </CardContent>
 

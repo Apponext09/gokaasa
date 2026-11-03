@@ -3,7 +3,8 @@ import { pool } from '../db/pool.js';
 const DETAIL_SELECT = `
   r.*, h.name AS hotel_name, h.city AS hotel_city, h.status AS hotel_status,
   submitter.first_name AS submitter_first_name, submitter.last_name AS submitter_last_name,
-  decision.first_name AS decision_first_name, decision.last_name AS decision_last_name
+  decision.first_name AS decision_first_name, decision.last_name AS decision_last_name,
+  publisher.first_name AS publisher_first_name, publisher.last_name AS publisher_last_name
 `;
 
 export const hotelReviewRepository = {
@@ -14,6 +15,14 @@ export const hotelReviewRepository = {
          JOIN hotels h ON h.id = r.hotel_id
          LEFT JOIN users submitter ON submitter.id = r.submitted_by
          LEFT JOIN users decision ON decision.id = r.reviewed_by
+         LEFT JOIN LATERAL (
+           SELECT u.first_name, u.last_name
+             FROM hotel_review_events e
+             JOIN users u ON u.id = e.actor_id
+            WHERE e.review_id = r.id AND e.event_type = 'PUBLISHED'
+            ORDER BY e.created_at DESC, e.id DESC
+            LIMIT 1
+         ) publisher ON true
         WHERE r.hotel_id = $1
         ORDER BY r.round_number DESC LIMIT 1${lock ? ' FOR UPDATE OF r' : ''}`,
       [hotelId],
@@ -32,10 +41,18 @@ export const hotelReviewRepository = {
          JOIN hotels h ON h.id = r.hotel_id
          LEFT JOIN users submitter ON submitter.id = r.submitted_by
          LEFT JOIN users decision ON decision.id = r.reviewed_by
+         LEFT JOIN LATERAL (
+           SELECT u.first_name, u.last_name
+             FROM hotel_review_events e
+             JOIN users u ON u.id = e.actor_id
+            WHERE e.review_id = r.id AND e.event_type = 'PUBLISHED'
+            ORDER BY e.created_at DESC, e.id DESC
+            LIMIT 1
+         ) publisher ON true
         WHERE ${clauses.join(' AND ')}
           AND r.round_number = (SELECT MAX(x.round_number) FROM hotel_reviews x WHERE x.hotel_id = r.hotel_id)
         ORDER BY CASE r.status WHEN 'PENDING' THEN 0 WHEN 'CHANGES_REQUESTED' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END,
-                 r.submitted_at ASC
+                 r.submitted_at DESC
         LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
     );

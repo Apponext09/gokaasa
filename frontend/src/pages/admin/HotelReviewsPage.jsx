@@ -18,7 +18,7 @@ const STATUS = {
 export function HotelReviewsPage() {
   const [params, setParams] = useSearchParams();
   const page = Math.max(1, Number(params.get('page') || 1));
-  const status = params.get('status') || 'PENDING';
+  const status = params.get('status') ?? '';
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
@@ -44,12 +44,71 @@ export function HotelReviewsPage() {
       {data && data.items.length === 0 && <Card className="admin-records-card"><EmptyState icon={ClipboardCheck} title="No hotel reviews in this queue" description="Submitted hotels will appear here." /></Card>}
       {data && data.items.length > 0 && (
         <Card className="admin-records-card overflow-hidden">
-          <Table minWidth="620px">
-            <TableHeader><tr><TableHead>Hotel</TableHead><TableHead>Status</TableHead><TableHead>Submitted</TableHead><TableHead className="text-right">Action</TableHead></tr></TableHeader>
-            <TableBody>{data.items.map((review) => {
-              const [tone, label] = STATUS[review.status] ?? ['neutral', review.status];
-              return <TableRow key={review.id}><TableCell><p className="font-medium text-[var(--text-strong)]">{review.hotelName}</p><p className="text-xs text-[var(--text-muted)]">{review.hotelCity || 'City not set'} · round {review.roundNumber}</p></TableCell><TableCell><Badge tone={tone}>{label}</Badge></TableCell><TableCell><p>{formatDateTime(review.submittedAt)}</p><p className="text-xs text-[var(--text-muted)]">by {review.submittedBy || 'staff'}</p></TableCell><TableCell className="text-right"><Link className="font-medium text-brand-600 hover:underline" to={`/admin/hotels/${review.hotelId}?tab=review`}>Open review</Link></TableCell></TableRow>;
-            })}</TableBody>
+          <Table minWidth="880px">
+            <TableHeader>
+              <tr>
+                <TableHead>Hotel</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Submitted by</TableHead>
+                <TableHead>Approved by</TableHead>
+                <TableHead>Published by</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </tr>
+            </TableHeader>
+            <TableBody>
+              {data.items.map((review) => {
+                const [tone, label] = STATUS[review.status] ?? ['neutral', review.status];
+                return (
+                  <TableRow key={review.id}>
+                    <TableCell>
+                      <p className="font-medium text-[var(--text-strong)]">{review.hotelName}</p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {review.hotelCity || 'City not set'} · round {review.roundNumber}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <Badge tone={tone}>{label}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm text-[var(--text-strong)]">{formatDateTime(review.submittedAt)}</p>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm font-medium text-[var(--text-strong)]">{review.submittedBy || '—'}</p>
+                    </TableCell>
+                    <TableCell>
+                      {review.decidedBy ? (
+                        <div>
+                          <p className="text-sm font-medium text-[var(--text-strong)]">{review.decidedBy}</p>
+                          {review.approvedAt && (
+                            <p className="text-xs text-[var(--text-muted)]">{formatDateTime(review.approvedAt)}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-[var(--text-muted)]">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {review.publishedBy ? (
+                        <div>
+                          <p className="text-sm font-medium text-[var(--text-strong)]">{review.publishedBy}</p>
+                          {review.publishedAt && (
+                            <p className="text-xs text-[var(--text-muted)]">{formatDateTime(review.publishedAt)}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-[var(--text-muted)]">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link className="font-medium text-brand-600 hover:underline" to={`/admin/hotels/${review.hotelId}?tab=review`}>
+                        Open review
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
           </Table>
         </Card>
       )}

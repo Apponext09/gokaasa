@@ -295,7 +295,7 @@ export function BookingReviewPage() {
                 {(hold.guestDetails?.rooms ?? []).map((room) => (
                   <li key={room.roomIndex}>
                     <span className="font-medium">Room {room.roomIndex + 1}:</span>{' '}
-                    {room.guests.map((guest) => `${guest.firstName} ${guest.lastName} (${guest.age})`).join(', ')}
+                    {room.guests.map((guest) => `${guest.firstName} ${guest.lastName}${guest.age != null && guest.age !== '' ? ` (${guest.age})` : ''}`).join(', ')}
                   </li>
                 ))}
               </ul>

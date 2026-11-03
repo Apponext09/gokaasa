@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ImagePlus, Trash2 } from 'lucide-react';
@@ -13,6 +13,7 @@ import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
+import { cn } from '@/lib/utils.js';
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -48,6 +49,12 @@ function toForm(coupon) {
   };
 }
 
+const safeIsoDate = (val) => {
+  if (!val) return '';
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? '' : d.toISOString();
+};
+
 function toBody(form) {
   return {
     code: form.code.trim().toUpperCase(),
@@ -55,8 +62,8 @@ function toBody(form) {
     discountValue: form.discountType === 'PERCENT' ? Number(form.discountValue) : rupeesToMinor(form.discountValue),
     maxDiscountMinor: form.maxDiscountMinor === '' ? null : rupeesToMinor(form.maxDiscountMinor),
     minAmountMinor: rupeesToMinor(form.minAmountMinor) ?? 0,
-    validFrom: new Date(form.validFrom).toISOString(),
-    validTo: new Date(form.validTo).toISOString(),
+    validFrom: safeIsoDate(form.validFrom),
+    validTo: safeIsoDate(form.validTo),
     usageLimit: form.usageLimit === '' ? null : Number(form.usageLimit),
     perUserLimit: form.perUserLimit === '' ? null : Number(form.perUserLimit),
     minNights: form.minNights === '' ? null : Number(form.minNights),
@@ -76,7 +83,16 @@ export function OfferFormPage() {
   const navigate = useNavigate();
   const [coupon, setCoupon] = useState(null);
   const [hotels, setHotels] = useState([]);
+  const [hotelSearch, setHotelSearch] = useState('');
   const [form, setForm] = useState(emptyForm());
+
+  const filteredHotels = useMemo(() => {
+    if (!hotelSearch.trim()) return hotels;
+    const q = hotelSearch.toLowerCase().trim();
+    return hotels.filter(
+      (h) => h.name?.toLowerCase().includes(q) || h.city?.toLowerCase().includes(q),
+    );
+  }, [hotels, hotelSearch]);
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -131,6 +147,18 @@ export function OfferFormPage() {
 
   const save = async (event) => {
     event.preventDefault();
+    if (!form.validFrom) {
+      toast.error('Valid From date and time is required');
+      return;
+    }
+    if (!form.validTo) {
+      toast.error('Valid To date and time is required');
+      return;
+    }
+    if (new Date(form.validTo) <= new Date(form.validFrom)) {
+      toast.error('End date must be after the start date');
+      return;
+    }
     setSaving(true);
     let saved = null;
     try {
@@ -309,13 +337,85 @@ export function OfferFormPage() {
             <FormField id="cities" label="Destination (city) restriction" hint="Comma-separated city names. Leave blank for every destination.">
               <Input id="cities" value={form.cities} onChange={set('cities')} placeholder="Goa, Jaipur" />
             </FormField>
-            <div>
-              <p className="mb-2 text-sm font-medium text-[var(--text-strong)]">Hotel restriction</p>
-              <p className="mb-2 text-xs text-[var(--text-muted)]">Leave every hotel unchecked to allow this coupon at all hotels.</p>
-              <div className="max-h-48 space-y-1.5 overflow-y-auto rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3">
-                {hotels.map((hotel) => (
-                  <Checkbox key={hotel.id} label={`${hotel.name} (${hotel.city})`} checked={form.hotelIds.includes(hotel.id)} onChange={() => toggleHotel(hotel.id)} />
-                ))}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-[var(--text-strong)]">Hotel restriction</p>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+                    {form.hotelIds.length === 0 ? 'All hotels (no restriction)' : `${form.hotelIds.length} of ${hotels.length} selected`}
+                  </span>
+                </div>
+                {hotels.length > 0 && (
+                  <div className="flex items-center gap-3 text-xs">
+                    {form.hotelIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, hotelIds: [] }))}
+                        className="font-medium text-brand-700 hover:underline"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, hotelIds: hotels.map((h) => h.id) }))}
+                      className="font-medium text-brand-700 hover:underline"
+                    >
+                      Select all
+                    </button>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-[var(--text-muted)]">
+                Leave every hotel unchecked to allow this coupon at all hotels. Or select specific properties below.
+              </p>
+
+              {hotels.length > 4 && (
+                <Input
+                  type="search"
+                  value={hotelSearch}
+                  onChange={(e) => setHotelSearch(e.target.value)}
+                  placeholder="Filter hotels by name or city..."
+                  className="h-9 text-xs"
+                />
+              )}
+
+              <div className="max-h-60 overflow-y-auto rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-input,#f8fafc)] p-2.5">
+                {filteredHotels.length === 0 ? (
+                  <p className="py-6 text-center text-xs text-[var(--text-muted)]">
+                    No hotels match &ldquo;{hotelSearch}&rdquo;
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredHotels.map((hotel) => {
+                      const isSelected = form.hotelIds.includes(hotel.id);
+                      return (
+                        <label
+                          key={hotel.id}
+                          className={cn(
+                            'flex cursor-pointer items-center gap-2.5 rounded-md border px-3 py-2 text-xs transition select-none',
+                            isSelected
+                              ? 'border-brand-500 bg-brand-50/80 font-medium text-brand-900 shadow-xs'
+                              : 'border-[var(--border-subtle)] bg-white text-[var(--text-body)] hover:border-slate-300 hover:bg-slate-50',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                            checked={isSelected}
+                            onChange={() => toggleHotel(hotel.id)}
+                          />
+                          <span className="min-w-0 flex-1 truncate">
+                            <span className="text-[var(--text-strong)]">{hotel.name}</span>
+                            {hotel.city && (
+                              <span className="ml-1 text-[var(--text-muted)] font-normal">({hotel.city})</span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

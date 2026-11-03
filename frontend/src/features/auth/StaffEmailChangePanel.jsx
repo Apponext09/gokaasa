@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button.jsx';
-import { Input, Label } from '@/components/ui/form-controls.jsx';
+import { Input, Label, PasswordInput } from '@/components/ui/form-controls.jsx';
 import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/surfaces.jsx';
 import { useAuth } from './AuthContext.jsx';
 import { authApi } from '@/services/endpoints.js';
@@ -140,7 +140,7 @@ export function StaffEmailChangePanel() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="staff-current-password">Current password</Label>
-              <Input id="staff-current-password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" disabled={Boolean(busy)} required />
+              <PasswordInput id="staff-current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} autoComplete="current-password" disabled={Boolean(busy)} required />
             </div>
             <Button type="submit" loading={busy === 'request'} disabled={!newEmail.trim() || !currentPassword || Boolean(busy)}>Send verification code</Button>
           </form>
