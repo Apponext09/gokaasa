@@ -37,6 +37,7 @@ import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPane
 import { HotelCard, HotelCardSkeleton } from '@/features/search/components/HotelCard.jsx';
 import { cn } from '@/lib/utils.js';
 import { OfferCard } from '@/features/offers/OfferCard.jsx';
+import { HotelChangeSearch } from '@/features/search/components/HotelChangeSearch.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { isStaffCustomerView } from '@/features/auth/viewMode.js';
@@ -237,7 +238,7 @@ const titleCaseSlug = (slug) => String(slug ?? '')
   .map((word) => (word ? word[0].toUpperCase() + word.slice(1) : word))
   .join(' ');
 
-function HomeHotelListing({ search = null, geolocation, authStatus }) {
+function HomeHotelListing({ search = null, onSearch = null, geolocation, authStatus }) {
   const [hotels, setHotels] = useState([]);
   const [status, setStatus] = useState('loading');
   const [filters, setFilters] = useState({});
@@ -356,6 +357,16 @@ function HomeHotelListing({ search = null, geolocation, authStatus }) {
       aria-label="Browse Hotels"
     >
       <div className="home-hotel-listing-inner">
+        <HotelChangeSearch
+          idPrefix="home-listing-sticky"
+          initialDestination={search}
+          initialStay={{ checkIn: search?.checkIn, checkOut: search?.checkOut }}
+          initialOccupancy={search?.occupancy}
+          coupon={search?.coupon}
+          onSearch={onSearch}
+          className="mb-6"
+        />
+
         {/* Section header */}
         <div className="home-hl-header">
           <div>
@@ -695,7 +706,16 @@ export function HomePage() {
 
       {/* NEARBY HOTELS */}
       {/* FEATURED HOTELS LISTING — reference-style filter + cards */}
-      <HomeHotelListing key={hotelSearchVersion} search={hotelSearch} geolocation={geolocation} authStatus={status} />
+      <HomeHotelListing
+        key={hotelSearchVersion}
+        search={hotelSearch}
+        onSearch={(nextSearch) => {
+          setHotelSearch(nextSearch);
+          setHotelSearchVersion((v) => v + 1);
+        }}
+        geolocation={geolocation}
+        authStatus={status}
+      />
 
       <Reveal>
         <div className="customer-section customer-section--compact customer-section--divided home-nearby-wrap">

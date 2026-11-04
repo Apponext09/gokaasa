@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Label, Textarea } from '@/components/ui/form-controls.jsx';
-import { EmptyState, formatDateTime } from '@/components/shared/index.jsx';
+import { EmptyState, HotelStatusBadge, formatDateTime } from '@/components/shared/index.jsx';
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -60,7 +60,7 @@ export function HotelReviewPanel({ hotelId, publishBlockers = [], onStatusChange
   }
 
   const { review } = data;
-  const [statusTone, statusLabel] = REVIEW_STATUS[review.status] ?? ['neutral', review.status];
+  const currentStatus = review.hotelStatus === 'UNPUBLISHED' ? 'UNPUBLISHED' : review.status;
   const canReview = isAdmin || isReviewExecutive;
   const trimmedComment = comment.trim();
 
@@ -73,7 +73,7 @@ export function HotelReviewPanel({ hotelId, publishBlockers = [], onStatusChange
               <CardTitle>Hotel review</CardTitle>
               <CardDescription>Submission {review.submissionCount}, sent by {review.submittedBy || 'staff'} on {formatDateTime(review.submittedAt)}.</CardDescription>
             </div>
-            <Badge tone={statusTone}>{statusLabel}</Badge>
+            <HotelStatusBadge status={currentStatus} />
           </div>
         </CardHeader>
         {review.decisionSummary && (

@@ -188,7 +188,7 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
         <div className="text-sm">
           <p className="font-medium text-[var(--text-strong)]">Upload photos</p>
           <p className="text-[var(--text-muted)]">
-            {uploadHint ?? 'JPEG, PNG, WebP or AVIF, up to 5 MB each.'} {images.length} of {maxImages} used.
+            {uploadHint ?? 'JPEG, PNG, WebP, AVIF or JFIF, up to 5 MB each.'} {images.length} of {maxImages} used.
           </p>
         </div>
         <div>
@@ -197,7 +197,7 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
             id={`image-upload-${adapter.name ?? 'gallery'}`}
             type="file"
             multiple
-            accept="image/jpeg,image/png,image/webp,image/avif"
+            accept="image/jpeg,image/png,image/webp,image/avif,.jfif"
             className="sr-only"
             disabled={disabled || uploading || full}
             onChange={(event) => event.target.files && handleFiles(event.target.files)}
@@ -208,7 +208,7 @@ export function ImageGallery({ images, disabled, onChanged, adapter, categories 
           <input
             ref={replaceInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp,image/avif"
+            accept="image/jpeg,image/png,image/webp,image/avif,.jfif"
             className="sr-only"
             disabled={disabled}
             onChange={(event) => event.target.files?.[0] && handleReplaceFile(event.target.files[0])}

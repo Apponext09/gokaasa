@@ -50,6 +50,7 @@ export const catalogApi = {
   adminList: (kind) => api.get(`/admin/catalogs/${kind}`).then((r) => r.data.items),
   create: (kind, body) => api.post(`/admin/catalogs/${kind}`, body).then((r) => r.data.item),
   update: (kind, code, body) => api.patch(`/admin/catalogs/${kind}/${encodeURIComponent(code)}`, body).then((r) => r.data.item),
+  delete: (kind, code) => api.delete(`/admin/catalogs/${kind}/${encodeURIComponent(code)}`).then((r) => r.data),
 };
 
 export const adminApi = {
@@ -60,6 +61,7 @@ export const adminApi = {
   getHotel: (id) => api.get(`/admin/hotels/${id}`).then((r) => r.data.hotel),
   createHotel: (body) => api.post('/admin/hotels', body).then((r) => r.data.hotel),
   updateHotel: (id, body) => api.patch(`/admin/hotels/${id}`, body).then((r) => r.data.hotel),
+  deleteHotel: (id) => api.delete(`/admin/hotels/${id}`).then((r) => r.data),
   setHotelAmenities: (id, codes) => api.put(`/admin/hotels/${id}/amenities`, { codes }).then((r) => r.data.hotel),
   transitionHotel: (id, action) => api.post(`/admin/hotels/${id}/status`, { action }).then((r) => r.data.hotel),
   verifyFields: (id, fields) => api.post(`/admin/hotels/${id}/verify-fields`, { fields }).then((r) => r.data.hotel),

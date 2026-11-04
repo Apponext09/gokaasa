@@ -67,7 +67,7 @@ function BackgroundSlot({ slot, image, onChanged }) {
         <div className="grid gap-3 xl:grid-cols-3">
           <Input aria-label={`Background ${slot} accessibility description`} placeholder="Accessibility description" value={altText} maxLength={160} onChange={(event) => setAltText(event.target.value)} />
           <Input aria-label={`Background ${slot} homepage display text`} placeholder="Homepage display text" value={heroText} maxLength={160} onChange={(event) => setHeroText(event.target.value)} />
-          <Input aria-label={`Choose background ${slot}`} type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          <Input aria-label={`Choose background ${slot}`} type="file" accept="image/jpeg,image/png,image/webp,.jfif" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
         </div>
         {file && <p className="truncate text-xs text-[var(--text-muted)]">Selected: {file.name}{saving ? ` · ${progress}%` : ''}</p>}
       </div>

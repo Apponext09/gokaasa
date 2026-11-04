@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Archive, ArrowRight, CheckCircle2, Globe, RefreshCw, Save, Send, ShieldCheck, Lock } from 'lucide-react';
+import { AlertCircle, Archive, ArrowRight, Check, CheckCircle2, Globe, Loader2, RefreshCw, Save, Send, ShieldCheck, Lock } from 'lucide-react';
 import { Alert, Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { ConfirmDialog } from '@/components/ui/dialog.jsx';
@@ -127,6 +127,9 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   const [busyField, setBusyField] = useState(null);
   const [addingUrl, setAddingUrl] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'saving' | 'unsaved' | 'error'
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const isSavingRef = useRef(false);
   const { items: propertyTypes } = useCatalog('property-types');
   const { items: imageCategories } = useCatalog('image-categories');
 
@@ -177,28 +180,74 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   }, [hotelId, applyHotel]);
 
   // Saves the form. Returns true only when the server accepted every change.
-  const persist = async (values) => {
+  const persist = async (values, { silent = false } = {}) => {
+    if (isSavingRef.current) return false;
+    isSavingRef.current = true;
     setBusy('save');
+    setSaveStatus('saving');
     try {
       let updated = await adminApi.updateHotel(hotelId, toPayload(values));
-      if (amenitiesDirty) updated = await adminApi.setHotelAmenities(hotelId, selectedAmenities);
-      applyHotel(updated);
+      if (amenitiesDirty) {
+        updated = await adminApi.setHotelAmenities(hotelId, selectedAmenities);
+        setSavedAmenities(selectedAmenities);
+      }
+      setHotel(updated);
+      reset(values, { keepValues: true, keepDirty: false });
+      setSaveStatus('saved');
+      setLastSavedAt(new Date());
+      if (!silent) toast.success('Hotel draft saved');
       return true;
     } catch (error) {
+      setSaveStatus('error');
       const normalized = normalizeError(error);
-      if (!applyServerFieldErrors(form, normalized)) toast.error(normalized.message);
+      if (!silent) {
+        if (!applyServerFieldErrors(form, normalized)) toast.error(normalized.message);
+      }
       return false;
     } finally {
+      isSavingRef.current = false;
       setBusy(null);
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async ({ silent = false } = {}) => {
     let ok = false;
     await handleSubmit(async (values) => {
-      ok = await persist(values);
+      ok = await persist(values, { silent });
     })();
     return ok;
+  };
+
+  const performAutoSave = async () => {
+    if (readOnly || isSavingRef.current || busy !== null) return false;
+    const currentValues = form.getValues();
+    const parseResult = hotelFormSchema.safeParse(currentValues);
+    if (parseResult.success) {
+      return await persist(parseResult.data, { silent: true });
+    }
+    return false;
+  };
+
+  // Debounced auto-save (Option B): runs 1.5 seconds after user stops typing or toggling amenities
+  const watchedValues = form.watch();
+
+  useEffect(() => {
+    if (readOnly || !hotel || !hasUnsaved || isSavingRef.current) return undefined;
+
+    setSaveStatus('unsaved');
+    const timer = setTimeout(async () => {
+      await performAutoSave();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [watchedValues, selectedAmenities, hasUnsaved, readOnly, hotel]);
+
+  const handleTabChange = async (nextTab) => {
+    if (nextTab === tab) return;
+    if (hasUnsaved && !readOnly) {
+      await performAutoSave();
+    }
+    setTab(nextTab);
   };
 
   const runTransitions = async (actions) => {
@@ -263,9 +312,8 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   };
 
   const suggestionAction = async (field, accept) => {
-    if (hasUnsaved) {
-      toast.info('Save your changes first, then decide on the provider value.');
-      return;
+    if (hasUnsaved && !readOnly) {
+      await performAutoSave();
     }
     setBusyField(field);
     try {
@@ -280,9 +328,8 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
   };
 
   const syncFromProvider = async () => {
-    if (hasUnsaved) {
-      toast.info('Save your changes first, then refresh from the provider.');
-      return;
+    if (hasUnsaved && !readOnly) {
+      await performAutoSave();
     }
     setBusy('sync');
     try {
@@ -497,7 +544,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
       <Tabs
         label="Hotel sections"
         value={tab}
-        onChange={setTab}
+        onChange={handleTabChange}
         items={visibleTabs.map((item) => ({
           ...item,
           badge: item.value === 'images' ? imageCount : item.value === 'amenities' ? selectedAmenities.length : item.value === 'rooms' ? activeRoomCount : undefined,
@@ -515,36 +562,50 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-subtle)] bg-[var(--surface-card)]/95 backdrop-blur md:left-[var(--admin-sidebar-width,15rem)] transition-[left] duration-200">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <p className="text-xs text-[var(--text-muted)]">
-            {hasUnsaved ? (
-              <span className="font-medium text-warning-600">Unsaved changes</span>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--text-muted)]">
+            {saveStatus === 'saving' || busy === 'save' ? (
+              <span className="inline-flex items-center gap-1.5 font-medium text-brand-600">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                Saving...
+              </span>
+            ) : hasUnsaved || saveStatus === 'unsaved' ? (
+              <span className="inline-flex items-center gap-1.5 font-medium text-amber-600">
+                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" aria-hidden="true" />
+                Unsaved changes
+              </span>
+            ) : saveStatus === 'error' ? (
+              <span className="inline-flex items-center gap-1.5 font-medium text-danger-600">
+                <AlertCircle className="h-3.5 w-3.5 text-danger-500" aria-hidden="true" />
+                Could not auto-save (check required fields)
+              </span>
             ) : (
-              'All changes saved'
+              <span className="inline-flex items-center gap-1.5 font-medium text-emerald-600">
+                <Check className="h-3.5 w-3.5 text-emerald-500" aria-hidden="true" />
+                {lastSavedAt ? `All changes saved at ${lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}` : 'All changes saved'}
+              </span>
             )}
-            {blockers.length > 0 && hotel.status !== 'PUBLISHED' && ` · ${blockers.length} item(s) to publish`}
-          </p>
+            {blockers.length > 0 && hotel.status !== 'PUBLISHED' && (
+              <span className="text-[var(--text-muted)]">
+                · {blockers.length} item{blockers.length === 1 ? '' : 's'} to publish
+              </span>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-2">
             {extraActions}
-            {!reviewOnly && <Button type="submit" form={FORM_ID} variant="secondary" loading={busy === 'save'} disabled={readOnly || busy !== null}>
-              <Save className="h-4 w-4" aria-hidden="true" /> Save draft
-            </Button>}
-            {!reviewOnly && <Button
-              type="button"
-              variant="ghost"
-              disabled={readOnly || busy !== null || !NEXT_TAB[tab] || NEXT_TAB[tab] === tab}
-              onClick={async () => {
-                if (await saveDraft()) setTab(NEXT_TAB[tab]);
-              }}
-            >
-              Save & continue <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Button>}
             {!reviewOnly && (
-              <Button variant="secondary" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'CHANGES_REQUESTED'].includes(hotel.status)} onClick={handleSubmitForReview}>
+              <Button type="submit" form={FORM_ID} variant="secondary" size="sm" loading={busy === 'save'} disabled={readOnly || busy !== null}>
+                <Save className="h-4 w-4" aria-hidden="true" /> Save draft
+              </Button>
+            )}
+            {!reviewOnly && (
+              <Button variant="secondary" size="sm" loading={busy === 'SUBMIT_FOR_REVIEW'} disabled={readOnly || busy !== null || !['DRAFT', 'CHANGES_REQUESTED'].includes(hotel.status)} onClick={handleSubmitForReview}>
                 <Send className="h-4 w-4" aria-hidden="true" /> Submit for review
               </Button>
             )}
             <Button
               variant="primary"
+              size="sm"
               disabled={!canPublish || busy !== null || !PUBLISH_PATH[hotel.status] || (reviewOnly && hotel.status !== 'READY_TO_PUBLISH') || (!hasUnsaved && blockers.length > 0)}
               loading={busy !== null && PUBLISH_PATH[hotel.status]?.includes(busy)}
               onClick={handlePublish}

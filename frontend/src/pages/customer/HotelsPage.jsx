@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button.jsx";
 import { Pagination, formatDateTime } from "@/components/shared/index.jsx";
 import { StaggeredReveal } from "@/components/shared/StaggeredReveal.jsx";
 import { SearchWidget } from "@/features/search/components/SearchWidget.jsx";
+import { HotelChangeSearch } from "@/features/search/components/HotelChangeSearch.jsx";
 import { HotelsFilterPanel } from "@/features/search/components/HotelsFilterPanel.jsx";
 import { HotelCard, HotelCardSkeleton } from "@/features/search/components/HotelCard.jsx";
 import { useGeolocation } from "@/features/home/useGeolocation.js";
@@ -74,19 +75,11 @@ export function HotelsPage() {
       : {
           ...state,
           checkIn: addDays(today, 1),
-          checkOut: addDays(today, 3),
+          checkOut: addDays(today, 2),
         }
   ), [hasStay, state, today]);
 
-  // Defaults are real search inputs, so write them to the URL as well. This keeps refresh/share and
-  // the quick-view/full-page links on the exact stay that produced the displayed availability.
-  useEffect(() => {
-    if (params.has("checkIn") || params.has("checkOut")) return;
-    const search = toSearchParams(effectiveState);
-    if (state.area) search.set("area", state.area);
-    if (destination) search.set("destination", destination);
-    setParams(search, { replace: true });
-  }, [destination, effectiveState, params, setParams, state.area]);
+
 
   const requestKey = buildRequest(effectiveState, destination, debouncedNameQuery).toString();
   const searchWidgetKey = [
@@ -252,24 +245,17 @@ export function HotelsPage() {
                 ? `Browsing all hotels in ${label} - add dates to see live prices`
                 : "Choose a destination and dates to see live prices and availability"}
           </p>
-          <div className="hotels-page-search-box">
-            <div className="hotels-search-desktop">
-              <SearchWidget
-                key={`desktop-${searchWidgetKey}`}
-                variant="compact"
-                initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
-              />
-            </div>
-            <div className="hotels-search-mobile">
-              <SearchWidget
-                key={`mobile-${searchWidgetKey}`}
-                variant="hero"
-                initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
-              />
-            </div>
-          </div>
+        </div>
 
-          {locationImages.length > 1 && (
+        <div className="customer-search-shell hotels-page-search-shell animate-[heroSearch_900ms_cubic-bezier(0.22,1,0.36,1)_both]">
+          <SearchWidget
+            key={`search-${searchWidgetKey}`}
+            variant="hero"
+            initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
+          />
+        </div>
+
+        {locationImages.length > 1 && (
             <div className="mt-4 flex items-center justify-center gap-1.5" aria-label="Location hotel photos">
               {locationImages.map((_, idx) => (
                 <button
@@ -285,10 +271,18 @@ export function HotelsPage() {
               ))}
             </div>
           )}
-        </div>
       </div>
 
       <div className="hotels-page-body">
+        <HotelChangeSearch
+          idPrefix="hotels-body-sticky"
+          initialDestination={{ destination, area: state.area, name: state.name }}
+          initialStay={{ checkIn: state.checkIn, checkOut: state.checkOut }}
+          initialOccupancy={state.occupancy}
+          coupon={state.coupon}
+          className="mb-6"
+        />
+
         {/* Sort tabs */}
         <div className="hotels-sort-tabs-bar">
           <span className="hotels-sort-label">Sort by:</span>

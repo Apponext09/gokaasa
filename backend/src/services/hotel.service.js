@@ -378,4 +378,35 @@ export const hotelService = {
       isWishlisted,
     };
   },
+
+  async delete(hotelId, actor) {
+    return withTransaction(async (client) => {
+      const hotel = await hotelRepository.findById(hotelId, { client });
+      if (!hotel) throw AppError.notFound('Hotel not found');
+
+      const activeBookings = await client.query(
+        "SELECT 1 FROM bookings WHERE hotel_id = $1 AND status NOT IN ('CANCELLED', 'REJECTED') LIMIT 1",
+        [hotelId],
+      );
+      if (activeBookings.rowCount) {
+        throw AppError.conflict('Cannot delete hotel with active bookings. Please unpublish or archive it instead.');
+      }
+
+      const now = new Date();
+      await client.query(
+        "UPDATE hotels SET deleted_at = $1, status = 'ARCHIVED', updated_by = $2, updated_at = $1 WHERE id = $3",
+        [now, actor.id, hotelId],
+      );
+
+      await auditService.record(client, {
+        actor,
+        action: 'hotel.deleted',
+        entity: 'hotel',
+        entityId: hotelId,
+        oldValue: { name: hotel.name, status: hotel.status },
+      });
+
+      return { id: hotelId, name: hotel.name, deleted: true };
+    });
+  },
 };

@@ -30,10 +30,19 @@ export const hotelReviewRepository = {
     return rows[0] ?? null;
   },
 
-  async list({ page, limit, status }, client = pool) {
+  async list({ page, limit, status, search }, client = pool) {
     const params = [];
-    const clauses = [`h.deleted_at IS NULL`];
-    if (status) { params.push(status); clauses.push(`r.status = $${params.length}`); }
+    const clauses = [`h.deleted_at IS NULL`, `h.status != 'ARCHIVED'`];
+    if (status === 'PUBLISHED') {
+      clauses.push(`r.status = 'PUBLISHED' AND h.status = 'PUBLISHED'`);
+    } else if (status) {
+      params.push(status);
+      clauses.push(`r.status = $${params.length}`);
+    }
+    if (search) {
+      params.push(`%${search}%`);
+      clauses.push(`(h.name ILIKE $${params.length} OR h.city ILIKE $${params.length})`);
+    }
     params.push(limit, (page - 1) * limit);
     const { rows } = await client.query(
       `SELECT ${DETAIL_SELECT}, COUNT(*) OVER()::int AS total_count

@@ -15,5 +15,8 @@ export const catalogController = {
   async update(req, res) {
     return res.json({ item: await catalogService.update(req.validated.params.kind, req.validated.params.code, req.validated.body, actorOf(req)) });
   },
+  async delete(req, res) {
+    return res.json({ item: await catalogService.delete(req.validated.params.kind, req.validated.params.code, actorOf(req)) });
+  },
 };
 

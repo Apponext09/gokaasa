@@ -39,6 +39,10 @@ test('onboarding API allow-list permits hotel preparation but not inventory or o
   assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'GET', '/room-types/8/blocks'), 'allowed');
   assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'POST', '/room-types/8/blocks'), 'allowed');
   assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'DELETE', '/availability-blocks/4'), 'allowed');
+  assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'GET', '/catalogs/bed-types'), 'allowed');
+  assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'POST', '/catalogs/bed-types'), 'allowed');
+  assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'PATCH', '/catalogs/bed-types/KING'), 'allowed');
+  assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'GET', '/homepage-background-images'), 'allowed');
   assert.equal(decision('HOTEL_ONBOARDING_EXECUTIVE', 'GET', '/bookings'), 403);
 });
 

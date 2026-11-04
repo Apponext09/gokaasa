@@ -134,7 +134,7 @@ export function NearbyHotelsSection() {
                   <Popup>
                     <strong>{hotel.name}</strong>
                     <span className="nearby-map-popup-location">{hotel.area ? `${hotel.area}, ` : ''}{hotel.city}</span>
-                    {hotel.distanceKm != null && (
+                    {hotel.locationUrl && hotel.distanceKm != null && (
                       <span className="nearby-map-popup-location">{Number(hotel.distanceKm).toFixed(1)} km from your location</span>
                     )}
                     <span className="nearby-map-popup-actions">

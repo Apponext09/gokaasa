@@ -282,7 +282,7 @@ export function OfferFormPage() {
                   ref={imageInputRef}
                   id="offer-image"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png,image/webp,.jfif"
                   className="sr-only"
                   onChange={(event) => event.target.files?.[0] && chooseImage(event.target.files[0])}
                 />

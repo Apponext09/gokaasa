@@ -5,11 +5,11 @@ import { AppError } from '../utils/AppError.js';
 import { ALLOWED_IMAGE_TYPES } from '../utils/imageSignature.js';
 import { ALLOWED_DOCUMENT_TYPES } from '../utils/fileSignature.js';
 
-const ALLOWED_MIME = new Set(ALLOWED_IMAGE_TYPES.map((type) => type.mime));
-const ALLOWED_EXT = new Set(ALLOWED_IMAGE_TYPES.map((type) => `.${type.ext}`).concat('.jpeg'));
+const ALLOWED_MIME = new Set(ALLOWED_IMAGE_TYPES.map((type) => type.mime).concat('image/pjpeg', 'image/jfif'));
+const ALLOWED_EXT = new Set(ALLOWED_IMAGE_TYPES.map((type) => `.${type.ext}`).concat('.jpeg', '.jfif'));
 
-const ALLOWED_DOC_MIME = new Set(ALLOWED_DOCUMENT_TYPES.map((type) => type.mime));
-const ALLOWED_DOC_EXT = new Set(ALLOWED_DOCUMENT_TYPES.map((type) => `.${type.ext}`).concat('.jpeg'));
+const ALLOWED_DOC_MIME = new Set(ALLOWED_DOCUMENT_TYPES.map((type) => type.mime).concat('image/pjpeg', 'image/jfif'));
+const ALLOWED_DOC_EXT = new Set(ALLOWED_DOCUMENT_TYPES.map((type) => `.${type.ext}`).concat('.jpeg', '.jfif'));
 
 // Files stay in memory only long enough to be validated and handed to storage. They never touch
 // the filesystem under their client-supplied name.
@@ -19,7 +19,7 @@ const upload = multer({
   fileFilter(_req, file, callback) {
     const extension = path.extname(file.originalname ?? '').toLowerCase();
     if (!ALLOWED_MIME.has(file.mimetype) || !ALLOWED_EXT.has(extension)) {
-      return callback(AppError.unsupportedMediaType('Only JPEG, PNG, WebP and AVIF images are accepted'));
+      return callback(AppError.unsupportedMediaType('Only JPEG, PNG, WebP, AVIF and JFIF images are accepted'));
     }
     return callback(null, true);
   },

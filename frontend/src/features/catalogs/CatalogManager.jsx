@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Plus, Save, X } from 'lucide-react';
+import { Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/dialog.jsx';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button.jsx';
 import { Checkbox, Input, Select } from '@/components/ui/form-controls.jsx';
@@ -17,6 +18,8 @@ function MasterRow({ kind, item, onChanged }) {
   const [mealFlags, setMealFlags] = useState({ breakfast: item.includesBreakfast ?? false, lunch: item.includesLunch ?? false, dinner: item.includesDinner ?? false });
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setName(item.name);
@@ -45,6 +48,21 @@ function MasterRow({ kind, item, onChanged }) {
     setCategory(item.category ?? 'OTHER');
     setMealFlags({ breakfast: item.includesBreakfast ?? false, lunch: item.includesLunch ?? false, dinner: item.includesDinner ?? false });
     setEditing(false);
+  };
+
+  const remove = async () => {
+    setDeleting(true);
+    try {
+      await catalogApi.delete(kind, item.code);
+      invalidateCatalog(kind);
+      toast.success(`${definition.singular} deleted`);
+      setConfirmDelete(false);
+      await onChanged();
+    } catch (error) {
+      toast.error(normalizeError(error).message);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -82,9 +100,24 @@ function MasterRow({ kind, item, onChanged }) {
               <Button size="sm" variant="ghost" loading={saving} disabled={!name.trim()} onClick={() => save({ name: name.trim(), ...(definition.needsCategory && { category }), ...(definition.needsMealFlags && { includesBreakfast: mealFlags.breakfast, includesLunch: mealFlags.lunch, includesDinner: mealFlags.dinner }) })}><Save className="h-3.5 w-3.5" /> Save</Button>
               <Button size="sm" variant="ghost" disabled={saving} onClick={cancelEdit}><X className="h-3.5 w-3.5" /> Cancel</Button>
             </>
-          ) : <Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>}
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+              <Button size="sm" variant="ghost" className="text-danger-600 hover:text-danger-700 hover:bg-danger-50" onClick={() => setConfirmDelete(true)} title="Delete"><Trash2 className="h-3.5 w-3.5 text-danger-500" /> Delete</Button>
+            </>
+          )}
           <Button size="sm" variant="ghost" loading={saving} onClick={() => save({ isActive: !item.isActive })}>{item.isActive ? 'Deactivate' : 'Activate'}</Button>
         </div>
+        <ConfirmDialog
+          open={confirmDelete}
+          title={`Delete ${item.name}?`}
+          description={`Are you sure you want to permanently delete this ${definition.singular}? If it is already assigned to any hotel or room, it cannot be deleted.`}
+          confirmLabel="Delete"
+          tone="danger"
+          loading={deleting}
+          onConfirm={remove}
+          onCancel={() => setConfirmDelete(false)}
+        />
       </TableCell>
     </TableRow>
   );

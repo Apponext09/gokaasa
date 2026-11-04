@@ -29,7 +29,7 @@ export function homePathFor(user) {
 }
 
 const SALES_PATH = /^\/admin\/(?:bookings(?:\/\d+)?|payments|refunds|invoices|offers(?:\/new|\/\d+)?|profile|notifications)$/;
-const ONBOARDING_PATH = /^\/admin\/(?:hotels(?:\/new|\/onboarding(?:\/\d+\/review)?|\/\d+(?:\/rooms(?:\/new|\/\d+)?)?)?|profile|notifications)$/;
+const ONBOARDING_PATH = /^\/admin\/(?:hotels(?:\/new|\/onboarding(?:\/\d+\/review)?|\/\d+(?:\/rooms(?:\/new|\/\d+)?)?)?|masters|profile|notifications)$/;
 const REVIEW_PATH = /^\/admin\/(?:hotel-reviews|hotels\/\d+(?:\/rooms\/\d+)?|profile|notifications)$/;
 const OWNER_PATH = /^\/admin\/(?:dashboard|hotels(?:\/new|\/onboarding(?:\/\d+\/review)?|\/\d+(?:\/rooms(?:\/new|\/\d+)?)?)?|bookings(?:\/\d+)?|payments|refunds|invoices|customers(?:\/\d+)?|reviews|reports|profile|notifications)$/;
 

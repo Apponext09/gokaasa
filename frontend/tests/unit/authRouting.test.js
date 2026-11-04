@@ -51,6 +51,7 @@ test('specialized staff can open only their assigned console areas', () => {
   assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms'), true);
   assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms/new'), true);
   assert.equal(canAccessAdminPath(onboarding, '/admin/hotels/35/rooms/8'), true);
+  assert.equal(canAccessAdminPath(onboarding, '/admin/masters'), true);
   assert.equal(canAccessAdminPath(onboarding, '/admin/bookings'), false);
   assert.equal(canAccessAdminPath(onboarding, '/admin/settings'), false);
 

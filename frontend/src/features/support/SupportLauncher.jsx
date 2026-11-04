@@ -85,11 +85,11 @@ export function SupportLauncher() {
 
   return (
     <>
-      {/* Compact, small concierge card at bottom-right */}
+      {/* Compact, sleek concierge card at bottom-right */}
       <div
         className={cn(
           'assistant-panel-shell fixed z-50 overflow-hidden transition-all duration-200 ease-out motion-reduce:transition-none',
-          'bottom-3 right-3 w-[min(290px,calc(100vw-1.5rem))] h-[min(385px,calc(100dvh-5rem))] rounded-2xl shadow-2xl sm:bottom-5 sm:right-5 sm:w-[325px] sm:h-[min(460px,calc(100dvh-5rem))] sm:rounded-2xl',
+          'bottom-3 right-3 w-[min(310px,calc(100vw-1.5rem))] h-[min(430px,calc(100dvh-5.5rem))] rounded-2xl shadow-xl sm:bottom-5 sm:right-5 sm:w-[320px] sm:h-[450px]',
           chatOpen
             ? 'translate-y-0 opacity-100 pointer-events-auto scale-100'
             : 'translate-y-3 opacity-0 pointer-events-none scale-95',

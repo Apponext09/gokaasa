@@ -54,6 +54,14 @@ const ONBOARDING_RULES = [
   ['POST', /^\/hotel-import\/jobs\/\d+\/discard$/],
   ['GET', /^\/hotels\/\d+\/review$/],
   ['POST', /^\/hotels\/\d+\/review\/issues\/\d+\/fix$/],
+  ['GET', /^\/catalogs\/[^/]+$/],
+  ['POST', /^\/catalogs\/[^/]+$/],
+  ['PATCH', /^\/catalogs\/[^/]+\/[^/]+$/],
+  ['GET', /^\/homepage-background-images$/],
+  ['PUT', /^\/homepage-background-images\/[1-4]$/],
+  ['DELETE', /^\/homepage-background-images\/[1-4]$/],
+  ['DELETE', /^\/catalogs\/[^/]+\/[^/]+$/],
+  ['DELETE', /^\/hotels\/\d+$/],
 ];
 
 const REVIEW_RULES = [

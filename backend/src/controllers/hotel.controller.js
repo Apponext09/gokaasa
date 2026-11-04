@@ -48,6 +48,11 @@ export const hotelController = {
     return res.json({ hotel });
   },
 
+  async delete(req, res) {
+    const result = await hotelService.delete(req.validated.params.id, actorOf(req));
+    return res.json(result);
+  },
+
   async setAmenities(req, res) {
     const hotel = await hotelService.setAmenities(req.validated.params.id, req.validated.body.codes, actorOf(req));
     return res.json({ hotel });

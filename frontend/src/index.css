@@ -2289,7 +2289,7 @@ body {
 }
 
 .hotels-page-hero-inner {
-  max-width: 900px;
+  max-width: 1040px;
   margin: 0 auto;
   text-align: center;
   position: relative;
@@ -2312,10 +2312,10 @@ body {
 }
 
 .hotels-page-search-box {
-  background: #fff;
+  background: transparent;
   border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 20px 40px rgba(7 30 74 / 0.35);
+  padding: 0;
+  box-shadow: none;
   position: relative;
   z-index: 20;
 }
@@ -2584,10 +2584,10 @@ body {
 }
 
 .hcard-total-nights {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
-  color: #0a42ba;
-  margin-top: 2px;
+  color: #15803d;
+  margin-top: 3px;
 }
 
 .hcard-member-deal {
@@ -7363,33 +7363,33 @@ body {
 }
 
 .assistant-header {
-  gap: 0.55rem;
+  gap: 0.4rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.9rem 1rem 0.75rem;
+  padding: 0.6rem 0.8rem;
   background:
     radial-gradient(circle at 92% -20%, rgba(80, 150, 255, 0.42), transparent 38%),
     linear-gradient(135deg, #071b3d 0%, #0b3675 62%, #0b55bd 100%);
 }
 
 .assistant-header-avatar {
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 1.85rem;
+  height: 1.85rem;
   border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 0.7rem;
+  border-radius: 0.55rem;
   background: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 .assistant-header-avatar svg {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
 .assistant-header-control.ui-button {
-  width: 1.9rem;
-  height: 1.9rem;
-  min-height: 1.9rem;
-  border-radius: 0.55rem;
+  width: 1.65rem;
+  height: 1.65rem;
+  min-height: 1.65rem;
+  border-radius: 0.45rem;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -7400,20 +7400,20 @@ body {
 .assistant-languages {
   width: fit-content;
   border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 0.55rem;
-  padding: 0.15rem;
+  border-radius: 0.45rem;
+  padding: 0.1rem;
   background: rgba(3, 15, 34, 0.16);
 }
 
 .assistant-languages button {
   border: 0;
-  border-radius: 0.4rem;
-  padding: 0.25rem 0.65rem;
-  font-size: 0.68rem;
+  border-radius: 0.35rem;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.64rem;
 }
 
 .assistant-progress {
-  height: 3px;
+  height: 2.5px;
   background: #d9e5f3;
 }
 
@@ -7424,7 +7424,7 @@ body {
 }
 
 .assistant-transcript {
-  padding: 0.9rem;
+  padding: 0.65rem 0.75rem;
   background:
     radial-gradient(circle at 100% 0%, rgba(219, 234, 254, 0.6), transparent 28%),
     #f5f8fc;
@@ -7433,7 +7433,7 @@ body {
 }
 
 .assistant-transcript > * + * {
-  margin-top: 0.75rem;
+  margin-top: 0.55rem;
 }
 
 .assistant-transcript > .pl-9,
@@ -7442,58 +7442,58 @@ body {
 }
 
 .assistant-message {
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
 .assistant-message-avatar {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.4rem;
+  height: 1.4rem;
   border: 1px solid rgba(30, 94, 190, 0.14);
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.07);
 }
 
 .assistant-message-avatar svg {
-  width: 0.8rem;
-  height: 0.8rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
 .assistant-message-bubble {
   max-width: 88%;
   border: 1px solid #dde6f1;
-  border-radius: 0.85rem;
+  border-radius: 0.75rem;
   border-top-left-radius: 0.2rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.5rem 0.65rem;
   background: #fff;
-  font-size: 0.78rem;
-  line-height: 1.5;
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.045);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
 .assistant-message.justify-end .assistant-message-bubble {
   border-color: #0a53bb;
-  border-radius: 0.85rem;
+  border-radius: 0.75rem;
   border-top-right-radius: 0.2rem;
   background: linear-gradient(135deg, #0b59ca, #0a408f);
-  box-shadow: 0 4px 12px rgba(10, 64, 143, 0.16);
+  box-shadow: 0 3px 10px rgba(10, 64, 143, 0.16);
 }
 
 .assistant-welcome {
-  margin-top: 0.85rem !important;
+  margin-top: 0.5rem !important;
 }
 
 .assistant-welcome-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .assistant-welcome-action {
-  min-height: 5.15rem;
-  gap: 0.55rem;
+  min-height: 3.8rem;
+  gap: 0.45rem;
   border-color: #dce5f0;
-  border-radius: 0.7rem;
-  padding: 0.7rem;
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.55rem;
   background: #fff;
-  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.035);
 }
 
 .assistant-welcome-action:nth-child(5) {
@@ -7504,52 +7504,52 @@ body {
 .assistant-welcome-action:hover {
   border-color: #92b7e8;
   background: #fafdff;
-  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
 }
 
 .assistant-welcome-action > span:first-child {
-  width: 1.85rem;
-  height: 1.85rem;
-  border-radius: 0.55rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.45rem;
   background: #e9f2ff;
   color: #0b55be;
 }
 
 .assistant-welcome-action > span:last-child > span:first-child {
-  font-size: 0.76rem;
-  line-height: 1.25;
+  font-size: 0.72rem;
+  line-height: 1.2;
 }
 
 .assistant-welcome-action > span:last-child > span:last-child {
-  margin-top: 0.15rem;
-  font-size: 0.66rem;
-  line-height: 1.35;
+  margin-top: 0.1rem;
+  font-size: 0.62rem;
+  line-height: 1.25;
 }
 
 .assistant-quick-reply {
-  border-radius: 0.55rem;
-  padding: 0.45rem 0.7rem;
-  font-size: 0.74rem;
+  border-radius: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.7rem;
 }
 
 .assistant-transcript .ui-card {
   border-color: #dce5f0;
-  border-radius: 0.7rem;
+  border-radius: 0.6rem;
   box-shadow: none;
 }
 
 .assistant-composer {
   border-color: #dce5f0;
-  padding: 0.65rem 0.8rem max(0.65rem, env(safe-area-inset-bottom));
+  padding: 0.45rem 0.6rem max(0.45rem, env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.045);
+  box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.04);
 }
 
 .assistant-composer-box {
-  gap: 0.35rem;
+  gap: 0.25rem;
   border-color: #cfdbea;
-  border-radius: 0.75rem;
-  padding: 0.25rem;
+  border-radius: 0.65rem;
+  padding: 0.2rem;
   background: #f8fafc;
   box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.025);
   transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
@@ -7558,13 +7558,13 @@ body {
 .assistant-composer-box:focus-within {
   border-color: #5992dd;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(11, 85, 190, 0.1);
+  box-shadow: 0 0 0 2px rgba(11, 85, 190, 0.1);
 }
 
 .assistant-composer-input {
-  min-height: 2.25rem;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.78rem;
+  min-height: 1.9rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.74rem;
 }
 
 .assistant-composer-input::placeholder {
@@ -7572,12 +7572,12 @@ body {
 }
 
 .assistant-send-button.ui-button {
-  width: 2.25rem;
-  height: 2.25rem;
-  min-height: 2.25rem;
-  border-radius: 0.58rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  min-height: 1.9rem;
+  border-radius: 0.5rem;
   background: linear-gradient(145deg, #0b5bd3, #073a88);
-  box-shadow: 0 4px 10px rgba(7, 58, 136, 0.22);
+  box-shadow: 0 3px 8px rgba(7, 58, 136, 0.2);
 }
 
 @media (min-width: 768px) {
@@ -11702,4 +11702,9 @@ body {
 
 .customer-hotel-details .hotel-change-search {
   border-radius: 0.75rem;
+}
+
+
+.hotels-page-root .customer-search-shell {
+  margin: 1rem auto 1.5rem !important;
 }

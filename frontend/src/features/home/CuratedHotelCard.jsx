@@ -57,7 +57,7 @@ export function CuratedHotelCard({ hotel }) {
           <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">{place}</span>
         </p>
-        {hotel.distanceKm != null && (
+        {hotel.locationUrl && hotel.distanceKm != null && (
           <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-[11px] font-semibold text-brand-700">
             <MapPin className="h-3 w-3" aria-hidden="true" />
             {Number(hotel.distanceKm).toFixed(1)} km from your location

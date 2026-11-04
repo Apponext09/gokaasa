@@ -94,8 +94,8 @@ export function SearchWidget({
   const [typed, setTyped] = useState(initial?.name ?? '');
 
   const [stay, setStay] = useState({
-    checkIn: initial?.checkIn ?? addDays(today, 1),
-    checkOut: initial?.checkOut ?? addDays(today, 3),
+    checkIn: initial?.checkIn ?? null,
+    checkOut: initial?.checkOut ?? null,
   });
 
   const [occupancy, setOccupancy] = useState(
@@ -107,11 +107,12 @@ export function SearchWidget({
   const submit = (event) => {
     event?.preventDefault();
 
-    const stayProblem = validateStay(stay, today);
-
-    if (stayProblem) {
-      setError(stayProblem);
-      return;
+    if (stay.checkIn || stay.checkOut) {
+      const stayProblem = validateStay(stay, today);
+      if (stayProblem) {
+        setError(stayProblem);
+        return;
+      }
     }
 
     let target = destination;

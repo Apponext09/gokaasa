@@ -88,5 +88,43 @@ export const catalogService = {
       return dto(await catalogRepository.find(kind, code, client));
     });
   },
+
+  async delete(kind, code, actor) {
+    return withTransaction(async (client) => {
+      const current = await catalogRepository.find(kind, code, client);
+      if (!current) throw AppError.notFound('Master value not found');
+
+      if (kind === 'property-types') {
+        const inUse = await client.query('SELECT 1 FROM hotels WHERE property_type = $1 AND deleted_at IS NULL LIMIT 1', [code]);
+        if (inUse.rowCount) throw AppError.conflict('Cannot delete this property type because it is in use by one or more hotels. Deactivate it instead.');
+      } else if (kind === 'room-categories') {
+        const inUse = await client.query('SELECT 1 FROM room_types WHERE category = $1 AND deleted_at IS NULL LIMIT 1', [code]);
+        if (inUse.rowCount) throw AppError.conflict('Cannot delete this room type because it is in use by one or more rooms. Deactivate it instead.');
+      } else if (kind === 'bed-types') {
+        const inUse = await client.query('SELECT 1 FROM room_types WHERE bed_type = $1 AND deleted_at IS NULL LIMIT 1', [code]);
+        if (inUse.rowCount) throw AppError.conflict('Cannot delete this bed type because it is in use by one or more rooms. Deactivate it instead.');
+      } else if (kind === 'meal-plans') {
+        const inUse = await client.query('SELECT 1 FROM rate_plans WHERE meal_plan = $1 AND deleted_at IS NULL LIMIT 1', [code]);
+        if (inUse.rowCount) throw AppError.conflict('Cannot delete this meal plan because it is in use by one or more rate plans. Deactivate it instead.');
+      } else if (kind === 'image-categories') {
+        if (code === 'OTHER') throw AppError.unprocessable('OTHER is the required fallback category and cannot be deleted');
+        const inUse = await client.query('SELECT 1 FROM hotel_images WHERE category = $1 AND deleted_at IS NULL LIMIT 1', [code]);
+        if (inUse.rowCount) throw AppError.conflict('Cannot delete this image category because it is in use. Deactivate it instead.');
+      } else if (kind === 'amenities') {
+        const inUse = await client.query('SELECT 1 FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id WHERE a.code = $1 LIMIT 1', [code]);
+        if (inUse.rowCount) throw AppError.conflict('Cannot delete this amenity because it is in use by one or more hotels. Deactivate it instead.');
+      }
+
+      await catalogRepository.delete(kind, code, client);
+      await auditService.record(client, {
+        actor,
+        action: 'catalog.deleted',
+        entity: kind,
+        entityId: code,
+        oldValue: dto(current),
+      });
+      return dto(current);
+    });
+  },
 };
 

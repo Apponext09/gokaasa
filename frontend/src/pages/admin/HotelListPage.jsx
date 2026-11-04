@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Plus, Search, Star } from 'lucide-react';
+import { Building2, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/dialog.jsx';
 
 import { Button, buttonVariants } from '@/components/ui/button.jsx';
 import { Card, Alert } from '@/components/ui/surfaces.jsx';
@@ -86,6 +88,24 @@ export function HotelListPage() {
   const [searchText, setSearchText] = useState(filters.q);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [hotelToDelete, setHotelToDelete] = useState(null);
+  const [deletingHotel, setDeletingHotel] = useState(false);
+
+  const confirmDeleteHotel = async () => {
+    if (!hotelToDelete) return;
+    setDeletingHotel(true);
+    try {
+      await adminApi.deleteHotel(hotelToDelete.id);
+      toast.success(`${hotelToDelete.name} deleted successfully`);
+      setHotelToDelete(null);
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(normalizeError(err).message);
+    } finally {
+      setDeletingHotel(false);
+    }
+  };
 
   const { items: propertyTypeItems } = useCatalog('property-types');
   const propertyTypeOptions = toOptions(propertyTypeItems);
@@ -158,6 +178,7 @@ export function HotelListPage() {
     filters.propertyType,
     filters.sort,
     filters.page,
+    refreshKey,
   ]);
 
   const hasFilters = FILTER_KEYS.some(
@@ -453,12 +474,24 @@ export function HotelListPage() {
 
                     {/* ACTIONS */}
                     <TableCell className="text-right">
-                      <Link
-                        to={`/admin/hotels/${hotel.id}`}
-                        className="font-medium text-brand-600 hover:underline"
-                      >
-                        Edit
-                      </Link>
+                      <div className="inline-flex items-center justify-end gap-3">
+                        <Link
+                          to={`/admin/hotels/${hotel.id}`}
+                          className="inline-flex items-center gap-1 font-medium text-brand-600 hover:text-brand-800 hover:underline"
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                          Edit
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setHotelToDelete(hotel)}
+                          className="inline-flex items-center gap-1 font-medium text-danger-600 hover:text-danger-800 hover:underline"
+                          title={`Delete ${hotel.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          Delete
+                        </button>
+                      </div>
                     </TableCell>
 
                   </TableRow>
@@ -493,6 +526,16 @@ export function HotelListPage() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={Boolean(hotelToDelete)}
+        title={`Delete "${hotelToDelete?.name}"?`}
+        description="Are you sure you want to delete this hotel? It will be removed from all lists and search. Hotels with active guest bookings cannot be deleted."
+        confirmLabel="Delete hotel"
+        tone="danger"
+        loading={deletingHotel}
+        onConfirm={confirmDeleteHotel}
+        onCancel={() => setHotelToDelete(null)}
+      />
     </div>
   );
 }

@@ -9,21 +9,28 @@ import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { BackgroundImagesManager } from '@/features/catalogs/BackgroundImagesManager.jsx';
 
 export function MasterDataPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasPermission } = useAuth();
+  const canManageCatalogs = isAdmin || hasPermission?.('catalog.manage');
+  const canManageBackgrounds = isAdmin || hasPermission?.('homepage.manage');
   const [kind, setKind] = useState('property-types');
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canManageCatalogs) return;
     Object.entries(MASTER_DEFINITIONS).filter(([, definition]) => !definition.custom).forEach(([masterKind]) => {
       preloadCatalog(masterKind, { admin: true });
     });
-  }, [isAdmin]);
+  }, [canManageCatalogs]);
 
-  if (!isAdmin) return <Navigate to="/admin/dashboard" replace />;
+  if (!canManageCatalogs) return <Navigate to="/admin/hotels" replace />;
+
+  const availableTabs = Object.entries(MASTER_DEFINITIONS)
+    .filter(([value]) => value !== 'background-images' || canManageBackgrounds)
+    .map(([value, definition]) => ({ value, label: definition.label }));
+
   return (
     <div className="space-y-6">
       <PageHeader title="Masters" description="Manage catalogue values and the homepage background images used across the platform." />
-      <Tabs value={kind} onChange={setKind} label="Master type" items={Object.entries(MASTER_DEFINITIONS).map(([value, definition]) => ({ value, label: definition.label }))} />
+      <Tabs value={kind} onChange={setKind} label="Master type" items={availableTabs} />
       {kind === 'background-images' ? <BackgroundImagesManager /> : <CatalogManager key={kind} kind={kind} />}
     </div>
   );

@@ -148,6 +148,7 @@ adminRouter.post('/hotels/:id/review/approve', validate({ params: idParam, body:
 adminRouter.get('/catalogs/:kind', validate({ params: catalogKindParam }), requirePermission('catalog.manage'), catalogController.adminList);
 adminRouter.post('/catalogs/:kind', validate({ params: catalogKindParam, body: catalogCreateSchema }), requirePermission('catalog.manage'), catalogController.create);
 adminRouter.patch('/catalogs/:kind/:code', validate({ params: catalogItemParam, body: catalogUpdateSchema }), requirePermission('catalog.manage'), catalogController.update);
+adminRouter.delete('/catalogs/:kind/:code', validate({ params: catalogItemParam }), requirePermission('catalog.manage'), catalogController.delete);
 adminRouter.get('/homepage-background-images', requirePermission('homepage.manage'), homepageBackgroundController.list);
 adminRouter.put(
   '/homepage-background-images/:slot',
@@ -215,6 +216,7 @@ adminRouter.get('/exports/hotels', validate({ query: adminHotelListQuery }), hot
 adminRouter.post('/hotels', validate({ body: hotelCreateSchema }), hotelController.createManual);
 adminRouter.get('/hotels/:id', validate({ params: idParam }), requireHotelReadAccess(hotelIdFromParam), hotelController.getAdmin);
 adminRouter.patch('/hotels/:id', validate({ params: idParam, body: hotelUpdateSchema }), requireHotelAccess(hotelIdFromParam), hotelController.update);
+adminRouter.delete('/hotels/:id', validate({ params: idParam }), requireHotelAccess(hotelIdFromParam), hotelController.delete);
 adminRouter.put(
   '/hotels/:id/amenities',
   validate({ params: idParam, body: hotelAmenitiesSchema }),

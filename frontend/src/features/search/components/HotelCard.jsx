@@ -273,7 +273,7 @@ export function HotelCard({ hotel, state, compact = false }) {
               <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" aria-hidden="true" />
               <span className="truncate">{place}</span>
             </p>
-            {hotel.distanceKm != null && (
+            {hotel.locationUrl && hotel.distanceKm != null && (
               <span className="inline-flex w-fit items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-xs font-semibold text-brand-700">
                 <MapPin className="h-3 w-3" aria-hidden="true" />
                 {Number(hotel.distanceKm).toFixed(1)} km
@@ -425,11 +425,11 @@ export function HotelCard({ hotel, state, compact = false }) {
                   <span className="text-sm text-[var(--text-muted)] line-through">{formatMoney(originalPerNightMinor)}</span>
                 )}
                 <span className="text-xl font-semibold tracking-tight text-[var(--text-strong)]">{formatMoney(pricePerNightMinor)}</span>
-                <span className="text-sm text-[var(--text-muted)]">/ night before taxes</span>
+                <span className="text-sm text-[var(--text-muted)]">/ night before taxes & fees</span>
               </p>
               <p className="text-xs text-[var(--text-muted)]">
                 {offer.nights} night{offer.nights === 1 ? '' : 's'} · {formatMoney(offer.finalTotalMinor)} total
-                {offer.taxTotalMinor + offer.feeTotalMinor > 0 && ` · incl. ${formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes & fees`}
+                {offer.taxTotalMinor > 0 && ` · incl. ${formatMoney(offer.taxTotalMinor)} taxes`}{offer.feeTotalMinor > 0 && ` + ${formatMoney(offer.feeTotalMinor)} fees`}
               </p>
             </div>
             <div className="grid min-w-44 gap-2">
@@ -459,13 +459,15 @@ export function HotelCard({ hotel, state, compact = false }) {
             )}
             <div className="hcard-final-price-row">
               <span className="hcard-final-amount">{formatMoney(pricePerNightMinor)}</span>
-              <span className="hcard-per-night">/ night before taxes</span>
+              <span className="hcard-per-night">/ night before taxes & fees</span>
             </div>
-            {offer && offer.taxTotalMinor + offer.feeTotalMinor > 0 && (
-              <p className="hcard-taxes-note">+{formatMoney(offer.taxTotalMinor + offer.feeTotalMinor)} taxes &amp; fees for the stay</p>
+            {offer && (offer.taxTotalMinor > 0 || offer.feeTotalMinor > 0) && (
+              <p className="hcard-taxes-note">{offer.taxTotalMinor > 0 ? `+${formatMoney(offer.taxTotalMinor)} taxes` : ''}{offer.taxTotalMinor > 0 && offer.feeTotalMinor > 0 ? ' · ' : ''}{offer.feeTotalMinor > 0 ? `+${formatMoney(offer.feeTotalMinor)} fees` : ''}</p>
             )}
-            {offer && offer.nights > 1 && (
-              <p className="hcard-total-nights">{formatMoney(offer.finalTotalMinor)} for {offer.nights} nights</p>
+            {offer && (
+              <p className="hcard-total-nights">
+                Total: {formatMoney(offer.finalTotalMinor)}{offer.nights > 1 ? ` for ${offer.nights} nights` : ''}
+              </p>
             )}
             {offer && !couponOffer && offer.memberDealCode ? (
               <div className="hcard-member-deal">

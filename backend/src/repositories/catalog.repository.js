@@ -65,9 +65,15 @@ export const catalogRepository = {
     const { table } = config(kind);
     const entries = Object.entries(changes);
     await client.query(
-      `UPDATE ${table} SET ${entries.map(([column], index) => `${column} = $${index + 2}`).join(', ')}, updated_at = now() WHERE code = $1`,
+      `UPDATE ${table} SET ${entries.map(([column], index) => `${column} = ${index + 2}`).join(', ')}, updated_at = now() WHERE code = $1`,
       [code, ...entries.map(([, value]) => value)],
     );
+  },
+
+  async delete(kind, code, client = pool) {
+    const { table } = config(kind);
+    const { rowCount } = await client.query(`DELETE FROM ${table} WHERE code = $1`, [code]);
+    return rowCount > 0;
   },
 };
 

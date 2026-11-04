@@ -118,6 +118,7 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
     area: row.area,
     countryCode: row.country_code,
     country: countryName(row.country_code),
+    locationUrl: row.location_url ?? null,
     distanceKm: row.distance_km == null ? null : Number(row.distance_km),
     latitude: row.latitude == null ? null : Number(row.latitude),
     longitude: row.longitude == null ? null : Number(row.longitude),

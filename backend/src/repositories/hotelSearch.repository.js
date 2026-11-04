@@ -219,7 +219,7 @@ export const hotelSearchRepository = {
           ORDER BY pt.hotel_id, (pt.available_rooms >= $9::int) DESC, pt.final_total ASC, pt.room_type_id ASC, pt.plan_id ASC
        ),
        listing AS (
-         SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.star_rating, h.guest_rating, h.review_count,
+         SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.location_url, h.star_rating, h.guest_rating, h.review_count,
                 COALESCE(h.guest_rating, (SELECT AVG(r.rating) FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED')) AS display_guest_rating,
                 NULL::numeric AS distance_km, h.latitude, h.longitude,
                 h.property_type, (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
