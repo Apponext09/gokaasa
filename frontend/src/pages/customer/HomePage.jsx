@@ -37,7 +37,6 @@ import { HotelsFilterPanel } from '@/features/search/components/HotelsFilterPane
 import { HotelCard, HotelCardSkeleton } from '@/features/search/components/HotelCard.jsx';
 import { cn } from '@/lib/utils.js';
 import { OfferCard } from '@/features/offers/OfferCard.jsx';
-import { HotelChangeSearch } from '@/features/search/components/HotelChangeSearch.jsx';
 
 import { useAuth } from '@/features/auth/AuthContext.jsx';
 import { isStaffCustomerView } from '@/features/auth/viewMode.js';
@@ -357,15 +356,6 @@ function HomeHotelListing({ search = null, onSearch = null, geolocation, authSta
       aria-label="Browse Hotels"
     >
       <div className="home-hotel-listing-inner">
-        <HotelChangeSearch
-          idPrefix="home-listing-sticky"
-          initialDestination={search}
-          initialStay={{ checkIn: search?.checkIn, checkOut: search?.checkOut }}
-          initialOccupancy={search?.occupancy}
-          coupon={search?.coupon}
-          onSearch={onSearch}
-          className="mb-6"
-        />
 
         {/* Section header */}
         <div className="home-hl-header">

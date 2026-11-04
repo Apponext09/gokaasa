@@ -29,7 +29,16 @@ const hotelSuggestion = (hotel) => ({
  * characters switches to the server's live city, area and hotel search. The chosen result keeps the
  * same URL payload used by the existing search and hotel-detail navigation.
  */
-export function DestinationField({ value, onChange, onTextChange, disabled = false, id = 'destination', bare = false }) {
+export function DestinationField({
+  value,
+  onChange,
+  onTextChange,
+  disabled = false,
+  id = 'destination',
+  bare = false,
+  isOpen,
+  onOpenChange,
+}) {
   const [text, setText] = useState(value?.label ?? '');
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState('idle');
@@ -40,12 +49,15 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
   const listId = useId();
   const debounced = useDebounce(text, 150);
 
+  const isControlled = isOpen !== undefined;
+  const showList = isControlled ? isOpen : focused;
+
   useEffect(() => {
     setText(value?.label ?? '');
   }, [value?.label]);
 
   useEffect(() => {
-    if (!focused) return undefined;
+    if (!showList) return undefined;
 
     const query = debounced.trim();
     const controller = new AbortController();
@@ -81,7 +93,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
       cancelled = true;
       controller.abort();
     };
-  }, [debounced, focused, value]);
+  }, [debounced, showList, value]);
 
   const selectedText = Boolean(value && text.trim() === value.label);
   const locallyFilteredItems = text.trim().length > 0 && text.trim().length < MIN_CHARS && !selectedText
@@ -95,7 +107,6 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
   const cityCount = locallyFilteredItems.filter((item) => item.type !== 'HOTEL').length;
   const hotelCount = locallyFilteredItems.filter((item) => item.type === 'HOTEL').length;
   const firstHotelIndex = visibleItems.findIndex((item) => item.type === 'HOTEL');
-  const showList = focused;
 
   const choose = (item) => {
     setText(item.label);
@@ -126,6 +137,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
       choose(visibleItems[active]);
     } else if (event.key === 'Escape') {
       setFocused(false);
+      onOpenChange?.(false);
       inputRef.current?.blur();
     }
   };
@@ -164,9 +176,18 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
             }}
             onFocus={() => {
               setFocused(true);
+              onOpenChange?.(true);
               setTab('ALL');
             }}
-            onBlur={() => setTimeout(() => setFocused(false), 120)}
+            onClick={() => {
+              setFocused(true);
+              onOpenChange?.(true);
+            }}
+            onBlur={() => {
+              if (!isControlled) {
+                setTimeout(() => setFocused(false), 120);
+              }
+            }}
             onKeyDown={onKeyDown}
             className="w-full bg-transparent py-2 text-sm font-medium text-[var(--text-strong)] placeholder:font-normal placeholder:text-[var(--text-muted)] focus:outline-none"
           />
@@ -199,6 +220,7 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
             setFocused(false);
+            onOpenChange?.(false);
             inputRef.current?.blur();
           }}
         />
@@ -249,7 +271,11 @@ export function DestinationField({ value, onChange, onTextChange, disabled = fal
                   aria-selected={index === active}
                   onMouseDown={(event) => {
                     event.preventDefault();
+                    event.stopPropagation();
                     choose(item);
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
                   }}
                   onMouseEnter={() => setActive(index)}
                   className={cn('cursor-pointer', index === active && 'bg-brand-50')}

@@ -41,8 +41,42 @@ function monthGrid(year, month) {
  * keeps the same calendar visible and switches its hint to check-out, which is the "automatically open
  * checkout" behavior without a second popup.
  */
-export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = 'stay', disabled = false, bare = false, inline = false }) {
-  const [open, setOpen] = useState(false);
+export function DateRangePicker({
+  checkIn,
+  checkOut,
+  onChange,
+  onComplete,
+  onCheckInSelect,
+  onCheckOutSelect,
+  onCheckInClick,
+  onCheckOutClick,
+  min,
+  idPrefix = 'stay',
+  disabled = false,
+  bare = false,
+  inline = false,
+  isOpen,
+  onOpenChange,
+  activeTarget: controlledActiveTarget,
+  onTargetChange,
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = isOpen !== undefined;
+  const open = isControlled ? isOpen : internalOpen;
+
+  const setOpen = (val) => {
+    onOpenChange?.(val);
+    if (!isControlled) setInternalOpen(val);
+  };
+
+  const [internalTarget, setInternalTarget] = useState(() => (!checkIn ? 'checkIn' : 'checkOut'));
+  const activeTarget = controlledActiveTarget !== undefined ? controlledActiveTarget : internalTarget;
+  const setActiveTarget = (target) => {
+    if (open) {
+      onTargetChange?.(target);
+    }
+    if (controlledActiveTarget === undefined) setInternalTarget(target);
+  };
   const [editing, setEditing] = useState(() => !(checkIn && checkOut));
   const anchor = checkIn && isIsoDate(checkIn) ? checkIn : min;
   const [cursor, setCursor] = useState(() => ({ year: Number(anchor.slice(0, 4)), month: Number(anchor.slice(5, 7)) - 1 }));
@@ -50,11 +84,36 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
   const nights = nightsBetween(checkIn, checkOut);
 
   useEffect(() => {
+    if (!open) return;
+    if (!checkIn) {
+      setActiveTarget('checkIn');
+    } else if (!checkOut) {
+      setActiveTarget('checkOut');
+    }
+  }, [open, checkIn, checkOut]);
+
+  useEffect(() => {
+    if (open) {
+      const targetDate = activeTarget === 'checkOut' && checkOut && isIsoDate(checkOut)
+        ? checkOut
+        : checkIn && isIsoDate(checkIn)
+          ? checkIn
+          : min;
+      if (targetDate && isIsoDate(targetDate)) {
+        setCursor({
+          year: Number(targetDate.slice(0, 4)),
+          month: Number(targetDate.slice(5, 7)) - 1,
+        });
+      }
+    }
+  }, [open, activeTarget]);
+
+  useEffect(() => {
     if (inline && !checkIn && !checkOut) setEditing(true);
   }, [inline, checkIn, checkOut]);
 
   useEffect(() => {
-    if (!open || inline) return undefined;
+    if (!open || inline || isControlled) return undefined;
     const onDown = (event) => {
       if (ref.current && !ref.current.contains(event.target)) setOpen(false);
     };
@@ -65,7 +124,7 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, inline]);
+  }, [open, inline, isControlled]);
 
   const cells = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
   const monthLabel = new Date(Date.UTC(cursor.year, cursor.month, 1)).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -74,13 +133,26 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
 
   const pick = (day) => {
     if (day < min) return;
-    if (!checkIn || (checkIn && checkOut) || day <= checkIn) {
+
+    if (!checkIn || activeTarget === 'checkIn' || (checkIn && checkOut && activeTarget !== 'checkOut')) {
       onChange({ checkIn: day, checkOut: null });
+      setActiveTarget('checkOut');
+      onCheckInSelect?.(day);
       return;
     }
+
+    if (day <= checkIn) {
+      onChange({ checkIn: day, checkOut: null });
+      setActiveTarget('checkOut');
+      onCheckInSelect?.(day);
+      return;
+    }
+
     onChange({ checkIn, checkOut: day });
     setOpen(false);
     setEditing(false);
+    onCheckOutSelect?.(day);
+    onComplete?.({ checkIn, checkOut: day });
   };
 
   const shift = (delta) => {
@@ -90,7 +162,11 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
     });
   };
 
-  const hint = !checkIn ? 'Select check-in' : !checkOut ? 'Now select check-out' : null;
+  const hint = (activeTarget === 'checkIn' || !checkIn)
+    ? 'Select check-in'
+    : (!checkOut || activeTarget === 'checkOut')
+      ? 'Now select check-out'
+      : (nights ? `${nights} night${nights === 1 ? '' : 's'}` : null);
 
   if (inline) {
     if (!editing && checkIn && checkOut) {
@@ -180,10 +256,16 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
           type="button"
           id={`${idPrefix}-checkin`}
           disabled={disabled}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setActiveTarget('checkIn');
+            setOpen(true);
+            onCheckInClick?.();
+          }}
           className={cn(
             'flex min-h-14 flex-col items-start px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand-500',
             bare && 'customer-date-field',
+            bare && open && activeTarget === 'checkIn' && 'bg-slate-50/90 rounded-lg',
+            !bare && open && activeTarget === 'checkIn' && 'bg-slate-100/70',
           )}
         >
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Check-in</span>
@@ -197,10 +279,16 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
           type="button"
           id={`${idPrefix}-checkout`}
           disabled={disabled}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setActiveTarget('checkOut');
+            setOpen(true);
+            onCheckOutClick?.();
+          }}
           className={cn(
             'flex min-h-14 flex-col items-start px-4 py-2 text-left focus-visible:outline-2 focus-visible:outline-brand-500',
             bare && 'customer-date-field',
+            bare && open && activeTarget === 'checkOut' && 'bg-slate-50/90 rounded-lg',
+            !bare && open && activeTarget === 'checkOut' && 'bg-slate-100/70',
           )}
         >
           <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">Check-out</span>
@@ -268,10 +356,26 @@ export function DateRangePicker({ checkIn, checkOut, onChange, min, idPrefix = '
           <div className="mt-4 flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3 text-sm">
             <span className="text-[var(--text-muted)]" aria-live="polite">{hint ?? (nights ? `${nights} night${nights === 1 ? '' : 's'}` : '')}</span>
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => onChange({ checkIn: null, checkOut: null })} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange({ checkIn: null, checkOut: null });
+                  setActiveTarget('checkIn');
+                }}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[var(--text-muted)] hover:bg-[var(--surface-muted)]"
+              >
                 <X className="h-3.5 w-3.5" /> Clear
               </button>
-              <button type="button" onClick={() => setOpen(false)} className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-brand-700 hover:bg-brand-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  if (checkIn && checkOut) {
+                    onComplete?.({ checkIn, checkOut });
+                  }
+                }}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-brand-700 hover:bg-brand-50"
+              >
                 <CalendarDays className="h-3.5 w-3.5" /> Done
               </button>
             </div>

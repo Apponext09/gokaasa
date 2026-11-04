@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button.jsx";
 import { Pagination, formatDateTime } from "@/components/shared/index.jsx";
 import { StaggeredReveal } from "@/components/shared/StaggeredReveal.jsx";
 import { SearchWidget } from "@/features/search/components/SearchWidget.jsx";
-import { HotelChangeSearch } from "@/features/search/components/HotelChangeSearch.jsx";
 import { HotelsFilterPanel } from "@/features/search/components/HotelsFilterPanel.jsx";
 import { HotelCard, HotelCardSkeleton } from "@/features/search/components/HotelCard.jsx";
 import { useGeolocation } from "@/features/home/useGeolocation.js";
@@ -274,14 +273,6 @@ export function HotelsPage() {
       </div>
 
       <div className="hotels-page-body">
-        <HotelChangeSearch
-          idPrefix="hotels-body-sticky"
-          initialDestination={{ destination, area: state.area, name: state.name }}
-          initialStay={{ checkIn: state.checkIn, checkOut: state.checkOut }}
-          initialOccupancy={state.occupancy}
-          coupon={state.coupon}
-          className="mb-6"
-        />
 
         {/* Sort tabs */}
         <div className="hotels-sort-tabs-bar">

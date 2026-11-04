@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search } from 'lucide-react';
 
@@ -75,6 +75,11 @@ export function SearchWidget({
 }) {
   const navigate = useNavigate();
   const today = todayIso();
+  const widgetRef = useRef(null);
+
+  // Expected Sequence: area -> checkin -> checkout -> guests
+  const [activeDropdown, setActiveDropdown] = useState(null); // 'area' | 'checkin' | 'checkout' | 'guests' | null
+  const [pendingStep, setPendingStep] = useState(null);
 
   const [destination, setDestination] = useState(
     () => initialDestinationFor(initial)
@@ -92,6 +97,81 @@ export function SearchWidget({
   );
 
   const [error, setError] = useState(null);
+
+  // Close active dropdown on outside click or Escape
+  useEffect(() => {
+    if (!activeDropdown) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (widgetRef.current && !widgetRef.current.contains(event.target)) {
+        setActiveDropdown(null);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeDropdown]);
+
+  // Reliable transition: update destination state first, then open Check-in Date picker via useEffect
+  const handleDestinationChange = (value) => {
+    setDestination(value);
+    setError(null);
+    if (value) {
+      setPendingStep('checkin');
+    } else {
+      setActiveDropdown(null);
+    }
+  };
+
+  useEffect(() => {
+    if (pendingStep) {
+      setActiveDropdown(pendingStep);
+      setPendingStep(null);
+    }
+  }, [pendingStep, destination]);
+
+  const handleDatesChange = ({ checkIn, checkOut }) => {
+    setError(null);
+    setStay((current) => {
+      const nextCheckIn = checkIn ?? current.checkIn;
+      let nextCheckOut = checkOut ?? (checkIn ? null : current.checkOut);
+      if (nextCheckIn && nextCheckOut && nextCheckOut <= nextCheckIn) {
+        nextCheckOut = null;
+      }
+      return {
+        checkIn: nextCheckIn,
+        checkOut: nextCheckOut,
+      };
+    });
+  };
+
+  const handleCheckInSelect = () => {
+    // Step 2 -> Step 3: Check-in selected -> auto open Check-out
+    setActiveDropdown('checkout');
+  };
+
+  const handleCheckOutSelect = () => {
+    // Step 3 -> Step 4: Check-out selected -> auto open Rooms & Guests
+    setActiveDropdown('guests');
+  };
+
+  const handleGuestsComplete = () => {
+    // Step 4 completed: Close dropdown
+    setActiveDropdown(null);
+  };
 
   const submit = (event) => {
     event?.preventDefault();
@@ -156,14 +236,25 @@ export function SearchWidget({
       checkIn={stay.checkIn}
       checkOut={stay.checkOut}
       bare={!compact}
-      onChange={({ checkIn, checkOut }) => {
-        setError(null);
-
-        setStay((current) => ({
-          checkIn: checkIn ?? current.checkIn,
-          checkOut: checkOut ?? (checkIn ? null : current.checkOut),
-        }));
+      isOpen={activeDropdown === 'checkin' || activeDropdown === 'checkout'}
+      activeTarget={activeDropdown === 'checkout' ? 'checkOut' : 'checkIn'}
+      onTargetChange={(target) => {
+        setActiveDropdown((current) => {
+          if (current === 'checkin' || current === 'checkout') {
+            return target === 'checkOut' ? 'checkout' : 'checkin';
+          }
+          return current;
+        });
       }}
+      onCheckInClick={() => setActiveDropdown('checkin')}
+      onCheckOutClick={() => setActiveDropdown('checkout')}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) setActiveDropdown(null);
+      }}
+      onCheckInSelect={handleCheckInSelect}
+      onCheckOutSelect={handleCheckOutSelect}
+      onChange={handleDatesChange}
+      onComplete={handleCheckOutSelect}
     />
   );
 
@@ -171,6 +262,7 @@ export function SearchWidget({
   if (compact) {
     return (
       <form
+        ref={widgetRef}
         onSubmit={submit}
         noValidate
         aria-label="Search hotels"
@@ -190,7 +282,9 @@ export function SearchWidget({
           <DestinationField
             id={`destination-${variant}`}
             value={destination}
-            onChange={setDestination}
+            isOpen={activeDropdown === 'area'}
+            onOpenChange={(isOpen) => setActiveDropdown(isOpen ? 'area' : null)}
+            onChange={handleDestinationChange}
             onTextChange={setTyped}
           />
         </div>
@@ -203,7 +297,10 @@ export function SearchWidget({
           <GuestsPopover
             idPrefix={variant}
             rooms={occupancy}
+            isOpen={activeDropdown === 'guests'}
+            onOpenChange={(isOpen) => setActiveDropdown(isOpen ? 'guests' : null)}
             onChange={setOccupancy}
+            onComplete={handleGuestsComplete}
           />
         </div>
 
@@ -242,6 +339,7 @@ export function SearchWidget({
   // SMALLER HERO SEARCH
   return (
     <form
+      ref={widgetRef}
       onSubmit={submit}
       noValidate
       aria-label="Search hotels"
@@ -271,10 +369,9 @@ export function SearchWidget({
           <DestinationField
             id={`destination-${variant}`}
             value={destination}
-            onChange={(value) => {
-              setDestination(value);
-              setError(null);
-            }}
+            isOpen={activeDropdown === 'area'}
+            onOpenChange={(isOpen) => setActiveDropdown(isOpen ? 'area' : null)}
+            onChange={handleDestinationChange}
             onTextChange={setTyped}
             bare
           />
@@ -290,7 +387,10 @@ export function SearchWidget({
           <GuestsPopover
             idPrefix={variant}
             rooms={occupancy}
+            isOpen={activeDropdown === 'guests'}
+            onOpenChange={(isOpen) => setActiveDropdown(isOpen ? 'guests' : null)}
             onChange={setOccupancy}
+            onComplete={handleGuestsComplete}
             stayNights={nightsBetween(stay.checkIn, stay.checkOut)}
             bare
           />

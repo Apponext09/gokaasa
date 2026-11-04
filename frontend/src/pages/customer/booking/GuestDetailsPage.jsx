@@ -80,7 +80,7 @@ export function GuestDetailsPage() {
             <GuestForm hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
           </div>
           <aside className="guest-details-summary lg:sticky lg:top-20 lg:self-start">
-            <StaySummary quote={hold.quote} petsCount={hold.petsCount || (petFields.length > 0 ? petFields.length : undefined)} className="guest-stay-summary" />
+            <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} className="guest-stay-summary" />
           </aside>
         </div>
       )}

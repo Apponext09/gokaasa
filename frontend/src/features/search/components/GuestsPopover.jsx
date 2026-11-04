@@ -32,18 +32,42 @@ function Stepper({ label, hint, value, min, max, onChange, id }) {
  * used inside the booking assistant chat panel, where a fixed-width floating dialog can get clipped by the
  * panel's small size. The step's own Continue action (outside this component) replaces the popup's "Done".
  */
-export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'guests', bare = false, stayNights = 0, inline = false }) {
-  const [open, setOpen] = useState(false);
+export function GuestsPopover({
+  rooms,
+  onChange,
+  disabled = false,
+  idPrefix = 'guests',
+  bare = false,
+  stayNights = 0,
+  inline = false,
+  isOpen,
+  onOpenChange,
+  onComplete,
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = isOpen !== undefined;
+  const open = isControlled ? isOpen : internalOpen;
+
+  const setOpen = (val) => {
+    onOpenChange?.(val);
+    if (!isControlled) setInternalOpen(val);
+  };
+
   const ref = useRef(null);
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!open || inline || isControlled) return undefined;
     const onDown = (event) => {
       if (ref.current && !ref.current.contains(event.target)) setOpen(false);
     };
+    const onKey = (event) => event.key === 'Escape' && setOpen(false);
     document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [open]);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, inline, isControlled]);
 
   const hasGuests = Array.isArray(rooms) && rooms.length > 0;
   const activeRooms = hasGuests ? rooms : [{ adults: 2, childAges: [], pets: 0 }];
@@ -71,8 +95,8 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
               <p className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
                 <BedDouble className="h-4 w-4 text-brand-700" aria-hidden="true" /> Room {index + 1}
               </p>
-              {rooms.length > 1 && (
-                <button type="button" onClick={() => onChange(rooms.filter((_, i) => i !== index))} className="inline-flex items-center gap-1 text-xs text-danger-600 hover:underline">
+              {activeRooms.length > 1 && (
+                <button type="button" onClick={() => onChange(activeRooms.filter((_, i) => i !== index))} className="inline-flex items-center gap-1 text-xs text-danger-600 hover:underline">
                   <Trash2 className="h-3.5 w-3.5" /> Remove
                 </button>
               )}
@@ -126,7 +150,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
             )}
           </section>
         ))}
-        <Button type="button" variant="ghost" size="sm" disabled={rooms.length >= LIMITS.maxRooms} onClick={() => onChange([...rooms, { adults: 2, childAges: [], pets: 0 }])}>
+        <Button type="button" variant="ghost" size="sm" disabled={activeRooms.length >= LIMITS.maxRooms} onClick={() => onChange([...activeRooms, { adults: 2, childAges: [], pets: 0 }])}>
           <Plus className="h-4 w-4" aria-hidden="true" /> Add room
         </Button>
       </div>
@@ -140,11 +164,13 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
         id={`${idPrefix}-trigger`}
         disabled={disabled}
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(!open)}
         className={cn(
           'flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left focus-visible:outline-2 focus-visible:outline-brand-500',
           bare && 'customer-guests-control',
+          bare && open && 'bg-slate-50/80 rounded-lg',
           !bare && 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-card)]',
+          !bare && open && 'ring-2 ring-brand-500/20',
         )}
       >
         <span className="flex min-w-0 flex-col">
@@ -194,8 +220,8 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
                   <p className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
                     <BedDouble className="h-4 w-4 text-brand-700" aria-hidden="true" /> Room {index + 1}
                   </p>
-                  {rooms.length > 1 && (
-                    <button type="button" onClick={() => onChange(rooms.filter((_, i) => i !== index))} className="inline-flex items-center gap-1 text-xs text-danger-600 hover:underline">
+                  {activeRooms.length > 1 && (
+                    <button type="button" onClick={() => onChange(activeRooms.filter((_, i) => i !== index))} className="inline-flex items-center gap-1 text-xs text-danger-600 hover:underline">
                       <Trash2 className="h-3.5 w-3.5" /> Remove
                     </button>
                   )}
@@ -261,7 +287,14 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
                 </Button>
               )}
             </div>
-            <Button size="sm" onClick={() => { if (!hasGuests) onChange(activeRooms); setOpen(false); }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                if (!hasGuests) onChange(activeRooms);
+                setOpen(false);
+                onComplete?.();
+              }}
+            >
               <UserRound className="h-4 w-4" aria-hidden="true" /> Done
             </Button>
           </div>
