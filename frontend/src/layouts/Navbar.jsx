@@ -20,6 +20,12 @@ import { cn } from '@/lib/utils.js';
 import logoMark from '@/assets/logo.png';
 
 /* =========================================================
+   NAVBAR THEME
+========================================================= */
+
+const NAVBAR_BG = '#0B1F3A';
+
+/* =========================================================
    INDIA FLAG
 ========================================================= */
 
@@ -169,13 +175,13 @@ function DesktopNavLink({ to, label, icon: Icon, iconColor, isActive }) {
       to={to}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'relative flex h-full shrink-0 items-center gap-2 whitespace-nowrap px-2 text-[14.5px] font-semibold tracking-tight transition-colors duration-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.65)]',
-        active ? 'text-white' : 'text-white/90 hover:text-white',
+        'relative flex h-full shrink-0 items-center gap-2 whitespace-nowrap px-2 text-[14.5px] font-semibold tracking-tight transition-colors duration-200',
+        active ? 'text-white' : 'text-white/85 hover:text-white',
       )}
     >
       {Icon && (
         <Icon
-          className="h-[21px] w-[21px] shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+          className="h-[21px] w-[21px] shrink-0"
           style={{ color: iconColor }}
           aria-hidden="true"
         />
@@ -211,7 +217,7 @@ function MyProfileLink({ compact = false }) {
         className="flex h-10 w-10 items-center justify-center rounded-full text-white/90 transition-colors duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9B66F]"
       >
         <UserRound
-          className="h-5 w-5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+          className="h-5 w-5"
           style={{ color: '#60A5FA' }}
           aria-hidden="true"
         />
@@ -222,10 +228,10 @@ function MyProfileLink({ compact = false }) {
   return (
     <Link
       to={to}
-      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/[0.10] px-3 py-2 text-[14.5px] font-semibold text-white shadow-sm backdrop-blur-sm transition-colors duration-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.55)] hover:border-white/35 hover:bg-white/[0.16] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9B66F]"
+      className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/[0.08] px-3 py-2 text-[14.5px] font-semibold text-white shadow-sm transition-colors duration-200 hover:border-white/35 hover:bg-white/[0.15] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D9B66F]"
     >
       <UserRound
-        className="h-[21px] w-[21px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]"
+        className="h-[21px] w-[21px]"
         style={{ color: '#60A5FA' }}
         aria-hidden="true"
       />
@@ -251,11 +257,10 @@ function CurrencyLanguageSelector() {
         aria-expanded={open}
         className="
           flex items-center gap-1 whitespace-nowrap rounded-full
-          border border-white/[0.18] bg-white/[0.10] px-2 py-2
-          text-[12.5px] font-medium text-white shadow-sm backdrop-blur-sm
+          border border-white/[0.18] bg-white/[0.08] px-2 py-2
+          text-[12.5px] font-medium text-white shadow-sm
           transition-colors duration-200
-          [text-shadow:0_1px_3px_rgba(0,0,0,0.55)]
-          hover:border-white/30 hover:bg-white/[0.16]
+          hover:border-white/30 hover:bg-white/[0.15]
           focus-visible:outline-2 focus-visible:outline-offset-2
           focus-visible:outline-[#D9B66F]
         "
@@ -337,43 +342,9 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
   const isPartner = Boolean(user?.roles?.includes('HOTEL_OWNER'));
   const partnerTo = isPartner ? '/partner/status' : '/partner/register';
 
-  const location = useLocation();
-  const isHome = location.pathname === '/';
-
-  const { heroSlides, setNavbarHeight } = useHomepageBackground();
-
-  const useUploadedBackground = isHome && heroSlides.length > 0;
+  const { setNavbarHeight } = useHomepageBackground();
 
   const headerRef = useRef(null);
-
-  /* =====================================================
-     SCROLL STATE
-  ===================================================== */
-
-  const [isScrolled, setIsScrolled] = useState(
-    () => window.scrollY > 40,
-  );
-
-  useEffect(() => {
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (ticking) return;
-
-      ticking = true;
-
-      window.requestAnimationFrame(() => {
-        setIsScrolled(window.scrollY > 40);
-        ticking = false;
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
 
   /* =====================================================
      NAVBAR HEIGHT OBSERVER
@@ -433,55 +404,11 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
       ref={headerRef}
       className="
         go-navbar sticky top-0 z-50 isolate w-full
-        shadow-[0_6px_24px_-6px_rgba(16,30,53,0.35)]
+        bg-[#0B1F3A]
+        shadow-[0_6px_24px_-6px_rgba(16,30,53,0.45)]
       "
+      style={{ backgroundColor: NAVBAR_BG }}
     >
-      {/* FALLBACK BACKGROUND FOR OTHER PAGES */}
-
-      {!useUploadedBackground && (
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-          aria-hidden="true"
-        >
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: "url('/destinations/navi-mumbai.jpg')",
-            }}
-          />
-
-          <div className="absolute inset-0 bg-gradient-to-r from-[#101E35]/90 via-[#13284d]/80 to-[#101E35]/90" />
-
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0A1526]/60 via-[#101E35]/10 to-[#101E35]/30" />
-
-          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent" />
-        </div>
-      )}
-
-      {/* DYNAMIC GLASSMORPHISM BACKGROUND */}
-
-      <div
-        aria-hidden="true"
-        className={cn(
-          'pointer-events-none absolute inset-0 z-0',
-          'border-b transition-all duration-300 ease-in-out',
-          isScrolled
-            ? [
-                'border-white/[0.12]',
-                'bg-[#101E35]/75',
-                'backdrop-blur-xl',
-                'supports-[backdrop-filter]:bg-[#101E35]/65',
-                'shadow-[0_4px_20px_rgba(0,0,0,0.18)]',
-              ].join(' ')
-            : [
-                'border-white/[0.10]',
-                'bg-white/[0.08]',
-                'backdrop-blur-md',
-                'supports-[backdrop-filter]:bg-white/[0.07]',
-              ].join(' '),
-        )}
-      />
-
       {/* DESKTOP NAVBAR */}
 
       <div
@@ -491,7 +418,7 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
           lg:grid lg:grid-cols-[auto_1fr_auto]
         "
       >
-        {/* DESKTOP LOGO — WHITE BACKGROUND */}
+        {/* DESKTOP LOGO */}
 
         <Link
           to="/"
@@ -500,10 +427,7 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
           <img
             src={logoMark}
             alt="Gokaasa"
-            className="
-              h-[40px] w-auto object-contain
-              drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]
-            "
+            className="h-[40px] w-auto object-contain"
           />
         </Link>
 
@@ -548,7 +472,7 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
           sm:h-[68px] sm:px-6 lg:hidden
         "
       >
-        {/* MOBILE LOGO — WHITE BACKGROUND */}
+        {/* MOBILE LOGO */}
 
         <Link
           to="/"
@@ -557,11 +481,7 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
           <img
             src={logoMark}
             alt="Gokaasa"
-            className="
-              h-7 w-auto object-contain
-              drop-shadow-[0_1px_3px_rgba(0,0,0,0.35)]
-              sm:h-8
-            "
+            className="h-7 w-auto object-contain sm:h-8"
           />
         </Link>
 
@@ -623,7 +543,6 @@ export function Navbar({ drawerOpen, onToggleDrawer }) {
               flex h-10 w-10 items-center justify-center
               rounded-full border border-white/20
               bg-white/[0.06] text-white/90
-              backdrop-blur-sm
               transition-colors duration-200
               hover:bg-white/[0.14] hover:text-white
               focus-visible:outline-2 focus-visible:outline-offset-2
