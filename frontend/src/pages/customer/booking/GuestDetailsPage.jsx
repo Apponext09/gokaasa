@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/button.jsx';
 import { Input, Textarea } from '@/components/ui/form-controls.jsx';
@@ -80,7 +80,7 @@ export function GuestDetailsPage() {
             <GuestForm hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
           </div>
           <aside className="guest-details-summary lg:sticky lg:top-20 lg:self-start">
-            <StaySummary quote={hold.quote} className="guest-stay-summary" />
+            <StaySummary quote={hold.quote} petsCount={hold.petsCount || (petFields.length > 0 ? petFields.length : undefined)} className="guest-stay-summary" />
           </aside>
         </div>
       )}
@@ -92,12 +92,14 @@ function GuestForm({ hold, onSaved, onExpired }) {
   const { user } = useAuth();
   const occupancy = hold.quote.stay.occupancy;
   const schema = useMemo(() => buildGuestFormSchema(), []);
+  const initialPetsCount = hold.petsCount || occupancy.reduce((sum, r) => sum + (r.pets || 0), 0);
   const form = useForm({
     resolver: zodResolver(schema),
-    defaultValues: defaultGuestValues(occupancy, hold.guestDetails),
+    defaultValues: defaultGuestValues(occupancy, hold.guestDetails, initialPetsCount),
     mode: 'onBlur',
   });
-  const { register, handleSubmit, formState, setValue, getValues, clearErrors } = form;
+  const { register, handleSubmit, formState, setValue, getValues, clearErrors, control } = form;
+  const { fields: petFields, append: appendPet, remove: removePet } = useFieldArray({ control, name: 'pets' });
   const { errors, isSubmitting } = formState;
   const [submitError, setSubmitError] = useState(null);
 
@@ -320,6 +322,54 @@ function GuestForm({ hold, onSaved, onExpired }) {
           </Card>
         );
       })}
+
+            {/* PET DETAILS */}
+      <Card className="guest-form-card guest-pets-card space-y-4 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-[var(--text-strong)]">
+              🐾 Pet Details <span className="font-normal text-[var(--text-muted)]">({petFields.length} {petFields.length === 1 ? 'pet' : 'pets'})</span>
+            </h2>
+            <p className="text-sm text-[var(--text-muted)]">
+              Travelling with a pet? Enter their details so the hotel can make appropriate arrangements.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => appendPet({ name: '', breed: '' })}
+          >
+            + Add another pet
+          </Button>
+        </div>
+
+        {petFields.length === 0 ? (
+          <p className="text-sm italic text-[var(--text-muted)]">No pets added. If you are bringing pets, click "+ Add another pet" above.</p>
+        ) : (
+          <div className="space-y-3">
+            {petFields.map((field, petIndex) => (
+              <div key={field.id} className="grid items-end gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3 sm:grid-cols-[1fr_1fr_auto]">
+                <FormField id={`pet-${petIndex}-name`} label={`Pet ${petIndex + 1} Name`} error={errors.pets?.[petIndex]?.name?.message}>
+                  <Input id={`pet-${petIndex}-name`} placeholder="e.g. Bruno, Bella" {...register(`pets.${petIndex}.name`)} />
+                </FormField>
+                <FormField id={`pet-${petIndex}-breed`} label="Breed / Animal Type (optional)">
+                  <Input id={`pet-${petIndex}-breed`} placeholder="e.g. Labrador, Cat" {...register(`pets.${petIndex}.breed`)} />
+                </FormField>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removePet(petIndex)}
+                  className="mb-1 h-9 text-danger-600 hover:text-danger-700"
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <Card className="guest-form-card guest-extras-card space-y-4 p-4">
         <div>

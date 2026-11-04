@@ -43,6 +43,8 @@ export const hotelSearchQuery = z
     amenities: csv(z.string().regex(/^[A-Z][A-Z0-9_]{1,40}$/, 'Unknown amenity')),
     freeCancellation: z.enum(['true', 'false']).optional(),
     mealPlans: csv(mealPlanCode),
+    pets: z.coerce.number().int().min(0).max(10).optional(),
+    petsAllowed: z.enum(['true', 'false']).optional(),
   })
   .superRefine((value, ctx) => {
     if (value.checkOut <= value.checkIn) {

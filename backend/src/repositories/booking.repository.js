@@ -2,14 +2,14 @@ import { pool } from '../db/pool.js';
 
 const HOLD_COLUMNS = `
   h.id, h.user_id, h.hotel_id, h.room_type_id, h.rate_plan_id, h.check_in::text AS check_in, h.check_out::text AS check_out,
-  h.nights, h.rooms, h.occupancy, h.currency, h.subtotal_minor, h.discount_minor, h.taxes_minor, h.fees_minor,
+  h.nights, h.rooms, h.occupancy, h.pets_count, h.currency, h.subtotal_minor, h.discount_minor, h.taxes_minor, h.fees_minor,
   h.total_minor, h.coupon_id, h.coupon_code, h.coupon_discount_minor, h.quote_snapshot, h.guest_details, h.status,
   h.expires_at, h.booking_id, h.converted_at, h.released_at, h.created_at, h.updated_at, (h.expires_at <= now()) AS is_expired_now
 `;
 
 const BOOKING_COLUMNS = `
   b.id, b.booking_ref, b.user_id, b.hotel_id, b.hold_id, b.status, b.check_in::text AS check_in, b.check_out::text AS check_out,
-  b.adults, b.children, b.rooms_count, b.currency, b.subtotal_minor, b.taxes_minor, b.fees_minor, b.discount_minor,
+  b.adults, b.children, b.pets_count, b.rooms_count, b.currency, b.subtotal_minor, b.taxes_minor, b.fees_minor, b.discount_minor,
   b.coupon_id, b.coupon_code, b.coupon_discount_minor,
   b.total_minor, b.paid_minor, b.refunded_minor, b.cancellation_policy, b.cancellation_deadline_at, b.check_in_at,
   b.primary_first_name, b.primary_last_name, b.primary_email::text AS primary_email, b.primary_phone,
@@ -34,6 +34,7 @@ export const bookingRepository = {
   async publishedHotel(hotelId, client = pool) {
     const { rows } = await client.query(
       `SELECT h.id, h.slug, h.name, h.address_line, h.area, h.city, h.country_code, h.time_zone,
+              h.pets_allowed,
               h.check_in_time::text AS check_in_time,
               (SELECT i.storage_key FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover_storage_key
@@ -47,7 +48,7 @@ export const bookingRepository = {
   /** Nightly prices for one plan, in stay order. Used to re-quote under the room lock. */
   async nightlyPrices(ratePlanId, checkIn, checkOut, client = pool) {
     const { rows } = await client.query(
-      `SELECT stay_date::text AS stay_date, base_price_minor, discount_minor, tax_minor, fee_minor, final_price_minor
+      `SELECT stay_date::text AS stay_date, base_price_minor, discount_minor, tax_minor, 0::bigint AS fee_minor, final_price_minor
          FROM rate_prices WHERE rate_plan_id = $1 AND stay_date >= $2 AND stay_date < $3 ORDER BY stay_date`,
       [ratePlanId, checkIn, checkOut],
     );
@@ -82,14 +83,14 @@ export const bookingRepository = {
     const { rows } = await client.query(
       `INSERT INTO booking_holds (user_id, hotel_id, room_type_id, rate_plan_id, check_in, check_out, nights, rooms,
                                   occupancy, currency, subtotal_minor, discount_minor, taxes_minor, fees_minor, total_minor,
-                                  quote_snapshot, idempotency_key, status, expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HELD', now() + ($18 || ' minutes')::interval)
+                                  quote_snapshot, idempotency_key, status, expires_at, pets_count)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HELD', now() + ($18 || ' minutes')::interval, $19)
        RETURNING id, expires_at`,
       [
         values.userId, values.hotelId, values.roomTypeId, values.ratePlanId, values.checkIn, values.checkOut,
         values.nights, values.rooms, JSON.stringify(values.occupancy), values.currency, values.subtotal,
         values.discount, values.taxes, values.fees, values.total, JSON.stringify(values.quoteSnapshot),
-        values.idempotencyKey ?? null, String(values.holdMinutes),
+        values.idempotencyKey ?? null, String(values.holdMinutes), values.petsCount ?? 0,
       ],
     );
     return rows[0];
@@ -125,10 +126,17 @@ export const bookingRepository = {
   },
 
   async saveHoldGuests(client, id, guestDetails) {
-    await client.query(`UPDATE booking_holds SET guest_details = $2, updated_at = now() WHERE id = $1`, [
-      id,
-      JSON.stringify(guestDetails),
-    ]);
+    const petsCount = Array.isArray(guestDetails?.pets) && guestDetails.pets.length > 0
+      ? guestDetails.pets.length
+      : (guestDetails?.petsCount != null ? Number(guestDetails.petsCount) : null);
+    await client.query(
+      `UPDATE booking_holds
+          SET guest_details = $2,
+              pets_count = CASE WHEN $3::int IS NOT NULL THEN $3::int ELSE pets_count END,
+              updated_at = now()
+        WHERE id = $1`,
+      [id, JSON.stringify(guestDetails), petsCount],
+    );
   },
 
   async setHoldStatus(client, id, status) {
@@ -231,7 +239,7 @@ export const bookingRepository = {
 
   async bookingRooms(bookingId, client = pool) {
     const { rows } = await client.query(
-      `SELECT br.room_type_id, br.room_name, br.meal_plan, mp.name AS meal_plan_name, br.rate_plan_name, br.quantity, br.nights, br.rate_per_night_minor,
+      `SELECT br.room_type_id, br.rate_plan_id, br.room_name, br.meal_plan, mp.name AS meal_plan_name, br.rate_plan_name, br.quantity, br.nights, br.rate_per_night_minor,
               subtotal_minor, discount_minor, taxes_minor, fees_minor, total_minor
          FROM booking_rooms br JOIN meal_plans mp ON mp.code = br.meal_plan
         WHERE br.booking_id = $1 ORDER BY br.id`,
@@ -277,6 +285,28 @@ export const bookingRepository = {
   },
 
   /** How many bookings are in each status. Used for public counts (e.g. "confirmed stays"), never revenue. */
+
+  async insertBookingExtension(client, values) {
+    const { rows } = await client.query(
+      `INSERT INTO booking_extensions (booking_id, original_check_out, extended_check_out, additional_nights, additional_amount_minor, payment_id, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, booking_id, original_check_out::text AS original_check_out, extended_check_out::text AS extended_check_out,
+                   additional_nights, additional_amount_minor, payment_id, status, created_at, updated_at`,
+      [values.bookingId, values.originalCheckOut, values.extendedCheckOut, values.additionalNights, values.additionalAmountMinor, values.paymentId ?? null, values.status ?? 'CONFIRMED']
+    );
+    return rows[0];
+  },
+
+  async bookingExtensions(bookingId, client = pool) {
+    const { rows } = await client.query(
+      `SELECT id, booking_id, original_check_out::text AS original_check_out, extended_check_out::text AS extended_check_out,
+              additional_nights, additional_amount_minor, payment_id, status, created_at, updated_at
+         FROM booking_extensions WHERE booking_id = $1 ORDER BY id ASC`,
+      [bookingId]
+    );
+    return rows;
+  },
+
   async countByStatus(client = pool) {
     const { rows } = await client.query(`SELECT status, COUNT(*)::int AS count FROM bookings GROUP BY status`);
     return Object.fromEntries(rows.map((row) => [row.status, row.count]));

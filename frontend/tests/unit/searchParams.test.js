@@ -11,6 +11,7 @@ import {
   slugifyPlace,
   DINNER_INCLUDED_MEAL_PLANS,
   destinationSearchPath,
+  summarizeOccupancy,
 } from '../../src/features/search/searchParams.js';
 
 test('a shared URL restores the same search after a reload', () => {
@@ -118,4 +119,16 @@ test('destination cards optionally preselect an area within the destination', ()
   const params = new URLSearchParams(path.split('?')[1]);
   assert.equal(params.get('destination'), 'mumbai');
   assert.equal(params.get('area'), 'bandra-west');
+});
+
+test('pets round-trip in search params and summarize occupancy correctly', () => {
+  const url = new URLSearchParams('checkIn=2026-10-15&checkOut=2026-10-17&occ=2&pets=2');
+  const state = parseSearchParams(url);
+  assert.equal(state.occupancy[0].pets, 2);
+  assert.equal(state.filters.petsAllowed, true);
+  assert.equal(summarizeOccupancy(state.occupancy), '1 Room · 2 Adults · 2 Pets');
+
+  const back = toSearchParams(state);
+  assert.equal(back.get('pets'), '2');
+  assert.equal(back.get('petsAllowed'), 'true');
 });

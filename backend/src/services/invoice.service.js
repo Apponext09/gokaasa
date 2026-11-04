@@ -18,7 +18,7 @@ const money = (minor, currency = 'INR') => {
  * never from today's rates, and never from anything the browser could have supplied. Deliberately plain:
  * one page, Helvetica (bundled with pdfkit, no font files to ship), a navy/gold-adjacent accent rule.
  */
-function renderInvoicePdf(booking) {
+export function renderInvoicePdf(booking) {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   const chunks = [];
   doc.on('data', (chunk) => chunks.push(chunk));
@@ -57,7 +57,7 @@ function renderInvoicePdf(booking) {
   if (booking.hotel.address) { doc.text(booking.hotel.address, 310, rightY, { width: 235 }); rightY += 26; }
   doc.text(`Check-in: ${booking.stay.checkIn}`, 310, rightY); rightY += 13;
   doc.text(`Check-out: ${booking.stay.checkOut}`, 310, rightY); rightY += 13;
-  doc.text(`${booking.stay.nights} night(s)  ·  ${booking.stay.rooms} room(s)  ·  ${booking.stay.adults} adult(s), ${booking.stay.children} child(ren)`, 310, rightY, { width: 235 }); rightY += 13;
+  doc.text(`${booking.stay.nights} night(s)  ·  ${booking.stay.rooms} room(s)  ·  ${booking.stay.adults} adult(s), ${booking.stay.children} child(ren)${booking.stay.pets ? `  ·  ${booking.stay.pets} pet(s)` : ''}`, 310, rightY, { width: 235 }); rightY += 13;
 
   let y = Math.max(leftY, rightY) + 20;
   doc.rect(50, y, 495, 20).fill(NAVY);
@@ -109,7 +109,7 @@ function renderInvoicePdf(booking) {
     doc.text(`Reference: ${booking.payment.id ?? booking.payment.orderId ?? '—'}`, 50, y); y += 13;
     if (booking.payment.paidAt) { doc.text(`Paid at: ${new Date(booking.payment.paidAt).toLocaleString('en-IN')}`, 50, y); y += 13; }
   }
-  for (const refund of booking.refunds) {
+  for (const refund of (booking.refunds ?? [])) {
     doc.text(`Refund (${refund.status}): ${money(refund.amount, booking.amounts.currency)}`, 50, y);
     y += 13;
   }

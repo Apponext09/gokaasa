@@ -513,8 +513,10 @@ export function HotelDetailsPage() {
         (r) => ({
           adults: r.adults,
           childAges: r.childAges,
+          pets: r.pets || 0,
         })
       ),
+      petsCount: effectiveOccupancy.reduce((sum, r) => sum + (r.pets || 0), 0) || state.pets || 0,
 
       pricePerNightMinor:
         plan.pricePerNight,
@@ -841,6 +843,11 @@ export function HotelDetailsPage() {
               {hotel.propertyType && (
                 <Badge tone="neutral">
                   {hotel.propertyTypeName ?? hotel.propertyType.replaceAll('_', ' ').toLowerCase()}
+                </Badge>
+              )}
+              {hotel.petsAllowed && (
+                <Badge tone="success" className="gap-1">
+                  🐾 Pet friendly
                 </Badge>
               )}
             </div>

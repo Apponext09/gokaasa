@@ -64,7 +64,7 @@ const ratePlanFields = {
   cancellationPolicyId: z.number().int().positive().nullish(),
   discountPercent: percent,
   taxPercent: percent,
-  feeMinor: moneyMinor,
+  
   basePriceMinor: nightlyPriceMinor,
   status: z.enum(['ACTIVE', 'INACTIVE']),
 };
@@ -73,7 +73,7 @@ export const ratePlanCreateSchema = z.object({
   ...ratePlanFields,
   discountPercent: percent.default(0),
   taxPercent: percent.default(0),
-  feeMinor: moneyMinor.default(0),
+  feeMinor: moneyMinor.default(0).optional(),
   basePriceMinor: moneyMinor.optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
 });

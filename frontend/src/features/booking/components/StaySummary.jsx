@@ -3,8 +3,9 @@ import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { formatMoneyMinor, formatStayDate, occupancyLabel } from '../bookingFormat.js';
 
 /** The booking's facts and price breakdown. Shown from the server's quote, never from the browser's own numbers. */
-export function StaySummary({ quote, className = '' }) {
+export function StaySummary({ quote, petsCount, className = '' }) {
   const { hotel, room, ratePlan, cancellationPolicy, stay, totals, coupon } = quote;
+  const effectivePets = Number(petsCount ?? stay.petsCount ?? quote.petsCount ?? 0);
   const money = (minor) => formatMoneyMinor(minor, totals.currency);
   return (
     <article className={`stay-summary overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)] shadow-sm ${className}`} aria-label="Booking summary">
@@ -45,7 +46,7 @@ export function StaySummary({ quote, className = '' }) {
           </div>
           <div className="flex gap-2">
             <Users className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-            <dd className="text-[var(--text-body)]">{occupancyLabel(stay.occupancy)}</dd>
+            <dd className="text-[var(--text-body)]">{occupancyLabel(stay.occupancy, effectivePets)}</dd>
           </div>
           <div className="flex gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />

@@ -11,7 +11,6 @@ const valid = {
   cancellationPolicyId: '7',
   discountPercent: '10',
   taxPercent: '12',
-  feeRupees: '150',
   basePriceRupees: '8999.50',
   status: 'ACTIVE',
 };

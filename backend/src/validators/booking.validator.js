@@ -15,6 +15,7 @@ const occupancyRoom = z.object({
     .array(z.number().int().min(LIMITS.minAge).max(LIMITS.maxAge))
     .max(LIMITS.maxChildrenPerRoom)
     .default([]),
+  pets: z.number().int().min(0).max(10).optional().default(0),
 });
 
 export const occupancySchema = z.array(occupancyRoom).min(1).max(LIMITS.maxRooms);
@@ -45,6 +46,7 @@ export const holdCreateSchema = z
     ratePlanId: positiveId,
     rooms: z.number().int().min(1).max(LIMITS.maxRooms),
     idempotencyKey: z.string().trim().min(1).max(100).optional(),
+    petsCount: z.number().int().min(0).max(10).optional(),
     ...stayFields,
   })
   .superRefine((value, ctx) => {
@@ -108,6 +110,8 @@ export const guestDetailsSchema = z.object({
   companyName: optionalText(120),
   billingAddress: optionalText(300),
   specialRequest: optionalText(500),
+  petsCount: z.number().int().min(0).max(10).optional(),
+  pets: z.array(z.object({ name: z.string().trim().max(60).optional(), breed: z.string().trim().max(60).optional() })).optional(),
 });
 
 export const holdIdParam = z.object({ id: positiveId });
@@ -144,4 +148,19 @@ export const myBookingsQuery = z.object({
 
 export const cancelSchema = z.object({
   reason: z.string().trim().max(300).optional(),
+});
+
+
+export const checkExtensionSchema = z.object({
+  newCheckOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Check-out must be YYYY-MM-DD'),
+});
+
+export const createExtensionOrderSchema = z.object({
+  newCheckOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Check-out must be YYYY-MM-DD'),
+});
+
+export const confirmExtensionSchema = z.object({
+  razorpay_order_id: z.string().min(3).max(100),
+  razorpay_payment_id: z.string().min(3).max(100),
+  razorpay_signature: z.string().min(10).max(256),
 });

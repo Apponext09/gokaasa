@@ -306,6 +306,9 @@ export const bookingApi = {
   myBooking: (id) => api.get(`/my-bookings/${id}`).then((r) => r.data.booking),
   /** The PDF is generated server-side from the booking's own stored snapshot, never recomputed from today's rates. */
   invoiceBlob: (id) => api.get(`/bookings/${id}/invoice`, { responseType: 'blob' }).then((r) => r.data),
+  checkExtension: (id, body) => api.post(`/bookings/${id}/check-extension`, body).then((r) => r.data),
+  createExtensionOrder: (id, body) => api.post(`/bookings/${id}/create-extension-order`, body).then((r) => r.data),
+  confirmExtension: (id, body) => api.post(`/bookings/${id}/confirm-extension`, body).then((r) => r.data),
 };
 
 /** Notifications: the bell/dropdown's data, always scoped to the signed-in user by the server. */

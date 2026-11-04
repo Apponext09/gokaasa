@@ -80,7 +80,7 @@ export const inventoryService = {
         isRefundable: plan.is_refundable,
         discountPercent: Number(plan.discount_percent),
         taxPercent: Number(plan.tax_percent),
-        feeMinor: plan.fee_minor,
+        feeMinor: 0,
       })),
       days: nights.map((date) => {
         const facts = nightly.get(`${roomTypeId}|${date}`);
@@ -104,7 +104,7 @@ export const inventoryService = {
                     base: row.base_price_minor,
                     discount: row.discount_minor,
                     tax: row.tax_minor,
-                    fee: row.fee_minor,
+                    fee: 0,
                     final: row.final_price_minor,
                   }
                   : null,
@@ -138,8 +138,7 @@ export const inventoryService = {
           baseMinor: input.basePriceMinor,
           discountPercent: plan.discount_percent,
           taxPercent: plan.tax_percent,
-          feeMinor: plan.fee_minor,
-        });
+          });
         await ratePlanRepository.upsertPrices(client, plan.id, dates, components);
         changes.prices = { ratePlanId: plan.id, basePriceMinor: input.basePriceMinor, nights: dates.length };
       }

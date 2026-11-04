@@ -47,6 +47,20 @@ function renderControl(name, { register, disabled, invalid, ariaDescribedBy, pro
   if (name === 'locationUrl') {
     return <Input {...common} type="url" inputMode="url" placeholder="https://maps.app.goo.gl/..." {...register(name)} />;
   }
+  if (name === 'petsAllowed') {
+    return (
+      <label className="flex items-center gap-2 cursor-pointer py-1.5">
+        <input
+          type="checkbox"
+          id={name}
+          disabled={disabled}
+          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          {...register(name)}
+        />
+        <span className="text-sm font-medium text-[var(--text-strong)]">Allow pets at this property</span>
+      </label>
+    );
+  }
   if (name === 'checkInTime' || name === 'checkOutTime') {
     return <Input {...common} type="time" {...register(name)} />;
   }

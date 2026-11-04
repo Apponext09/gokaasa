@@ -127,8 +127,7 @@ export const availabilityService = {
             baseMinor: Number(plan.base_price_minor),
             discountPercent: plan.discount_percent,
             taxPercent: plan.tax_percent,
-            feeMinor: plan.fee_minor,
-          });
+            });
           const nightlyRows = nights.map((date) => ({ date, ...components }));
           const totals = quoteNights(nightlyRows, rooms);
           const policy = toPolicy(plan);

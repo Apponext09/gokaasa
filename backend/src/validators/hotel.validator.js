@@ -44,6 +44,7 @@ const hotelFields = {
   website: webUrl('Website', 500),
   checkInTime: time,
   checkOutTime: time,
+  petsAllowed: z.boolean().nullish(),
 };
 
 export const hotelCreateSchema = z.object({

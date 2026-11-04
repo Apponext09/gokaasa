@@ -26,6 +26,7 @@ export function SelectionBar({ selection, onClear }) {
   const startHold = async () => {
     setStarting(true);
     try {
+      const totalPets = (selection.occupancy || []).reduce((sum, r) => sum + (r.pets || 0), 0) || selection.petsCount || 0;
       const hold = await bookingApi.createHold({
         hotelId: selection.hotelId,
         roomTypeId: selection.roomTypeId,
@@ -34,6 +35,7 @@ export function SelectionBar({ selection, onClear }) {
         checkOut: selection.checkOut,
         rooms: selection.rooms,
         occupancy: selection.occupancy,
+        petsCount: totalPets,
         idempotencyKey: selection.idempotencyKey,
       });
       const nextParams = new URLSearchParams({ holdId: String(hold.id) });

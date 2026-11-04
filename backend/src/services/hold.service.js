@@ -21,13 +21,20 @@ const secondsLeft = (expiresAt) => Math.max(0, Math.floor((new Date(expiresAt).g
 
 function toHoldDto(hold) {
   const status = hold.status === HOLD_STATUS.HELD && !isHoldLive(hold) ? HOLD_STATUS.EXPIRED : hold.status;
+  const effectivePets = Number(
+    (hold.guest_details?.pets?.length) ||
+    hold.guest_details?.petsCount ||
+    hold.pets_count ||
+    0
+  );
   return {
     id: hold.id,
     status,
     expiresAt: hold.expires_at,
     secondsRemaining: status === HOLD_STATUS.HELD ? secondsLeft(hold.expires_at) : 0,
     bookingId: hold.booking_id,
-    quote: quoteView(hold.quote_snapshot, hold),
+    quote: quoteView(hold.quote_snapshot, { ...hold, pets_count: effectivePets }),
+    petsCount: effectivePets,
     guestDetails: hold.guest_details ?? null,
     createdAt: hold.created_at,
   };
@@ -43,6 +50,7 @@ function inputFromHold(hold) {
     checkOut: hold.check_out,
     rooms: hold.rooms,
     occupancy: hold.occupancy,
+    petsCount: Number(hold.pets_count ?? 0),
   };
 }
 
@@ -128,6 +136,7 @@ export const holdService = {
           quoteSnapshot: quote.snapshot,
           holdMinutes,
           idempotencyKey: input.idempotencyKey ?? null,
+          petsCount: Number(input.petsCount ?? input.pets ?? (input.occupancy || []).reduce((sum, r) => sum + (r.pets || 0), 0) ?? 0),
         });
 
         const nights = quote.snapshot.nightly.map((row) => row.date);

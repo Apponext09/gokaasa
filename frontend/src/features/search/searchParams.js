@@ -8,6 +8,7 @@ export const LIMITS = Object.freeze({
   minAdults: 1,
   maxAdults: 6,
   maxChildrenPerRoom: 4,
+  maxPetsPerRoom: 3,
   minAge: 0,
   maxAge: 17,
   maxNights: 30,
@@ -133,6 +134,10 @@ export function parseSearchParams(params) {
   const maxPrice = num('maxPrice');
   const guestRating = [3.5, 4, 4.5].includes(Number(get('guestRating'))) ? Number(get('guestRating')) : undefined;
   const stars = csvList(get('stars'), oneOf(['0', '1', '2', '3', '4', '5']))?.map(Number).sort((a, b) => a - b);
+  const pets = num('pets') || 0;
+  if (pets > 0 && occupancy.length > 0) {
+    occupancy[0].pets = pets;
+  }
 
   return {
     destination: slugifyPlace(get('destination') ?? '') || null,
@@ -155,6 +160,7 @@ export function parseSearchParams(params) {
       amenities: csvList(get('amenities'), (code) => AMENITY_CODE.test(code)),
       freeCancellation: get('freeCancellation') === 'true',
       mealPlans: dinnerOnly(csvList(get('mealPlans'), (value) => MEAL_PLAN_CODE.test(value))),
+      petsAllowed: get('petsAllowed') === 'true' || pets > 0,
     },
   };
 }
@@ -165,6 +171,8 @@ export function toSearchParams(state, { includeCoupon = true } = {}) {
   if (state.checkIn) params.set('checkIn', state.checkIn);
   if (state.checkOut) params.set('checkOut', state.checkOut);
   if (state.occupancy) params.set('occ', formatOccupancy(state.occupancy));
+  const totalPets = (state.occupancy ?? []).reduce((sum, r) => sum + (r.pets || 0), 0) || (state.pets || 0);
+  if (totalPets > 0) params.set('pets', String(totalPets));
   if (state.sort && state.sort !== 'recommended') params.set('sort', state.sort);
   if (state.page && state.page > 1) params.set('page', String(state.page));
   if (state.name) params.set('name', String(state.name).trim().slice(0, 120));
@@ -177,6 +185,7 @@ export function toSearchParams(state, { includeCoupon = true } = {}) {
   if (f.amenities?.length) params.set('amenities', [...f.amenities].sort().join(','));
   if (f.freeCancellation) params.set('freeCancellation', 'true');
   if (f.mealPlans?.length) params.set('mealPlans', f.mealPlans.join(','));
+  if (f.petsAllowed) params.set('petsAllowed', 'true');
   if (includeCoupon && state.coupon) params.set('coupon', state.coupon);
   return params;
 }
@@ -187,6 +196,8 @@ export function stayParams(state) {
   if (state.checkIn) params.set('checkIn', state.checkIn);
   if (state.checkOut) params.set('checkOut', state.checkOut);
   if (state.occupancy) params.set('occ', formatOccupancy(state.occupancy));
+  const totalStayPets = (state.occupancy ?? []).reduce((sum, r) => sum + (r.pets || 0), 0) || (state.pets || 0);
+  if (totalStayPets > 0) params.set('pets', String(totalStayPets));
   if (state.coupon) params.set('coupon', state.coupon);
   return params;
 }
@@ -211,8 +222,9 @@ export function summarizeOccupancy(rooms) {
   const roomCount = rooms.length;
   const adults = rooms.reduce((sum, r) => sum + r.adults, 0);
   const children = rooms.reduce((sum, r) => sum + r.childAges.length, 0);
+  const pets = rooms.reduce((sum, r) => sum + (r.pets || 0), 0);
   const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-  return `${plural(roomCount, 'Room')} · ${plural(adults, 'Adult')}${children ? ` · ${plural(children, 'Child')}` : ''}`;
+  return `${plural(roomCount, 'Room')} · ${plural(adults, 'Adult')}${children ? ` · ${plural(children, 'Child')}` : ''}${pets ? ` · ${plural(pets, 'Pet')}` : ''}`;
 }
 
 /** Stay validity used by the search widget and the details page before any request is made. */

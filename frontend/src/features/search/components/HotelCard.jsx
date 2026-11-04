@@ -116,6 +116,7 @@ export function HotelCard({ hotel, state, compact = false }) {
     if (!selection) return;
     setReserving(true);
     try {
+      const totalPets = (selection.occupancy || []).reduce((sum, r) => sum + (r.pets || 0), 0) || selection.petsCount || 0;
       const hold = await bookingApi.createHold({
         hotelId: selection.hotelId,
         roomTypeId: selection.roomTypeId,
@@ -124,6 +125,7 @@ export function HotelCard({ hotel, state, compact = false }) {
         checkOut: selection.checkOut,
         rooms: selection.rooms,
         occupancy: selection.occupancy,
+        petsCount: totalPets,
         idempotencyKey: selection.idempotencyKey,
       });
       const nextParams = new URLSearchParams({ holdId: String(hold.id) });
@@ -164,7 +166,8 @@ export function HotelCard({ hotel, state, compact = false }) {
       checkOut: state.checkOut,
       nights: offer.nights,
       rooms: state.occupancy.length,
-      occupancy: state.occupancy.map((room) => ({ adults: room.adults, childAges: room.childAges })),
+      occupancy: state.occupancy.map((room) => ({ adults: room.adults, childAges: room.childAges, pets: room.pets || 0 })),
+      petsCount: state.occupancy.reduce((sum, r) => sum + (r.pets || 0), 0) || state.pets || 0,
       pricePerNightMinor: offer.pricePerNightMinor,
       subtotalMinor: offer.baseTotalMinor,
       discountMinor: offer.discountTotalMinor,
@@ -383,6 +386,9 @@ export function HotelCard({ hotel, state, compact = false }) {
                 </Badge>
               )}
               {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <Badge tone="warning">Only {offer.roomsLeft} left</Badge>}
+              {hotel.petsAllowed && (
+                <Badge tone="success">🐾 Pet friendly</Badge>
+              )}
               {couponOffer && (
                 <Badge tone="premium">
                   <Tag className="h-3 w-3" aria-hidden="true" /> {couponOffer.discountPercent > 0

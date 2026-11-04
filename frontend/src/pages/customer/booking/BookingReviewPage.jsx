@@ -299,6 +299,14 @@ export function BookingReviewPage() {
                   </li>
                 ))}
               </ul>
+              {hold.guestDetails?.pets?.length > 0 && (
+                <div className="flex items-start gap-2 text-sm text-[var(--text-body)]">
+                  <span>🐾 <strong>Pets ({hold.guestDetails.pets.length}):</strong></span>
+                  <span>
+                    {hold.guestDetails.pets.map((p) => p.name ? (p.breed ? `${p.name} (${p.breed})` : p.name) : 'Pet').join(', ')}
+                  </span>
+                </div>
+              )}
               {hold.guestDetails?.companyName && <p className="text-sm text-[var(--text-body)]">Company: {hold.guestDetails.companyName}</p>}
               {hold.guestDetails?.gstNumber && <p className="text-sm text-[var(--text-body)]">GST: {hold.guestDetails.gstNumber}</p>}
               {hold.guestDetails?.specialRequest && <p className="text-sm text-[var(--text-body)]">Requests: {hold.guestDetails.specialRequest}</p>}
@@ -376,7 +384,7 @@ export function BookingReviewPage() {
               <p className="text-sm text-[var(--text-body)]">{hold.quote.cancellationPolicy.description}</p>
               <p className="flex items-start gap-2 text-xs text-[var(--text-muted)]">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Cancellation refunds follow the policy shown here, as it was when you booked. {occupancyLabel(hold.quote.stay.occupancy)}.
+                Cancellation refunds follow the policy shown here, as it was when you booked. {occupancyLabel(hold.quote.stay.occupancy, hold.petsCount || hold.guestDetails?.pets?.length || hold.quote.stay.petsCount)}.
               </p>
             </Card>
 
@@ -391,7 +399,7 @@ export function BookingReviewPage() {
           </div>
 
           <aside className="booking-review-summary lg:sticky lg:top-20 lg:self-start">
-            <StaySummary quote={hold.quote} className="guest-stay-summary review-stay-summary" />
+            <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} className="guest-stay-summary review-stay-summary" />
           </aside>
         </div>
       )}

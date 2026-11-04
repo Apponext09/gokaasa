@@ -88,7 +88,7 @@ export function SearchWidget({
   });
 
   const [occupancy, setOccupancy] = useState(
-    initial?.occupancy ?? [{ adults: 2, childAges: [] }]
+    initial?.occupancy ?? null
   );
 
   const [error, setError] = useState(null);

@@ -38,6 +38,7 @@ export const hotelFormSchema = z.object({
   website: z.string().trim().refine((value) => value === '' || z.url().safeParse(value).success, 'Enter a full URL, including https://'),
   checkInTime: z.string().refine((value) => value === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(value), 'Use a valid time'),
   checkOutTime: z.string().refine((value) => value === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(value), 'Use a valid time'),
+  petsAllowed: z.boolean().default(false),
 });
 
 export const EMPTY_HOTEL_FORM = {
@@ -58,6 +59,7 @@ export const EMPTY_HOTEL_FORM = {
   website: '',
   checkInTime: '',
   checkOutTime: '',
+  petsAllowed: false,
 };
 
 /** API hotel -> form strings. */
@@ -81,6 +83,7 @@ export function toFormValues(hotel) {
     website: str(hotel.website),
     checkInTime: hotel.checkInTime ? String(hotel.checkInTime).slice(0, 5) : '',
     checkOutTime: hotel.checkOutTime ? String(hotel.checkOutTime).slice(0, 5) : '',
+    petsAllowed: Boolean(hotel.petsAllowed ?? hotel.pets_allowed ?? false),
   };
 }
 
@@ -105,6 +108,7 @@ export function toPayload(values) {
     website: nullable(values.website),
     checkInTime: nullable(values.checkInTime),
     checkOutTime: nullable(values.checkOutTime),
+    petsAllowed: Boolean(values.petsAllowed),
   };
 }
 
@@ -126,10 +130,11 @@ export const FIELD_LABELS = {
   website: 'Website',
   checkInTime: 'Check-in time',
   checkOutTime: 'Check-out time',
+  petsAllowed: 'Pets Allowed (Pet-friendly)',
 };
 
 /** Fields shown on each workspace tab. The same form instance backs every tab. */
 export const TAB_FIELDS = {
-  overview: ['name', 'shortName', 'propertyType', 'starRating', 'description', 'phone', 'email', 'website', 'checkInTime', 'checkOutTime'],
+  overview: ['name', 'shortName', 'propertyType', 'starRating', 'petsAllowed', 'description', 'phone', 'email', 'website', 'checkInTime', 'checkOutTime'],
   location: ['addressLine', 'area', 'city', 'state', 'countryCode', 'postalCode', 'locationUrl'],
 };

@@ -56,6 +56,11 @@ export function buildGuestFormSchema() {
     companyName: z.string().trim().max(120, 'Company name must be at most 120 characters'),
     billingAddress: z.string().trim().max(300, 'Keep the billing address to 300 characters or fewer'),
     specialRequest: z.string().trim().max(500, 'Keep special requests to 500 characters or fewer'),
+    petsCount: z.number().int().min(0).max(10).optional(),
+    pets: z.array(z.object({
+      name: z.string().trim().max(60, 'Pet name must be at most 60 characters').optional(),
+      breed: z.string().trim().max(60).optional(),
+    })).optional(),
   });
 }
 
@@ -63,7 +68,7 @@ export function buildGuestFormSchema() {
  * Starting values. Children's ages come from the search; adults' ages are left for the guest to fill in.
  * When a saved draft exists (the guest came back to this page), it is used instead.
  */
-export function defaultGuestValues(occupancy, saved = null) {
+export function defaultGuestValues(occupancy, saved = null, initialPetsCount = 0) {
   const savedRooms = saved?.rooms ?? [];
   return {
     primaryContact: {
@@ -90,6 +95,9 @@ export function defaultGuestValues(occupancy, saved = null) {
     companyName: saved?.companyName ?? '',
     billingAddress: saved?.billingAddress ?? '',
     specialRequest: saved?.specialRequest ?? '',
+    pets: saved?.pets?.length
+      ? saved.pets.map((p) => ({ name: p.name ?? '', breed: p.breed ?? '' }))
+      : Array.from({ length: initialPetsCount || saved?.petsCount || 0 }, () => ({ name: '', breed: '' })),
   };
 }
 
@@ -114,5 +122,10 @@ export function toGuestDetailsPayload(values) {
     companyName: values.companyName || undefined,
     billingAddress: values.billingAddress || undefined,
     specialRequest: values.specialRequest || undefined,
+    petsCount: values.pets?.filter((p) => p.name?.trim()).length ?? 0,
+    pets: (values.pets ?? []).filter((p) => p.name?.trim()).map((p) => ({
+      name: p.name.trim(),
+      breed: p.breed?.trim() || undefined,
+    })),
   };
 }

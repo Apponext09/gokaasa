@@ -24,7 +24,7 @@ const SORT_SQL = {
 export const hotelSearchRepository = {
   async similar({ hotelId, city, limit }) {
     const { rows } = await pool.query(
-      `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type,
+      `SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.property_type, h.pets_allowed,
               (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
               h.star_rating, h.guest_rating,
               h.review_count, FALSE AS wishlisted,
@@ -84,7 +84,7 @@ export const hotelSearchRepository = {
                 (rp.base_price_minor
                   - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint
                   + ROUND((rp.base_price_minor - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint) * rp.tax_percent / 100)::bigint
-                  + rp.fee_minor)::bigint AS final_price_minor
+                  )::bigint AS final_price_minor
            FROM room_types rt
            JOIN within w ON w.id = rt.hotel_id
            JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE'
@@ -151,6 +151,7 @@ export const hotelSearchRepository = {
                   SELECT COUNT(DISTINCT a.code) FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id
                    WHERE ha.hotel_id = h.id AND a.code = ANY($6::text[])) = cardinality($6::text[]))
             AND ($19::text IS NULL OR h.name ILIKE '%' || $19::text || '%')
+            AND ($20::boolean IS NOT TRUE OR (h.pets_allowed = TRUE OR EXISTS (SELECT 1 FROM hotel_amenities ha JOIN amenities a ON a.id = ha.amenity_id WHERE ha.hotel_id = h.id AND a.code = 'PETS_ALLOWED')))
        ),
        room_nights AS (
          SELECT rt.id AS room_type_id, rt.hotel_id, rt.total_units, rt.max_adults, rt.max_children, rt.max_occupancy,
@@ -200,8 +201,8 @@ export const hotelSearchRepository = {
                 (p.base_price_minor * $8::int)::bigint AS base_total,
                 (p.nightly_discount * $8::int)::bigint AS discount_total,
                 (p.nightly_tax * $8::int)::bigint AS tax_total,
-                (p.fee_minor * $8::int)::bigint AS fee_total,
-                ((p.base_price_minor - p.nightly_discount + p.nightly_tax + p.fee_minor) * $8::int)::bigint AS final_total
+                0::bigint AS fee_total,
+                ((p.base_price_minor - p.nightly_discount + p.nightly_tax ) * $8::int)::bigint AS final_total
            FROM eligible_rooms ro
            JOIN priced_plans p ON p.room_type_id = ro.room_type_id
            JOIN meal_plans mp ON mp.code = p.meal_plan AND mp.is_active
@@ -210,7 +211,7 @@ export const hotelSearchRepository = {
             AND ($13::boolean IS NOT TRUE OR (p.is_refundable AND NOT cp.is_non_refundable AND cp.refund_percent = 100))
           GROUP BY p.id, ro.room_type_id, ro.hotel_id, ro.available_rooms, ro.available_without_holds, ro.next_hold_expires_at,
                    p.code, p.name, p.meal_plan, mp.name, p.is_refundable,
-                   p.base_price_minor, p.nightly_discount, p.nightly_tax, p.fee_minor,
+                   p.base_price_minor, p.nightly_discount, p.nightly_tax,
                    cp.code, cp.name, cp.is_non_refundable, cp.cancellation_deadline_hours, cp.refund_percent
        ),
        hotel_best AS (
@@ -219,7 +220,7 @@ export const hotelSearchRepository = {
           ORDER BY pt.hotel_id, (pt.available_rooms >= $9::int) DESC, pt.final_total ASC, pt.room_type_id ASC, pt.plan_id ASC
        ),
        listing AS (
-         SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.location_url, h.star_rating, h.guest_rating, h.review_count,
+         SELECT h.id, h.slug, h.name, h.city, h.area, h.country_code, h.location_url, h.pets_allowed, h.star_rating, h.guest_rating, h.review_count,
                 COALESCE(h.guest_rating, (SELECT AVG(r.rating) FROM reviews r WHERE r.hotel_id = h.id AND r.status = 'APPROVED')) AS display_guest_rating,
                 NULL::numeric AS distance_km, h.latitude, h.longitude,
                 h.property_type, (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name,
@@ -301,6 +302,7 @@ export const hotelSearchRepository = {
         q.limit,
         q.offset,
         q.name ?? null,
+        f.petsAllowed === true,
       ],
     );
     return rows;

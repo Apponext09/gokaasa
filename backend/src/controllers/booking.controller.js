@@ -1,3 +1,4 @@
+import { bookingExtensionService } from '../services/bookingExtension.service.js';
 import { holdService } from '../services/hold.service.js';
 import { bookingService } from '../services/booking.service.js';
 import { invoiceService } from '../services/invoice.service.js';
@@ -64,5 +65,17 @@ export const bookingController = {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.send(buffer);
+  },
+
+  async checkExtension(req, res) {
+    return res.json(await bookingExtensionService.checkExtension(req.user.id, req.validated.params.id, req.validated.body));
+  },
+
+  async createExtensionOrder(req, res) {
+    return res.status(201).json(await bookingExtensionService.createExtensionOrder(req.user.id, req.validated.params.id, req.validated.body));
+  },
+
+  async confirmExtension(req, res) {
+    return res.json(await bookingExtensionService.confirmExtension(req.user.id, req.validated.params.id, req.validated.body));
   },
 };

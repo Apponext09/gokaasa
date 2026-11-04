@@ -118,6 +118,7 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
     area: row.area,
     countryCode: row.country_code,
     country: countryName(row.country_code),
+    petsAllowed: Boolean(row.pets_allowed),
     locationUrl: row.location_url ?? null,
     distanceKm: row.distance_km == null ? null : Number(row.distance_km),
     latitude: row.latitude == null ? null : Number(row.latitude),
@@ -156,6 +157,7 @@ export function toCuratedCard(row, { offers = [] } = {}) {
     area: row.area,
     countryCode: row.country_code,
     country: countryName(row.country_code),
+    petsAllowed: Boolean(row.pets_allowed),
     propertyType: row.property_type,
     propertyTypeName: row.property_type_name ?? row.property_type,
     starRating: row.star_rating,
@@ -228,6 +230,7 @@ export const hotelSearchService = {
           // Prices arrive in rupees per room per night; the database compares paise.
           minPerNight: filters.minPrice == null ? null : filters.minPrice * 100,
           maxPerNight: filters.maxPrice == null ? null : filters.maxPrice * 100,
+          petsAllowed: filters.petsAllowed ?? false,
         },
         sort,
         limit,

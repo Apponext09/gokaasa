@@ -24,6 +24,7 @@ export const COLUMN_FOR = {
   website: 'website',
   checkInTime: 'check_in_time',
   checkOutTime: 'check_out_time',
+  petsAllowed: 'pets_allowed',
 };
 
 /** Fields that come from providers and are therefore tracked, verified and synced. */

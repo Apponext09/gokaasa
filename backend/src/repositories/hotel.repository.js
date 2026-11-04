@@ -14,7 +14,7 @@ const HOTEL_COLUMNS = `
   (SELECT pt.name FROM property_types pt WHERE pt.code = h.property_type) AS property_type_name, h.star_rating,
   h.guest_rating, h.review_count, h.address_line, h.area, h.city, h.state, h.country_code,
   h.postal_code, h.location_url, h.latitude, h.longitude, h.phone, h.email::text AS email, h.website,
-  h.check_in_time, h.check_out_time, h.time_zone, h.status, h.external_provider, h.external_id,
+  h.check_in_time, h.check_out_time, h.time_zone, h.pets_allowed, h.status, h.external_provider, h.external_id,
   h.published_at, h.archived_at, h.created_by, h.updated_by, h.created_at, h.updated_at,
   (SELECT COUNT(*)::int FROM room_types rt WHERE rt.hotel_id = h.id AND rt.deleted_at IS NULL AND rt.status <> 'ARCHIVED') AS room_type_count,
   (SELECT i.id FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL

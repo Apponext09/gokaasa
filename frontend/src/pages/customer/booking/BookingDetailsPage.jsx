@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Badge, Card } from '@/components/ui/surfaces.jsx';
 import { EmptyState, FullPageSpinner } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
+import { ExtendStayDialog } from '@/features/booking/components/ExtendStayDialog.jsx';
 import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, occupancyFromGuests, occupancyLabel, rebookPath } from '@/features/booking/bookingFormat.js';
 import { downloadInvoice } from '@/features/booking/invoice.js';
@@ -22,6 +23,7 @@ export function BookingDetailsPage() {
   const [booking, setBooking] = useState(null);
   const [error, setError] = useState(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useDocumentMeta({ title: 'Trip details | Gokaasa', description: 'Details of your Gokaasa booking.' });
@@ -69,6 +71,11 @@ export function BookingDetailsPage() {
           <p className="text-sm text-[var(--text-muted)]">{booking.hotel.address}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {booking.status === 'CONFIRMED' && (
+            <Button variant="secondary" size="sm" onClick={() => setExtendOpen(true)}>
+              <CalendarPlus className="mr-1 h-4 w-4 text-brand-600" aria-hidden="true" /> Extend Stay
+            </Button>
+          )}
           {['CONFIRMED', 'REFUND_PENDING', 'REFUNDED'].includes(booking.status) && (
             <Button variant="secondary" size="sm" onClick={handleInvoice}>
               <Download className="h-4 w-4" aria-hidden="true" /> Invoice
@@ -101,20 +108,32 @@ export function BookingDetailsPage() {
             <Field label="Dates" value={`${formatStayDate(booking.stay.checkIn)} → ${formatStayDate(booking.stay.checkOut)} (${booking.stay.nights} night${booking.stay.nights === 1 ? '' : 's'})`} />
             <Field label="Rooms" value={booking.rooms.map((room) => `${room.quantity} × ${room.name} (${room.mealPlanName ?? room.mealPlan.replace(/_/g, ' ').toLowerCase()})`).join(', ')} />
             <Field label="Rate" value={booking.rooms[0]?.ratePlanName} />
-            <Field label="Guests" value={`${occupancyLabel(occupancyFromGuests(booking.guests))}`} />
+            <Field label="Guests" value={`${booking.stay.rooms} room${booking.stay.rooms === 1 ? '' : 's'} · ${booking.stay.adults} adult${booking.stay.adults === 1 ? '' : 's'}${booking.stay.children ? ` · ${booking.stay.children} child${booking.stay.children === 1 ? '' : 'ren'}` : ''}${booking.stay.pets ? ` · ${booking.stay.pets} pet${booking.stay.pets === 1 ? '' : 's'}` : ''}`} />
+            {booking.stay.pets > 0 && <Field label="Pets" value={`🐾 ${booking.stay.pets} pet${booking.stay.pets === 1 ? '' : 's'}`} />}
           </dl>
         </Card>
 
         <Card className="space-y-4 p-5 text-sm">
           <div>
             <p className="font-medium text-[var(--text-strong)]">Guests</p>
-            <ul className="mt-1 space-y-0.5 text-[var(--text-body)]">
-              {booking.guests.map((guest) => (
-                <li key={`${guest.roomIndex}-${guest.name}`}>
-                  {[guest.name, guest.age != null && guest.age !== '' ? `${guest.age} yrs` : null].filter(Boolean).join(', ')} · Room {guest.roomIndex + 1}
-                </li>
-              ))}
-            </ul>
+            {booking.guests && booking.guests.length > 0 ? (
+              <ul className="mt-1 space-y-0.5 text-[var(--text-body)]">
+                {booking.guests.map((guest) => (
+                  <li key={`${guest.roomIndex}-${guest.name}`}>
+                    {[guest.name, guest.age != null && guest.age !== '' ? `${guest.age} yrs` : null].filter(Boolean).join(', ')} · Room {guest.roomIndex + 1}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-1 text-sm text-[var(--text-body)]">
+                {booking.primaryContact?.firstName} {booking.primaryContact?.lastName} (Primary Guest) · Room 1
+                {booking.stay.adults > 1 && (
+                  <span className="block text-xs text-[var(--text-muted)]">
+                    + {booking.stay.adults - 1} additional guest{booking.stay.adults - 1 > 1 ? 's' : ''} (details at check-in)
+                  </span>
+                )}
+              </p>
+            )}
           </div>
           <div>
             <p className="font-medium text-[var(--text-strong)]">Contact</p>
@@ -159,6 +178,16 @@ export function BookingDetailsPage() {
         )}
       </Card>
 
+      <ExtendStayDialog
+        booking={booking}
+        open={extendOpen}
+        onClose={() => setExtendOpen(false)}
+        onExtended={(updated) => {
+          setBooking(updated);
+          setExtendOpen(false);
+          setReloadKey((k) => k + 1);
+        }}
+      />
       <CancelBookingDialog
         bookingId={booking.id}
         open={cancelOpen}

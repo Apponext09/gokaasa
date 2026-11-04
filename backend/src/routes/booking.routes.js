@@ -6,6 +6,9 @@ import { validate } from '../middleware/validate.js';
 import {
   bookingIdParam,
   cancelSchema,
+  checkExtensionSchema,
+  confirmExtensionSchema,
+  createExtensionOrderSchema,
   couponApplySchema,
   createOrderSchema,
   devCheckoutSchema,
@@ -39,6 +42,11 @@ bookingsRouter.get('/:id', validate({ params: bookingIdParam }), bookingControll
 bookingsRouter.get('/:id/cancellation-preview', validate({ params: bookingIdParam }), bookingController.cancellationPreview);
 bookingsRouter.get('/:id/invoice', validate({ params: bookingIdParam }), bookingController.downloadInvoice);
 bookingsRouter.post('/:id/cancel', validate({ params: bookingIdParam, body: cancelSchema }), bookingController.cancelBooking);
+
+bookingsRouter.post('/:id/check-extension', validate({ params: bookingIdParam, body: checkExtensionSchema }), bookingController.checkExtension);
+bookingsRouter.post('/:id/create-extension-order', validate({ params: bookingIdParam, body: createExtensionOrderSchema }), bookingController.createExtensionOrder);
+bookingsRouter.post('/:id/confirm-extension', validate({ params: bookingIdParam, body: confirmExtensionSchema }), bookingController.confirmExtension);
+
 
 /** My Trips list and details. Mounted at /api/my-bookings. */
 export const myBookingsRouter = Router();

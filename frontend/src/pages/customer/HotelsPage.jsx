@@ -251,7 +251,7 @@ export function HotelsPage() {
           <SearchWidget
             key={`search-${searchWidgetKey}`}
             variant="hero"
-            initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: state.occupancy, coupon: state.coupon }}
+            initial={{ destination, area: state.area, name: state.name, checkIn: state.checkIn, checkOut: state.checkOut, occupancy: params.get('occ') ? state.occupancy : null, coupon: state.coupon }}
           />
         </div>
 

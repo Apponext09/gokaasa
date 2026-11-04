@@ -72,7 +72,7 @@ export const ratePlanService = {
         cancellation_policy_id: input.cancellationPolicyId ?? null,
         discount_percent: input.discountPercent,
         tax_percent: input.taxPercent,
-        fee_minor: input.feeMinor,
+        
         base_price_minor: input.basePriceMinor ?? null,
         status: input.status ?? 'ACTIVE',
       });
@@ -121,7 +121,7 @@ export const ratePlanService = {
         cancellationPolicyId: 'cancellation_policy_id',
         discountPercent: 'discount_percent',
         taxPercent: 'tax_percent',
-        feeMinor: 'fee_minor',
+        
         basePriceMinor: 'base_price_minor',
         status: 'status',
       };
@@ -131,7 +131,7 @@ export const ratePlanService = {
       if (input.basePriceMinor !== undefined) changes.pricing_review_required = false;
       await ratePlanRepository.update(client, planId, changes);
 
-      const pricingChanged = ['discount_percent', 'tax_percent', 'fee_minor'].some(
+      const pricingChanged = ['discount_percent', 'tax_percent'].some(
         (column) => changes[column] !== undefined && Number(changes[column]) !== Number(current[column]),
       );
       if (pricingChanged) {
@@ -141,7 +141,7 @@ export const ratePlanService = {
             baseMinor: Number(night.base_price_minor),
             discountPercent: updated.discount_percent,
             taxPercent: updated.tax_percent,
-            feeMinor: updated.fee_minor,
+            
           });
           await ratePlanRepository.setPriceComponents(client, planId, night.stay_date, components);
         }

@@ -86,8 +86,7 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
     baseMinor: Number(plan.base_price_minor),
     discountPercent: plan.discount_percent,
     taxPercent: plan.tax_percent,
-    feeMinor: plan.fee_minor,
-  });
+    });
   const nightlyRows = nights.map((date) => ({ date, ...components }));
   const totals = quoteNights(nightlyRows, rooms);
   const total = totals.subtotal - totals.discount + totals.taxes + totals.fees;
@@ -113,6 +112,7 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
       id: hotel.id,
       slug: hotel.slug,
       name: hotel.name,
+      petsAllowed: Boolean(hotel.pets_allowed),
       address: [hotel.address_line, hotel.area, hotel.city].filter(Boolean).join(', '),
       city: hotel.city,
       countryCode: hotel.country_code,
@@ -129,7 +129,7 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
       currency: plan.currency,
     },
     cancellationPolicy: policy,
-    stay: { checkIn, checkOut, nights: nights.length, rooms, occupancy },
+    stay: { checkIn, checkOut, nights: nights.length, rooms, occupancy, petsCount: Number(input.petsCount ?? input.pets ?? (occupancy || []).reduce((s, r) => s + (r.pets || 0), 0) ?? 0) },
     nightly: nightlyRows.map((row) => ({ date: row.date, base: row.base, discount: row.discount, tax: row.tax, fee: row.fee, final: row.final })),
     totals: { subtotal: totals.subtotal, discount: totals.discount, taxes: totals.taxes, fees: totals.fees, total },
   };
@@ -175,7 +175,8 @@ export function quoteView(snapshot, hold = null) {
       deadlineHours: snapshot.cancellationPolicy.cancellation_deadline_hours,
       refundPercent: snapshot.cancellationPolicy.refund_percent,
     },
-    stay: { ...snapshot.stay },
+    hotel: { ...snapshot.hotel, petsAllowed: Boolean(snapshot.hotel?.petsAllowed) },
+    stay: { ...snapshot.stay, petsCount: hold ? Number(hold.pets_count ?? hold.guest_details?.pets?.length ?? hold.guest_details?.petsCount ?? snapshot.stay?.petsCount ?? 0) : Number(snapshot.stay?.petsCount ?? 0) },
     nightly: snapshot.nightly.map((row) => ({ date: row.date, final: row.final })),
     totals: {
       ...snapshot.totals,

@@ -20,7 +20,7 @@ export const roomTypeRepository = {
                         p.base_price_minor
                         - ROUND(p.base_price_minor * p.discount_percent / 100)::bigint
                         + ROUND((p.base_price_minor - ROUND(p.base_price_minor * p.discount_percent / 100)::bigint) * p.tax_percent / 100)::bigint
-                        + p.fee_minor
+                        
                       )
                  FROM rate_plans p
                 WHERE p.room_type_id = rt.id AND p.deleted_at IS NULL AND p.status = 'ACTIVE'

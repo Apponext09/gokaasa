@@ -27,6 +27,7 @@ function toBookingRow(row) {
     checkOut: row.check_out,
     rooms: row.rooms_count,
     amounts: { total: Number(row.total_minor), paid: Number(row.paid_minor), refunded: Number(row.refunded_minor), currency: row.currency },
+    extensionsCount: Number(row.extensions_count ?? 0),
     createdAt: row.created_at,
   };
 }

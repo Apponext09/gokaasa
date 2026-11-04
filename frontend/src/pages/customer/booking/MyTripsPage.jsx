@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { CalendarDays, Download, Luggage } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Download, Luggage } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { Tabs } from '@/components/ui/tabs.jsx';
 import { Badge, Card } from '@/components/ui/surfaces.jsx';
 import { EmptyState, PageHeader, Pagination } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { CancelBookingDialog } from '@/features/booking/components/CancelBookingDialog.jsx';
+import { ExtendStayDialog } from '@/features/booking/components/ExtendStayDialog.jsx';
 import { ReviewCta } from '@/features/reviews/ReviewCta.jsx';
 import { downloadInvoice } from '@/features/booking/invoice.js';
 import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, rebookPath } from '@/features/booking/bookingFormat.js';
@@ -37,6 +38,7 @@ export function MyTripsPage() {
   const requestedPage = Math.max(1, Number.parseInt(params.get('page') ?? '1', 10) || 1);
   const [state, setState] = useState({ items: [], loading: true, error: null });
   const [cancelling, setCancelling] = useState(null);
+  const [extendingTrip, setExtendingTrip] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useDocumentMeta({ title: 'My trips | Gokaasa', description: 'Your upcoming, completed and cancelled Gokaasa bookings.' });
@@ -98,6 +100,15 @@ export function MyTripsPage() {
                       <Link to={`/my-trips/${trip.id}`}>
                         <Button variant="secondary" size="sm">View Details</Button>
                       </Link>
+                      {trip.status === 'CONFIRMED' && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => setExtendingTrip(trip)}
+                        >
+                          <CalendarPlus className="mr-1 h-3.5 w-3.5 text-brand-600" aria-hidden="true" /> Extend Stay
+                        </Button>
+                      )}
                       {tab === 'upcoming' && trip.status === 'CONFIRMED' && (
                         <Button variant="danger-outline" size="sm" onClick={() => setCancelling(trip.id)}>
                           Cancel Booking
@@ -143,6 +154,15 @@ export function MyTripsPage() {
         />
       )}
 
+      <ExtendStayDialog
+        booking={extendingTrip}
+        open={Boolean(extendingTrip)}
+        onClose={() => setExtendingTrip(null)}
+        onExtended={() => {
+          refresh();
+          setExtendingTrip(null);
+        }}
+      />
       <CancelBookingDialog
         bookingId={cancelling}
         open={cancelling !== null}

@@ -60,6 +60,7 @@ export async function ensureBookingForHold(client, hold) {
     check_in_at: snapshot.hotel.checkInAt,
     adults: hold.occupancy.reduce((sum, room) => sum + room.adults, 0),
     children: hold.occupancy.reduce((sum, room) => sum + room.childAges.length, 0),
+    pets_count: Number((details.pets && details.pets.length > 0 ? details.pets.length : null) ?? (details.petsCount && Number(details.petsCount) > 0 ? Number(details.petsCount) : null) ?? (hold.pets_count && Number(hold.pets_count) > 0 ? Number(hold.pets_count) : null) ?? 0),
     rooms_count: hold.rooms,
     currency: hold.currency,
     subtotal_minor: Number(hold.subtotal_minor),
@@ -228,6 +229,7 @@ export async function buildBookingDto(client, booking, { includePreview = true }
       rooms: booking.rooms_count,
       adults: booking.adults,
       children: booking.children,
+      pets: Number(booking.pets_count ?? 0),
     },
     guests: guests.map((guest) => ({ roomIndex: guest.room_index, name: guest.full_name, age: guest.age, isPrimary: guest.is_primary })),
     primaryContact: {

@@ -132,7 +132,14 @@ export function BookingsPage() {
                     <p>{b.hotel.name}</p>
                     <p className="text-xs text-[var(--text-muted)]">{b.hotel.city}</p>
                   </TableCell>
-                  <TableCell className="text-[var(--text-muted)]">{b.checkIn} → {b.checkOut}</TableCell>
+                  <TableCell className="text-[var(--text-muted)]">
+                    <div>{b.checkIn} → {b.checkOut}</div>
+                    {b.extensionsCount > 0 && (
+                      <span className="inline-block mt-0.5 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700">
+                        +{b.extensionsCount} Extended
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-[var(--text-strong)]">{formatMoney(b.amounts.total, b.amounts.currency)}</TableCell>
                   <TableCell><Badge tone={BOOKING_STATUS_LABEL[b.status]?.tone ?? 'neutral'}>{BOOKING_STATUS_LABEL[b.status]?.label ?? b.status}</Badge></TableCell>
                   <TableCell className="text-[var(--text-muted)]">{new Date(b.createdAt).toLocaleDateString('en-IN')}</TableCell>

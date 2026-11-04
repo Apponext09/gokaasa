@@ -8,10 +8,10 @@ const FREE = { is_non_refundable: false, cancellation_deadline_hours: 24, refund
 const PARTIAL = { is_non_refundable: false, cancellation_deadline_hours: 48, refund_percent: 50 };
 const NON_REFUNDABLE = { is_non_refundable: true, cancellation_deadline_hours: null, refund_percent: 0 };
 
-test('price components add up: final = base - discount + tax + fee', () => {
-  const c = priceComponents({ baseMinor: 800000, discountPercent: 10, taxPercent: 12, feeMinor: 5000 });
-  assert.deepEqual(c, { base: 800000, discount: 80000, tax: 86400, fee: 5000, final: 811400 });
-  assert.equal(c.final, c.base - c.discount + c.tax + c.fee);
+test('price components add up: final = base - discount + tax', () => {
+  const c = priceComponents({ baseMinor: 800000, discountPercent: 10, taxPercent: 12 });
+  assert.deepEqual(c, { base: 800000, discount: 80000, tax: 86400, fee: 0, final: 806400 });
+  assert.equal(c.final, c.base - c.discount + c.tax);
 });
 
 test('discount is taken before tax, and rounding is to the nearest paisa', () => {

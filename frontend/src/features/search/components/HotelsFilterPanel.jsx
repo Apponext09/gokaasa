@@ -259,6 +259,18 @@ export function HotelsFilterPanel({
         </p>
       </Section>
 
+      {/* Pets */}
+      <Section title="Pets">
+        <Checkbox
+          label="Pet friendly (Pets allowed)"
+          checked={filters.petsAllowed === true}
+          onChange={(e) => set({ petsAllowed: e.target.checked ? true : undefined })}
+        />
+        <p className="text-xs text-[var(--text-muted)]">
+          Show only pet-friendly hotels that allow pets.
+        </p>
+      </Section>
+
       {/* Amenities */}
       <Section title="Amenities">
         {amenityItems.map((amenity) => (

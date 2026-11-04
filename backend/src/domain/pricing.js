@@ -21,9 +21,9 @@ export function priceComponents({ baseMinor, discountPercent = 0, taxPercent = 0
   const discount = roundMinor((baseMinor * Number(discountPercent)) / 100);
   const taxable = baseMinor - discount;
   const tax = roundMinor((taxable * Number(taxPercent)) / 100);
-  const fee = Number(feeMinor);
-  const final = baseMinor - discount + tax + fee;
-  return { base: baseMinor, discount, tax, fee, final };
+  const fee = 0;
+  const final = baseMinor - discount + tax;
+  return { base: baseMinor, discount, tax, fee: 0, final };
 }
 
 /** ISO date helpers. Dates are calendar days with no timezone, so arithmetic is done on UTC midnight. */

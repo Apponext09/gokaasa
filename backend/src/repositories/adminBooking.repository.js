@@ -48,6 +48,7 @@ export const adminBookingRepository = {
               b.check_out::text AS check_out, b.rooms_count, b.total_minor, b.paid_minor, b.refunded_minor, b.currency,
               b.primary_first_name, b.primary_last_name, b.primary_email::text AS primary_email, b.created_at,
               (SELECT status FROM payments p WHERE p.booking_id = b.id ORDER BY p.attempt DESC LIMIT 1) AS payment_status,
+              (SELECT COUNT(*)::int FROM booking_extensions be WHERE be.booking_id = b.id) AS extensions_count,
               COUNT(*) OVER()::int AS total_count
          FROM bookings b
          ${paymentJoin}

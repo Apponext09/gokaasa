@@ -35,11 +35,12 @@ export const BOOKING_STATUS_LABEL = {
   EXPIRED: { label: 'Expired', tone: 'neutral' },
 };
 
-export const occupancyLabel = (occupancy = []) => {
+export const occupancyLabel = (occupancy = [], petsCount = 0) => {
   const adults = occupancy.reduce((sum, room) => sum + room.adults, 0);
   const children = occupancy.reduce((sum, room) => sum + room.childAges.length, 0);
+  const pets = petsCount || occupancy.reduce((sum, room) => sum + (room.pets || 0), 0);
   const rooms = occupancy.length;
-  return `${rooms} room${rooms === 1 ? '' : 's'} · ${adults} adult${adults === 1 ? '' : 's'}${children ? ` · ${children} child${children === 1 ? '' : 'ren'}` : ''}`;
+  return `${rooms} room${rooms === 1 ? '' : 's'} · ${adults} adult${adults === 1 ? '' : 's'}${children ? ` · ${children} child${children === 1 ? '' : 'ren'}` : ''}${pets ? ` · ${pets} pet${pets === 1 ? '' : 's'}` : ''}`;
 };
 
 export const EXPIRED_MESSAGE = 'Your room hold has expired. Please search again.';

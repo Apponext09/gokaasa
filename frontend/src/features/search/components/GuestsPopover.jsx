@@ -45,12 +45,17 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
-  const updateRoom = (index, next) => onChange(rooms.map((room, i) => (i === index ? { ...room, ...next } : room)));
-  const guestCount = rooms.reduce((total, room) => total + room.adults + room.childAges.length, 0);
-  const bareSummary = `${guestCount} ${guestCount === 1 ? 'Adult' : 'Adults'} | ${rooms.length} ${rooms.length === 1 ? 'Room' : 'Rooms'}`;
+  const hasGuests = Array.isArray(rooms) && rooms.length > 0;
+  const activeRooms = hasGuests ? rooms : [{ adults: 2, childAges: [], pets: 0 }];
+
+  const updateRoom = (index, next) => onChange(activeRooms.map((room, i) => (i === index ? { ...room, ...next } : room)));
+  const guestCount = hasGuests ? rooms.reduce((total, room) => total + room.adults + room.childAges.length, 0) : 0;
+  const petCount = hasGuests ? rooms.reduce((total, room) => total + (room.pets || 0), 0) : 0;
+  const petSummary = petCount > 0 ? ` · ${petCount} ${petCount === 1 ? 'Pet' : 'Pets'}` : '';
+  const bareSummary = hasGuests ? `${guestCount} ${guestCount === 1 ? 'Adult' : 'Adults'} | ${rooms.length} ${rooms.length === 1 ? 'Room' : 'Rooms'}${petSummary}` : '';
 
   const setChildren = (index, count) => {
-    const current = rooms[index].childAges;
+    const current = activeRooms[index].childAges;
     const ages = count > current.length
       ? [...current, ...Array(count - current.length).fill(7)]
       : current.slice(0, count);
@@ -60,7 +65,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
   if (inline) {
     return (
       <div className="w-full space-y-3">
-        {rooms.map((room, index) => (
+        {activeRooms.map((room, index) => (
           <section key={index} className="rounded-lg border border-[var(--border-subtle)] p-2.5" aria-label={`Room ${index + 1}`}>
             <header className="mb-1 flex items-center justify-between">
               <p className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
@@ -90,6 +95,15 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
               max={LIMITS.maxChildrenPerRoom}
               onChange={(count) => setChildren(index, count)}
             />
+            <Stepper
+              id={`${idPrefix}-${index}-pets`}
+              label="Pets"
+              hint="Dogs, cats & service animals"
+              value={room.pets || 0}
+              min={0}
+              max={LIMITS.maxPetsPerRoom ?? 3}
+              onChange={(pets) => updateRoom(index, { pets })}
+            />
             {room.childAges.length > 0 && (
               <div className="mt-2 grid grid-cols-2 gap-2">
                 {room.childAges.map((age, childIndex) => (
@@ -112,7 +126,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
             )}
           </section>
         ))}
-        <Button type="button" variant="ghost" size="sm" disabled={rooms.length >= LIMITS.maxRooms} onClick={() => onChange([...rooms, { adults: 2, childAges: [] }])}>
+        <Button type="button" variant="ghost" size="sm" disabled={rooms.length >= LIMITS.maxRooms} onClick={() => onChange([...rooms, { adults: 2, childAges: [], pets: 0 }])}>
           <Plus className="h-4 w-4" aria-hidden="true" /> Add room
         </Button>
       </div>
@@ -139,16 +153,20 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
             <span className="customer-guests-label-compact" aria-hidden="true">Guests</span>
           </span>
           <span className="customer-guests-value truncate text-sm font-medium text-[var(--text-strong)]">
-            {bare ? (
-              <>
-                <span className="customer-guests-value-full">{bareSummary}</span>
-                <span className="customer-guests-value-compact" aria-hidden="true">{guestCount}A · {rooms.length}R</span>
-              </>
+            {hasGuests ? (
+              bare ? (
+                <>
+                  <span className="customer-guests-value-full">{bareSummary}</span>
+                  <span className="customer-guests-value-compact" aria-hidden="true">{guestCount}A · {rooms.length}R{petCount > 0 ? ` · ${petCount}P` : ''}</span>
+                </>
+              ) : (
+                <>
+                  <span className="customer-guests-value-full">{summarizeOccupancy(rooms)}</span>
+                  <span className="customer-guests-value-compact" aria-hidden="true">{guestCount}A · {rooms.length}R{petCount > 0 ? ` · ${petCount}P` : ''}</span>
+                </>
+              )
             ) : (
-              <>
-                <span className="customer-guests-value-full">{summarizeOccupancy(rooms)}</span>
-                <span className="customer-guests-value-compact" aria-hidden="true">{guestCount}A · {rooms.length}R</span>
-              </>
+              <span className="font-normal text-[var(--text-muted)]">Add guests</span>
             )}
           </span>
           {bare && stayNights > 0 && (
@@ -170,7 +188,7 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
         />
         <div className="customer-guests-dialog fixed inset-x-3 bottom-3 z-[70] max-h-[75vh] overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] p-4 shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-full sm:z-40 sm:mt-2 sm:w-96" role="dialog" aria-label="Rooms and guests">
           <div className="space-y-4">
-            {rooms.map((room, index) => (
+            {activeRooms.map((room, index) => (
               <section key={index} className="rounded-lg border border-[var(--border-subtle)] p-3" aria-label={`Room ${index + 1}`}>
                 <header className="mb-1 flex items-center justify-between">
                   <p className="flex items-center gap-2 text-sm font-semibold text-[var(--text-strong)]">
@@ -200,6 +218,15 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
                   max={LIMITS.maxChildrenPerRoom}
                   onChange={(count) => setChildren(index, count)}
                 />
+                <Stepper
+                  id={`${idPrefix}-${index}-pets`}
+                  label="Pets"
+                  hint="Dogs, cats & service animals"
+                  value={room.pets || 0}
+                  min={0}
+                  max={LIMITS.maxPetsPerRoom ?? 3}
+                  onChange={(pets) => updateRoom(index, { pets })}
+                />
                 {room.childAges.length > 0 && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     {room.childAges.map((age, childIndex) => (
@@ -224,10 +251,17 @@ export function GuestsPopover({ rooms, onChange, disabled = false, idPrefix = 'g
             ))}
           </div>
           <div className="mt-4 flex items-center justify-between gap-3">
-            <Button variant="ghost" size="sm" disabled={rooms.length >= LIMITS.maxRooms} onClick={() => onChange([...rooms, { adults: 2, childAges: [] }])}>
-              <Plus className="h-4 w-4" aria-hidden="true" /> Add room
-            </Button>
-            <Button size="sm" onClick={() => setOpen(false)}>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="sm" disabled={activeRooms.length >= LIMITS.maxRooms} onClick={() => onChange([...activeRooms, { adults: 2, childAges: [], pets: 0 }])}>
+                <Plus className="h-4 w-4" aria-hidden="true" /> Add room
+              </Button>
+              {hasGuests && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => { onChange(null); setOpen(false); }} className="text-danger-600 hover:text-danger-700">
+                  Clear
+                </Button>
+              )}
+            </div>
+            <Button size="sm" onClick={() => { if (!hasGuests) onChange(activeRooms); setOpen(false); }}>
               <UserRound className="h-4 w-4" aria-hidden="true" /> Done
             </Button>
           </div>

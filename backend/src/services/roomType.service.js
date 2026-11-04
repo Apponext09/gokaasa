@@ -79,7 +79,7 @@ export function toRatePlanDto(row, policy = null) {
     currency: row.currency,
     discountPercent: Number(row.discount_percent),
     taxPercent: Number(row.tax_percent),
-    feeMinor: row.fee_minor,
+    feeMinor: 0,
     basePriceMinor: row.base_price_minor == null ? null : Number(row.base_price_minor),
     pricingReviewRequired: row.pricing_review_required === true,
     status: row.status,

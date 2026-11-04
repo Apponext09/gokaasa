@@ -19,7 +19,7 @@ export const wishlistRepository = {
                   (rp.base_price_minor
                     - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint
                     + ROUND((rp.base_price_minor - ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint) * rp.tax_percent / 100)::bigint
-                    + rp.fee_minor)::bigint AS final_price_minor
+                    )::bigint AS final_price_minor
              FROM room_types rt
              JOIN rate_plans rp ON rp.room_type_id = rt.id AND rp.status = 'ACTIVE'
                AND rp.base_price_minor IS NOT NULL AND rp.deleted_at IS NULL

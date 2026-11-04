@@ -31,7 +31,6 @@ function valuesFor(plan, defaultMealPlan = 'ROOM_ONLY') {
     cancellationPolicyId: plan.cancellationPolicyId ? String(plan.cancellationPolicyId) : '',
     discountPercent: String(plan.discountPercent),
     taxPercent: String(plan.taxPercent),
-    feeRupees: minorToRupees(plan.feeMinor),
     basePriceRupees: minorToRupees(plan.basePriceMinor),
     status: plan.status,
   };
@@ -92,9 +91,6 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved, mealPl
           </FormField>
           <FormField id="rp-tax" label="Tax (%)" error={e.taxPercent?.message} hint="Applied after discount">
             <Input id="rp-tax" type="number" inputMode="decimal" min={0} max={100} step="0.01" invalid={!!e.taxPercent} {...register('taxPercent')} />
-          </FormField>
-          <FormField id="rp-fee" label="Extra fee per night (₹)" error={e.feeRupees?.message}>
-            <Input id="rp-fee" inputMode="decimal" invalid={!!e.feeRupees} {...register('feeRupees')} />
           </FormField>
           <FormField id="rp-status" label="Status" error={e.status?.message}>
             <Select id="rp-status" {...register('status')}>
@@ -174,7 +170,7 @@ export function RatePlansPanel({ roomId, policies, disabled, onChanged }) {
                 )}
               </div>
               <p className="text-xs text-[var(--text-muted)]">
-                {plan.basePriceMinor == null ? 'Price required' : `${formatMoney(plan.basePriceMinor)} base per night`} · Policy: {plan.cancellationPolicy?.name ?? 'None'} · discount {plan.discountPercent}% · tax {plan.taxPercent}% · fee {formatMoney(plan.feeMinor)} per night
+                {plan.basePriceMinor == null ? 'Price required' : `${formatMoney(plan.basePriceMinor)} base per night`} · Policy: {plan.cancellationPolicy?.name ?? 'None'} · discount {plan.discountPercent}% · tax {plan.taxPercent}%
               </p>
               {plan.pricingReviewRequired && <Alert tone="warning">This plan previously had different calendar prices. Confirm and save the permanent nightly price.</Alert>}
             </div>
