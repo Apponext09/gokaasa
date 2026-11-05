@@ -31,6 +31,7 @@ import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { useCatalog } from '@/features/catalogs/useCatalog.js';
 import { toOptions } from '@/features/catalogs/catalogs.js';
+import { useAuth } from '@/features/auth/AuthContext.jsx';
 
 const SORT_OPTIONS = [
   { value: 'updated_desc', label: 'Recently updated' },
@@ -83,6 +84,7 @@ function useHotelFilters() {
 }
 
 export function HotelListPage() {
+  const { isAdmin } = useAuth();
   const [filters, updateFilters] = useHotelFilters();
 
   const [searchText, setSearchText] = useState(filters.q);
@@ -482,7 +484,8 @@ export function HotelListPage() {
                           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                           Edit
                         </Link>
-                        <button
+                        {isAdmin && (
+                          <button
                           type="button"
                           onClick={() => setHotelToDelete(hotel)}
                           className="inline-flex items-center gap-1 font-medium text-danger-600 hover:text-danger-800 hover:underline"
@@ -491,6 +494,7 @@ export function HotelListPage() {
                           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                           Delete
                         </button>
+                        )}
                       </div>
                     </TableCell>
 

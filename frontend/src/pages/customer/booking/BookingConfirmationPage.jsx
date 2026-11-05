@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/surfaces.jsx';
 import { EmptyState, FullPageSpinner } from '@/components/shared/index.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { BookingProgress } from '@/features/booking/components/BookingProgress.jsx';
-import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate, occupancyLabel } from '@/features/booking/bookingFormat.js';
+import { BOOKING_STATUS_LABEL, formatMoneyMinor, formatStayDate } from '@/features/booking/bookingFormat.js';
 import { clearSelection } from '@/features/booking/selection.js';
 import { downloadInvoice } from '@/features/booking/invoice.js';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta.js';
@@ -90,7 +90,9 @@ export function BookingConfirmationPage() {
             <p className="text-sm text-[var(--text-body)]">
               {formatStayDate(booking.stay.checkIn)} → {formatStayDate(booking.stay.checkOut)} · {booking.stay.nights} night{booking.stay.nights === 1 ? '' : 's'}
             </p>
-            <p className="text-sm text-[var(--text-body)]">{occupancyLabel(booking.guests.length ? roomsFromGuests(booking) : [])}</p>
+            <p className="text-sm text-[var(--text-body)]">
+              {`${booking.stay.rooms} room${booking.stay.rooms === 1 ? '' : 's'} · ${booking.stay.adults} adult${booking.stay.adults === 1 ? '' : 's'}${booking.stay.children ? ` · ${booking.stay.children} child${booking.stay.children === 1 ? '' : 'ren'}` : ''}${booking.stay.pets ? ` · ${booking.stay.pets} pet${booking.stay.pets === 1 ? '' : 's'}` : ''}`}
+            </p>
           </div>
         </Card>
 
@@ -106,13 +108,24 @@ export function BookingConfirmationPage() {
           </div>
           <div className="space-y-1 border-t border-[var(--border-subtle)] pt-4 text-sm">
             <p className="font-medium text-[var(--text-strong)]">Guests</p>
-            <ul className="text-[var(--text-body)]">
-              {booking.guests.map((guest) => (
-                <li key={`${guest.roomIndex}-${guest.name}`}>
-                  {[guest.name, guest.age != null && guest.age !== '' ? `${guest.age} yrs` : null, `Room ${guest.roomIndex + 1}`].filter(Boolean).join(' · ')}
-                </li>
-              ))}
-            </ul>
+            {booking.guests && booking.guests.length > 0 ? (
+              <ul className="text-[var(--text-body)]">
+                {booking.guests.map((guest) => (
+                  <li key={`${guest.roomIndex}-${guest.name}`}>
+                    {[guest.name, guest.age != null && guest.age !== '' ? `${guest.age} yrs` : null, `Room ${guest.roomIndex + 1}`].filter(Boolean).join(' · ')}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[var(--text-body)]">
+                {booking.primaryContact?.firstName} {booking.primaryContact?.lastName} (Primary Guest) · Room 1
+                {booking.stay.adults > 1 && (
+                  <span className="block text-xs text-[var(--text-muted)]">
+                    + {booking.stay.adults - 1} additional guest{booking.stay.adults - 1 > 1 ? 's' : ''} (details at check-in)
+                  </span>
+                )}
+              </p>
+            )}
           </div>
         </Card>
       </div>
@@ -136,17 +149,6 @@ export function BookingConfirmationPage() {
   );
 }
 
-/** Room groupings for the occupancy label, rebuilt from the stored guest list. */
-function roomsFromGuests(booking) {
-  const rooms = new Map();
-  for (const guest of booking.guests) {
-    const room = rooms.get(guest.roomIndex) ?? { adults: 0, childAges: [] };
-    if (guest.age < 18) room.childAges.push(guest.age);
-    else room.adults += 1;
-    rooms.set(guest.roomIndex, room);
-  }
-  return [...rooms.values()];
-}
 
 function Row({ label, value, strong, mono }) {
   return (

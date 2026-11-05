@@ -380,6 +380,9 @@ export const hotelService = {
   },
 
   async delete(hotelId, actor) {
+    if (!actor?.roles?.includes('ADMIN')) {
+      throw AppError.forbidden('Only administrators can delete hotels');
+    }
     return withTransaction(async (client) => {
       const hotel = await hotelRepository.findById(hotelId, { client });
       if (!hotel) throw AppError.notFound('Hotel not found');
@@ -394,7 +397,7 @@ export const hotelService = {
 
       const now = new Date();
       await client.query(
-        "UPDATE hotels SET deleted_at = $1, status = 'ARCHIVED', updated_by = $2, updated_at = $1 WHERE id = $3",
+        "UPDATE hotels SET deleted_at = $1, archived_at = $1, status = 'ARCHIVED', updated_by = $2, updated_at = $1 WHERE id = $3",
         [now, actor.id, hotelId],
       );
 

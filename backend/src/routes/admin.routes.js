@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { hotelController } from '../controllers/hotel.controller.js';
 import { hotelWorkspaceController } from '../controllers/hotelWorkspace.controller.js';
 import { roomInventoryController as inv } from '../controllers/roomInventory.controller.js';
-import { authenticate, requirePermission } from '../middleware/authenticate.js';
+import { authenticate, authorize, requirePermission } from '../middleware/authenticate.js';
 import { importSearchLimiter } from '../middleware/rateLimiters.js';
 import { uploadSingleImage } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
@@ -216,7 +216,7 @@ adminRouter.get('/exports/hotels', validate({ query: adminHotelListQuery }), hot
 adminRouter.post('/hotels', validate({ body: hotelCreateSchema }), hotelController.createManual);
 adminRouter.get('/hotels/:id', validate({ params: idParam }), requireHotelReadAccess(hotelIdFromParam), hotelController.getAdmin);
 adminRouter.patch('/hotels/:id', validate({ params: idParam, body: hotelUpdateSchema }), requireHotelAccess(hotelIdFromParam), hotelController.update);
-adminRouter.delete('/hotels/:id', validate({ params: idParam }), requireHotelAccess(hotelIdFromParam), hotelController.delete);
+adminRouter.delete('/hotels/:id', validate({ params: idParam }), authorize('ADMIN'), hotelController.delete);
 adminRouter.put(
   '/hotels/:id/amenities',
   validate({ params: idParam, body: hotelAmenitiesSchema }),
