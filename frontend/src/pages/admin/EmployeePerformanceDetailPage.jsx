@@ -1,43 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Building2, CheckCircle2, Clock3, AlertTriangle, PencilLine, ChevronDown } from 'lucide-react';
 import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input } from '@/components/ui/form-controls.jsx';
 import { EmptyState, PageHeader, Pagination, formatDateTime } from '@/components/shared/index.jsx';
 import { StatCard, TrendChart, RangeSelector } from '@/components/admin/analyticsCharts.jsx';
+import { RANGES, resolveRange } from '@/features/admin/dateRangePresets.js';
 import { roleLabel } from '@/features/auth/roleLabels.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
-
-function isoDate(date) {
-  return date.toISOString().slice(0, 10);
-}
-function startOfMonth(date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-}
-
-const RANGES = [
-  { key: 'today', label: 'Today' },
-  { key: '7d', label: 'Last 7 Days' },
-  { key: '30d', label: 'Last 30 Days' },
-  { key: 'thisMonth', label: 'This Month' },
-  { key: 'lastMonth', label: 'Last Month' },
-  { key: 'custom', label: 'Custom Range' },
-];
-
-function resolveRange(key, custom) {
-  const now = new Date();
-  if (key === 'today') return { from: isoDate(now), to: isoDate(now) };
-  if (key === '7d') { const d = new Date(now); d.setUTCDate(d.getUTCDate() - 6); return { from: isoDate(d), to: isoDate(now) }; }
-  if (key === '30d') { const d = new Date(now); d.setUTCDate(d.getUTCDate() - 29); return { from: isoDate(d), to: isoDate(now) }; }
-  if (key === 'thisMonth') return { from: isoDate(startOfMonth(now)), to: isoDate(now) };
-  if (key === 'lastMonth') {
-    const lastMonthEnd = new Date(startOfMonth(now));
-    lastMonthEnd.setUTCDate(lastMonthEnd.getUTCDate() - 1);
-    return { from: isoDate(startOfMonth(lastMonthEnd)), to: isoDate(lastMonthEnd) };
-  }
-  return custom;
-}
 
 function monthLabel(month) {
   if (!month) return '';
@@ -75,9 +46,13 @@ function ActivityRow({ entry }) {
 
 export function EmployeePerformanceDetailPage() {
   const { id } = useParams();
-  const [rangeKey, setRangeKey] = useState('30d');
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
+  // Seeded from the URL so arriving from a date-filtered Employee Performance listing keeps the exact
+  // same range here -- this, plus the backend fix making both endpoints apply identical boundaries for
+  // the same { from, to }, is what keeps the two pages' KPI counts in agreement.
+  const [params, setParams] = useSearchParams();
+  const [rangeKey, setRangeKeyState] = useState(params.get('range') || 'all');
+  const [customFrom, setCustomFrom] = useState(params.get('range') === 'custom' ? params.get('from') ?? '' : '');
+  const [customTo, setCustomTo] = useState(params.get('range') === 'custom' ? params.get('to') ?? '' : '');
   const [employee, setEmployee] = useState(null);
   const [error, setError] = useState(null);
   const [activities, setActivities] = useState(null);
@@ -85,6 +60,23 @@ export function EmployeePerformanceDetailPage() {
 
   const range = resolveRange(rangeKey, { from: customFrom, to: customTo });
   const rangeReady = rangeKey !== 'custom' || (customFrom && customTo);
+
+  const setRangeKey = (key) => {
+    setRangeKeyState(key);
+    const next = new URLSearchParams(params);
+    if (key === 'all') { next.delete('range'); next.delete('from'); next.delete('to'); } else { next.set('range', key); }
+    if (key !== 'custom') { next.delete('from'); next.delete('to'); }
+    setParams(next, { replace: true });
+  };
+  const setCustom = (from, to) => {
+    setCustomFrom(from);
+    setCustomTo(to);
+    const next = new URLSearchParams(params);
+    next.set('range', 'custom');
+    if (from) next.set('from', from); else next.delete('from');
+    if (to) next.set('to', to); else next.delete('to');
+    setParams(next, { replace: true });
+  };
 
   useEffect(() => {
     if (!rangeReady) return undefined;
@@ -134,9 +126,9 @@ export function EmployeePerformanceDetailPage() {
         <RangeSelector ranges={RANGES} value={rangeKey} onChange={setRangeKey} />
         {rangeKey === 'custom' && (
           <div className="flex items-center gap-2">
-            <Input aria-label="From date" type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+            <Input aria-label="From date" type="date" value={customFrom} onChange={(e) => setCustom(e.target.value, customTo)} />
             <span className="text-sm text-[var(--text-muted)]">to</span>
-            <Input aria-label="To date" type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+            <Input aria-label="To date" type="date" value={customTo} onChange={(e) => setCustom(customFrom, e.target.value)} />
           </div>
         )}
       </div>

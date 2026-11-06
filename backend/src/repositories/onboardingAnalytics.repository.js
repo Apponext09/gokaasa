@@ -19,6 +19,20 @@ const HOTEL_ACTIVITY_CTE = `
   )
 `;
 
+/**
+ * Builds `column >= from AND column < (to + 1 day)` clauses, pushing params onto the given array and
+ * returning the SQL fragment (or '' if neither bound is given). The exclusive upper bound is the whole
+ * point: `column <= to` silently drops everything on the `to` day after midnight, which is the kind of
+ * off-by-one that made this module's listing/detail counts disagree. Every date-range query in this file
+ * uses this one helper so "the same range" always means the same two boundaries everywhere it's applied.
+ */
+function dateRangeClause(column, params, { from, to }) {
+  const clauses = [];
+  if (from) clauses.push(`${column} >= $${params.push(from)}::date`);
+  if (to) clauses.push(`${column} < ($${params.push(to)}::date + interval '1 day')`);
+  return clauses.length ? `AND ${clauses.join(' AND ')}` : '';
+}
+
 const SORT_OPTIONS = {
   onboarded_desc: 'onboarded DESC NULLS LAST, total_modifications DESC NULLS LAST',
   edited_desc: 'total_modifications DESC NULLS LAST, onboarded DESC NULLS LAST',
@@ -103,13 +117,22 @@ export const onboardingAnalyticsRepository = {
     return rows;
   },
 
-  /** One row per staff user who has onboarded or edited at least one hotel. */
-  async employeePerformanceList({ q, page, limit, sort }) {
+  /**
+   * One row per staff user who has onboarded or edited at least one hotel, in `{ from, to }` (optional).
+   * Uses the exact same two CTEs, the same status buckets, and the same dateRangeClause boundaries as
+   * employeeStats below, so a row here and that same employee's detail page agree for the same range --
+   * this is the one place both "onboarded" and "edited" are computed for the listing, so there is nowhere
+   * else for the two pages' numbers to drift apart.
+   */
+  async employeePerformanceList({ q, page, limit, sort, from, to }) {
     const params = [];
     const param = (value) => {
       params.push(value);
       return `$${params.length}`;
     };
+    const onboardedDateSql = dateRangeClause('created_at', params, { from, to });
+    const editedDateSql = dateRangeClause('created_at', params, { from, to });
+
     const clauses = ['u.deleted_at IS NULL', '(o.user_id IS NOT NULL OR e.user_id IS NOT NULL)'];
     if (q) {
       const pattern = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
@@ -126,7 +149,7 @@ export const onboardingAnalyticsRepository = {
                 COUNT(*) FILTER (WHERE status = 'PENDING_REVIEW')::int AS pending,
                 COUNT(*) FILTER (WHERE status = 'CHANGES_REQUESTED')::int AS changes_requested,
                 MAX(created_at) AS last_onboarded_at
-           FROM hotels WHERE deleted_at IS NULL AND created_by IS NOT NULL
+           FROM hotels WHERE deleted_at IS NULL AND created_by IS NOT NULL ${onboardedDateSql}
           GROUP BY created_by
        ),
        ${HOTEL_ACTIVITY_CTE},
@@ -135,7 +158,7 @@ export const onboardingAnalyticsRepository = {
                 COUNT(*)::int AS total_modifications,
                 COUNT(DISTINCT hotel_id)::int AS hotels_edited,
                 MAX(created_at) AS last_edited_at
-           FROM hotel_activity WHERE action <> 'hotel.created' AND user_id IS NOT NULL
+           FROM hotel_activity WHERE action <> 'hotel.created' AND user_id IS NOT NULL ${editedDateSql}
           GROUP BY user_id
        )
        SELECT u.id, u.first_name, u.last_name, u.email::text AS email, u.phone,
@@ -172,17 +195,17 @@ export const onboardingAnalyticsRepository = {
     return rows[0] ?? null;
   },
 
-  /** Same shape as employeePerformanceList's per-employee rollup, scoped to one user and an optional date range. */
+  /**
+   * Same status buckets, same `hotel_activity` CTE, and the same dateRangeClause boundaries as
+   * employeePerformanceList above -- scoped to one user instead of grouped across everyone, so a given
+   * employee's numbers here are identical to their row in that listing for the same `{ from, to }`.
+   */
   async employeeStats(userId, { from, to } = {}) {
     const onboardedParams = [userId];
-    const onboardedDateClauses = [];
-    if (from) onboardedDateClauses.push(`created_at >= $${onboardedParams.push(from)}`);
-    if (to) onboardedDateClauses.push(`created_at <= $${onboardedParams.push(to)}`);
+    const onboardedDateSql = dateRangeClause('created_at', onboardedParams, { from, to });
 
     const editedParams = [userId];
-    const editedDateClauses = [];
-    if (from) editedDateClauses.push(`created_at >= $${editedParams.push(from)}`);
-    if (to) editedDateClauses.push(`created_at <= $${editedParams.push(to)}`);
+    const editedDateSql = dateRangeClause('created_at', editedParams, { from, to });
 
     const [onboarded, edited] = await Promise.all([
       pool.query(
@@ -191,14 +214,14 @@ export const onboardingAnalyticsRepository = {
                 COUNT(*) FILTER (WHERE status = 'PENDING_REVIEW')::int AS pending,
                 COUNT(*) FILTER (WHERE status = 'CHANGES_REQUESTED')::int AS changes_requested
            FROM hotels
-          WHERE deleted_at IS NULL AND created_by = $1 ${onboardedDateClauses.length ? `AND ${onboardedDateClauses.join(' AND ')}` : ''}`,
+          WHERE deleted_at IS NULL AND created_by = $1 ${onboardedDateSql}`,
         onboardedParams,
       ),
       pool.query(
         `WITH ${HOTEL_ACTIVITY_CTE}
          SELECT COUNT(*)::int AS total_modifications, COUNT(DISTINCT hotel_id)::int AS hotels_edited
            FROM hotel_activity
-          WHERE user_id = $1 AND action <> 'hotel.created' ${editedDateClauses.length ? `AND ${editedDateClauses.join(' AND ')}` : ''}`,
+          WHERE user_id = $1 AND action <> 'hotel.created' ${editedDateSql}`,
         editedParams,
       ),
     ]);

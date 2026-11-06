@@ -7,6 +7,8 @@ import { Input, Select } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableSkeleton } from '@/components/ui/table.jsx';
 import { EmptyState, Pagination, PageHeader, formatDateTime } from '@/components/shared/index.jsx';
+import { RangeSelector } from '@/components/admin/analyticsCharts.jsx';
+import { RANGES, resolveRange } from '@/features/admin/dateRangePresets.js';
 import { roleLabel } from '@/features/auth/roleLabels.js';
 import { adminApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
@@ -17,7 +19,7 @@ const SORT_OPTIONS = [
   { value: 'edited_desc', label: 'Most editing activity' },
   { value: 'name_asc', label: 'Name A–Z' },
 ];
-const FILTER_KEYS = ['q', 'sort', 'page'];
+const FILTER_KEYS = ['q', 'sort', 'page', 'range', 'from', 'to'];
 
 function useFilters() {
   const [params, setParams] = useSearchParams();
@@ -49,14 +51,20 @@ export function EmployeePerformancePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText]);
 
+  const rangeKey = filters.range || 'all';
+  const range = resolveRange(rangeKey, { from: filters.from, to: filters.to });
+  const rangeReady = rangeKey !== 'custom' || (filters.from && filters.to);
+
   const query = {
     page: Number(filters.page) || 1,
     limit: 20,
     sort: filters.sort || 'onboarded_desc',
     ...(filters.q && { q: filters.q }),
+    ...range,
   };
 
   useEffect(() => {
+    if (!rangeReady) return undefined;
     let cancelled = false;
     setError(null);
     adminApi.listEmployeePerformance(query).then((result) => !cancelled && setData(result)).catch((err) => !cancelled && setError(normalizeError(err).message));
@@ -64,7 +72,7 @@ export function EmployeePerformancePage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.q, filters.sort, filters.page]);
+  }, [filters.q, filters.sort, filters.page, filters.range, filters.from, filters.to]);
 
   const exportCsv = async () => {
     setExporting(true);
@@ -96,6 +104,14 @@ export function EmployeePerformancePage() {
         <Select aria-label="Sort" value={filters.sort || 'onboarded_desc'} onChange={(e) => updateFilters({ sort: e.target.value })} className="w-auto min-w-[200px]">
           {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
+        <RangeSelector ranges={RANGES} value={rangeKey} onChange={(key) => updateFilters({ range: key === 'all' ? '' : key, from: '', to: '' })} />
+        {rangeKey === 'custom' && (
+          <div className="flex items-center gap-2">
+            <Input aria-label="From date" type="date" value={filters.from} onChange={(e) => updateFilters({ range: 'custom', from: e.target.value })} />
+            <span className="text-sm text-[var(--text-muted)]">to</span>
+            <Input aria-label="To date" type="date" value={filters.to} onChange={(e) => updateFilters({ range: 'custom', to: e.target.value })} />
+          </div>
+        )}
       </Card>
 
       {error && <Alert tone="error">{error}</Alert>}
@@ -122,10 +138,16 @@ export function EmployeePerformancePage() {
                 </tr>
               </TableHeader>
               <TableBody>
-                {data?.items.map((employee) => (
+                {data?.items.map((employee) => {
+                  const detailParams = new URLSearchParams();
+                  if (rangeKey !== 'all') detailParams.set('range', rangeKey);
+                  if (range.from) detailParams.set('from', range.from);
+                  if (range.to) detailParams.set('to', range.to);
+                  const detailQuery = detailParams.toString();
+                  return (
                   <TableRow key={employee.id}>
                     <TableCell>
-                      <Link to={`/admin/onboarding-analytics/employees/${employee.id}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{employee.name}</Link>
+                      <Link to={`/admin/onboarding-analytics/employees/${employee.id}${detailQuery ? `?${detailQuery}` : ''}`} className="font-medium text-[var(--text-strong)] hover:text-brand-700">{employee.name}</Link>
                       <p className="text-xs text-[var(--text-muted)]">{employee.email} · ID {employee.id}</p>
                     </TableCell>
                     <TableCell><div className="flex flex-wrap gap-1">{employee.roles.map((r) => <Badge key={r} tone="neutral">{roleLabel(r)}</Badge>)}</div></TableCell>
@@ -136,7 +158,8 @@ export function EmployeePerformancePage() {
                     <TableCell className="text-right">{employee.hotelsEdited}</TableCell>
                     <TableCell className="text-[var(--text-muted)]">{employee.lastActivityAt ? formatDateTime(employee.lastActivityAt) : 'Not available'}</TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

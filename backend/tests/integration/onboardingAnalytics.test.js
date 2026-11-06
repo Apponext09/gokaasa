@@ -149,6 +149,113 @@ describe('GET /admin/onboarding-analytics/monthly-trends', () => {
   });
 });
 
+describe('listing vs. detail consistency (date-filtered)', () => {
+  let adminUserId;
+  let hotelThisMonth, hotelLastMonth;
+  const today = new Date();
+  const thisMonthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const lastMonthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+  const lastMonthEnd = new Date(thisMonthStart.getTime() - 1);
+  const isoDate = (d) => d.toISOString().slice(0, 10);
+
+  before(async () => {
+    adminUserId = (await pool.query(`SELECT id FROM users WHERE email = $1`, ['oaa.admin@test.gokaasa.com'])).rows[0].id;
+    hotelThisMonth = hotelId;
+
+    // A second hotel, created by the same onboarding executive, backdated into last month.
+    const create = await request(app).post('/api/admin/hotels').set(bearer(onboardingToken)).send({ name: 'Analytics Test Hotel 2', city: 'Nashik', countryCode: 'IN' });
+    hotelLastMonth = create.body.hotel.id;
+    await pool.query(`UPDATE hotels SET created_at = $1 WHERE id = $2`, [lastMonthStart, hotelLastMonth]);
+
+    // A second edit to the FIRST hotel (same hotel as the one edited in the top-level before()), by the
+    // same admin, backdated into last month -- this is what tests "multiple edits to one hotel don't
+    // inflate the unique-hotels-edited count" once both edits fall inside one wide range.
+    await request(app).patch(`/api/admin/hotels/${hotelThisMonth}`).set(bearer(adminToken)).send({ description: 'Second edit, backdated for the date-range consistency test.' });
+    await pool.query(
+      `UPDATE audit_logs SET created_at = $1
+        WHERE id = (SELECT id FROM audit_logs WHERE entity = 'hotel' AND entity_id = $2 AND action = 'hotel.updated' ORDER BY id DESC LIMIT 1)`,
+      [lastMonthStart, hotelThisMonth],
+    );
+  });
+
+  async function listingRowFor(userId, range) {
+    const res = await request(app).get('/api/admin/onboarding-analytics/employees').set(bearer(adminToken)).query({ limit: 100, ...range });
+    return res.body.items.find((row) => row.id === userId) ?? { onboarded: 0, approved: 0, pending: 0, changesRequested: 0, hotelsEdited: 0, totalModifications: 0 };
+  }
+  async function detailFor(userId, range) {
+    const res = await request(app).get(`/api/admin/onboarding-analytics/employees/${userId}`).set(bearer(adminToken)).query(range);
+    return res.body.employee;
+  }
+
+  it('onboarded counts match between listing and detail for "this month" only', async () => {
+    const range = { from: isoDate(thisMonthStart), to: isoDate(today) };
+    const listing = await listingRowFor(onboardingUserId, range);
+    const detail = await detailFor(onboardingUserId, range);
+    assert.equal(listing.onboarded, 1);
+    assert.equal(listing.onboarded, detail.onboarded);
+  });
+
+  it('onboarded counts match between listing and detail for "last month" only', async () => {
+    const range = { from: isoDate(lastMonthStart), to: isoDate(lastMonthEnd) };
+    const listing = await listingRowFor(onboardingUserId, range);
+    const detail = await detailFor(onboardingUserId, range);
+    assert.equal(listing.onboarded, 1);
+    assert.equal(listing.onboarded, detail.onboarded);
+  });
+
+  it('a wide range counts both hotels, identically on both pages', async () => {
+    const range = { from: isoDate(lastMonthStart), to: isoDate(today) };
+    const listing = await listingRowFor(onboardingUserId, range);
+    const detail = await detailFor(onboardingUserId, range);
+    assert.equal(listing.onboarded, 2);
+    assert.equal(listing.onboarded, detail.onboarded);
+  });
+
+  it('two edits to the same hotel count as 1 unique hotel edited but 2 modification activities -- on both pages', async () => {
+    const range = { from: isoDate(lastMonthStart), to: isoDate(today) };
+    const listing = await listingRowFor(adminUserId, range);
+    const detail = await detailFor(adminUserId, range);
+    assert.equal(listing.hotelsEdited, 1);
+    assert.equal(listing.totalModifications, 2);
+    assert.equal(listing.hotelsEdited, detail.hotelsEdited);
+    assert.equal(listing.totalModifications, detail.totalModifications);
+  });
+
+  it('editing activity outside the selected range is excluded from both pages equally', async () => {
+    const range = { from: isoDate(thisMonthStart), to: isoDate(today) };
+    const listing = await listingRowFor(adminUserId, range);
+    const detail = await detailFor(adminUserId, range);
+    assert.equal(listing.totalModifications, 1);
+    assert.equal(listing.totalModifications, detail.totalModifications);
+  });
+
+  it('an employee with no activity in the selected range reports zero, not an error, on both pages', async () => {
+    const twoMonthsAgoStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 2, 1));
+    const range = { from: isoDate(twoMonthsAgoStart), to: isoDate(new Date(lastMonthStart.getTime() - 1)) };
+    const listing = await listingRowFor(adminUserId, range);
+    const detail = await detailFor(adminUserId, range);
+    assert.equal(listing.totalModifications, 0);
+    assert.equal(listing.hotelsEdited, 0);
+    assert.equal(listing.totalModifications, detail.totalModifications);
+    assert.equal(listing.hotelsEdited, detail.hotelsEdited);
+  });
+
+  it('pagination does not change the aggregate counts for a given employee', async () => {
+    const range = { from: isoDate(lastMonthStart), to: isoDate(today) };
+    const page1 = await request(app).get('/api/admin/onboarding-analytics/employees').set(bearer(adminToken)).query({ limit: 1, page: 1, sort: 'name_asc', ...range });
+    const page2 = await request(app).get('/api/admin/onboarding-analytics/employees').set(bearer(adminToken)).query({ limit: 1, page: 2, sort: 'name_asc', ...range });
+    const everyone = [...page1.body.items, ...page2.body.items];
+    const row = everyone.find((r) => r.id === onboardingUserId);
+    assert.ok(row);
+    assert.equal(row.onboarded, 2);
+  });
+
+  it('hotel creation attribution is unaffected by later edits', async () => {
+    const res = await request(app).get(`/api/admin/hotels/${hotelThisMonth}`).set(bearer(adminToken));
+    assert.equal(res.body.hotel.onboardedBy.id, onboardingUserId);
+  });
+});
+
 describe('GET /admin/exports/employee-performance', () => {
   it('returns a CSV with the onboarding executive\'s row', async () => {
     const res = await request(app).get('/api/admin/exports/employee-performance').set(bearer(adminToken));
