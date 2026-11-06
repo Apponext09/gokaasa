@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Building2, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
+import { Building2, History, Pencil, Plus, Search, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConfirmDialog } from '@/components/ui/dialog.jsx';
+import { ConfirmDialog, Modal } from '@/components/ui/dialog.jsx';
+import { HotelActivityHistory } from '@/features/hotels/components/HotelActivityHistory.jsx';
+import { roleLabel } from '@/features/auth/roleLabels.js';
 
 import { Button, buttonVariants } from '@/components/ui/button.jsx';
-import { Card, Alert } from '@/components/ui/surfaces.jsx';
+import { Card, Alert, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Input, Select } from '@/components/ui/form-controls.jsx';
 
 import {
@@ -83,6 +85,54 @@ function useHotelFilters() {
   return [filters, update];
 }
 
+/** "Onboarded By" / "Last Edited By" name, clickable to open that employee's profile details. */
+function AttributionCell({ person, onOpen }) {
+  if (!person) return <span className="text-xs italic text-[var(--text-muted)]">Historical Record / Attribution Unavailable</span>;
+  return (
+    <button type="button" onClick={() => onOpen(person.id)} className="text-left font-medium text-brand-700 hover:underline">
+      {person.name}
+    </button>
+  );
+}
+
+function EmployeeDetailModal({ userId, onClose }) {
+  const [employee, setEmployee] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+    let cancelled = false;
+    setEmployee(null);
+    setError(null);
+    adminApi.getUser(userId).then((result) => !cancelled && setEmployee(result)).catch((err) => !cancelled && setError(normalizeError(err).message));
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  return (
+    <Modal open={Boolean(userId)} title="Employee details" onClose={onClose}>
+      {error && <Alert tone="error">{error}</Alert>}
+      {!employee && !error && (
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      )}
+      {employee && (
+        <dl className="grid grid-cols-1 gap-x-4 gap-y-2 text-sm sm:grid-cols-2">
+          <div><dt className="text-xs text-[var(--text-muted)]">Employee Name</dt><dd className="font-medium text-[var(--text-strong)]">{employee.name || '—'}</dd></div>
+          <div><dt className="text-xs text-[var(--text-muted)]">Employee ID</dt><dd className="font-medium text-[var(--text-strong)]">{employee.id}</dd></div>
+          <div><dt className="text-xs text-[var(--text-muted)]">Email</dt><dd className="font-medium text-[var(--text-strong)]">{employee.email}</dd></div>
+          <div><dt className="text-xs text-[var(--text-muted)]">Mobile Number</dt><dd className="font-medium text-[var(--text-strong)]">{employee.phone ?? 'Not available'}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-xs text-[var(--text-muted)]">Assigned Role</dt><dd className="font-medium text-[var(--text-strong)]">{(employee.roles ?? []).map(roleLabel).join(', ') || '—'}</dd></div>
+        </dl>
+      )}
+    </Modal>
+  );
+}
+
 export function HotelListPage() {
   const { isAdmin } = useAuth();
   const [filters, updateFilters] = useHotelFilters();
@@ -93,6 +143,8 @@ export function HotelListPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [hotelToDelete, setHotelToDelete] = useState(null);
   const [deletingHotel, setDeletingHotel] = useState(false);
+  const [activityHotel, setActivityHotel] = useState(null);
+  const [employeeModalUserId, setEmployeeModalUserId] = useState(null);
 
   const confirmDeleteHotel = async () => {
     if (!hotelToDelete) return;
@@ -380,7 +432,7 @@ export function HotelListPage() {
         ) : (
           <div className="w-full overflow-x-auto overflow-y-visible">
 
-            <Table minWidth="820px">
+            <Table minWidth="1280px">
               <caption className="sr-only">Hotels</caption>
 
               <TableHeader>
@@ -399,7 +451,13 @@ export function HotelListPage() {
 
                   <TableHead>Status</TableHead>
 
-                  <TableHead>Last updated</TableHead>
+                  <TableHead>Onboarded By</TableHead>
+
+                  <TableHead>Onboarding Date</TableHead>
+
+                  <TableHead>Last Edited By</TableHead>
+
+                  <TableHead>Last Edited Date</TableHead>
 
                   <TableHead className="text-right">
                     <span className="sr-only">Actions</span>
@@ -469,9 +527,24 @@ export function HotelListPage() {
                       <HotelStatusBadge status={hotel.status} />
                     </TableCell>
 
-                    {/* LAST UPDATED */}
+                    {/* ONBOARDED BY */}
+                    <TableCell>
+                      <AttributionCell person={hotel.onboardedBy} onOpen={setEmployeeModalUserId} />
+                    </TableCell>
+
+                    {/* ONBOARDING DATE */}
                     <TableCell className="text-[var(--text-muted)]">
-                      {formatDateTime(hotel.updatedAt)}
+                      {formatDateTime(hotel.onboardedAt)}
+                    </TableCell>
+
+                    {/* LAST EDITED BY */}
+                    <TableCell>
+                      <AttributionCell person={hotel.lastEditedBy} onOpen={setEmployeeModalUserId} />
+                    </TableCell>
+
+                    {/* LAST EDITED DATE */}
+                    <TableCell className="text-[var(--text-muted)]">
+                      {formatDateTime(hotel.lastEditedAt)}
                     </TableCell>
 
                     {/* ACTIONS */}
@@ -484,6 +557,15 @@ export function HotelListPage() {
                           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                           Edit
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => setActivityHotel(hotel)}
+                          className="inline-flex items-center gap-1 font-medium text-[var(--text-body)] hover:text-brand-700 hover:underline"
+                          title={`Activity history for ${hotel.name}`}
+                        >
+                          <History className="h-3.5 w-3.5" aria-hidden="true" />
+                          Activity
+                        </button>
                         {isAdmin && (
                           <button
                           type="button"
@@ -540,6 +622,12 @@ export function HotelListPage() {
         onConfirm={confirmDeleteHotel}
         onCancel={() => setHotelToDelete(null)}
       />
+
+      <Modal open={Boolean(activityHotel)} title={`Activity history — ${activityHotel?.name ?? ''}`} onClose={() => setActivityHotel(null)} wide>
+        {activityHotel && <HotelActivityHistory hotelId={activityHotel.id} />}
+      </Modal>
+
+      <EmployeeDetailModal userId={employeeModalUserId} onClose={() => setEmployeeModalUserId(null)} />
     </div>
   );
 }

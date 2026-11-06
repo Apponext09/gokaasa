@@ -9,7 +9,10 @@ export const auditRepository = {
       params.push(value);
       return `$${params.length}`;
     };
-    if (entity) clauses.push(`a.entity = ${param(entity)}`);
+    if (entity) {
+      const entities = Array.isArray(entity) ? entity : [entity];
+      clauses.push(`a.entity = ANY(${param(entities)}::text[])`);
+    }
     if (action) clauses.push(`a.action = ${param(action)}`);
     if (entityId) clauses.push(`a.entity_id = ${param(String(entityId))}`);
     if (actorId) clauses.push(`a.user_id = ${param(actorId)}`);
@@ -33,6 +36,36 @@ export const auditRepository = {
         ORDER BY a.id DESC
         LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params,
+    );
+    return { rows, total: rows[0]?.total_count ?? 0 };
+  },
+
+  /**
+   * A hotel's full activity timeline. `room_type`/`rate_plan` edits are logged under their own entity
+   * (see hotel.service.js/roomType.service.js/ratePlan.service.js), not `entity='hotel'`, so this unions
+   * all three, scoped back to this hotel, instead of missing room/rate edits entirely.
+   */
+  async listForHotel(hotelId, { page, limit }) {
+    const { rows } = await pool.query(
+      `WITH hotel_activity AS (
+         SELECT a.* FROM audit_logs a WHERE a.entity = 'hotel' AND a.entity_id = $1::bigint::text
+         UNION ALL
+         SELECT a.* FROM audit_logs a
+          WHERE a.entity = 'room_type' AND a.entity_id ~ '^\\d+$'
+            AND a.entity_id::bigint IN (SELECT id FROM room_types WHERE hotel_id = $1::bigint)
+         UNION ALL
+         SELECT a.* FROM audit_logs a
+          WHERE a.entity = 'rate_plan' AND a.entity_id ~ '^\\d+$'
+            AND a.entity_id::bigint IN (SELECT id FROM rate_plans WHERE hotel_id = $1::bigint)
+       )
+       SELECT ha.id, ha.action, ha.entity, ha.entity_id, ha.old_value, ha.new_value, ha.ip_address, ha.created_at, ha.user_id,
+              u.first_name, u.last_name, u.email::text AS email,
+              ARRAY(SELECT r.code FROM user_roles ur JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = ha.user_id) AS actor_roles,
+              COUNT(*) OVER()::int AS total_count
+         FROM hotel_activity ha LEFT JOIN users u ON u.id = ha.user_id
+        ORDER BY ha.created_at DESC, ha.id DESC
+        LIMIT $2 OFFSET $3`,
+      [hotelId, limit, (page - 1) * limit],
     );
     return { rows, total: rows[0]?.total_count ?? 0 };
   },

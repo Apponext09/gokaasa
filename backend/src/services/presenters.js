@@ -52,8 +52,13 @@ export function toHotelSummary(row, { includeInternal = false } = {}) {
       createdAt: row.created_at,
       externalProvider: row.external_provider,
       externalId: row.external_id,
-      createdBy: row.created_by,
-      updatedBy: row.updated_by,
+      // Historical hotels predating this attribution, or whose creator/editor account was later
+      // deleted (created_by/updated_by is ON DELETE SET NULL), surface as null -- the frontend renders
+      // "Historical Record / Attribution Unavailable" rather than guessing who it was.
+      onboardedBy: row.created_by ? { id: row.created_by, name: row.created_by_name, email: row.created_by_email } : null,
+      onboardedAt: row.created_at,
+      lastEditedBy: row.updated_by ? { id: row.updated_by, name: row.updated_by_name, email: row.updated_by_email } : null,
+      lastEditedAt: row.updated_at,
     });
   }
   return summary;

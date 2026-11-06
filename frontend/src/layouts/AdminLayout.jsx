@@ -20,6 +20,7 @@ import {
   Settings,
   Star,
   Tag,
+  TrendingUp,
   UserCog,
   UserRound,
   Users,
@@ -61,6 +62,14 @@ const NAV = [
   {
     section: 'Insights',
     items: [{ to: '/admin/reports', label: 'Reports', icon: FileBarChart }],
+  },
+  {
+    section: 'Onboarding Analytics',
+    items: [
+      { to: '/admin/onboarding-analytics', label: 'Overview Dashboard', icon: TrendingUp, end: true, adminOnly: true },
+      { to: '/admin/onboarding-analytics/employees', label: 'Employee Performance', icon: UserCog, adminOnly: true },
+      { to: '/admin/onboarding-analytics/hotels', label: 'Hotel Onboarding History', icon: ScrollText, adminOnly: true },
+    ],
   },
   {
     section: 'Settings',

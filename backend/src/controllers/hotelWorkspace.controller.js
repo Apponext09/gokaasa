@@ -2,6 +2,7 @@ import { hotelService } from '../services/hotel.service.js';
 import { hotelSyncService } from '../services/hotelSync.service.js';
 import { hotelImageService } from '../services/hotelImage.service.js';
 import { hotelImportService } from '../services/hotelImport.service.js';
+import { auditLogService } from '../services/auditLog.service.js';
 import { AppError } from '../utils/AppError.js';
 
 function actorOf(req) {
@@ -98,5 +99,10 @@ export const hotelWorkspaceController = {
     const hotel = await hotelService.getAdmin(req.validated.params.id);
     const jobs = await hotelImportService.historyForHotel(hotel);
     return res.json({ jobs });
+  },
+
+  /** Full hotel/room-type/rate-plan audit timeline for one hotel. ADMIN only (route-enforced). */
+  async activityHistory(req, res) {
+    return res.json(await auditLogService.listForHotel(req.validated.params.id, req.validated.query));
   },
 };

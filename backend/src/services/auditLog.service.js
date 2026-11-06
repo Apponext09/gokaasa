@@ -21,4 +21,10 @@ export const auditLogService = {
     const { rows, total } = await auditRepository.list(query);
     return toPage(rows.map(toRow), total, query.page, query.limit);
   },
+
+  /** A single hotel's full activity timeline, across hotel/room-type/rate-plan edits. ADMIN only (route-enforced). */
+  async listForHotel(hotelId, query) {
+    const { rows, total } = await auditRepository.listForHotel(hotelId, query);
+    return toPage(rows.map(toRow), total, query.page, query.limit);
+  },
 };

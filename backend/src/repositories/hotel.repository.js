@@ -16,9 +16,17 @@ const HOTEL_COLUMNS = `
   h.postal_code, h.location_url, h.latitude, h.longitude, h.phone, h.email::text AS email, h.website,
   h.check_in_time, h.check_out_time, h.time_zone, h.pets_allowed, h.status, h.external_provider, h.external_id,
   h.published_at, h.archived_at, h.created_by, h.updated_by, h.created_at, h.updated_at,
+  cb.first_name || ' ' || cb.last_name AS created_by_name, cb.email::text AS created_by_email,
+  ub.first_name || ' ' || ub.last_name AS updated_by_name, ub.email::text AS updated_by_email,
   (SELECT COUNT(*)::int FROM room_types rt WHERE rt.hotel_id = h.id AND rt.deleted_at IS NULL AND rt.status <> 'ARCHIVED') AS room_type_count,
   (SELECT i.id FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
      ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover_image_id
+`;
+
+/** created_by/updated_by are just ids on `hotels` -- resolve display name/email for the admin listing/detail. */
+const ATTRIBUTION_JOINS = `
+  LEFT JOIN users cb ON cb.id = h.created_by
+  LEFT JOIN users ub ON ub.id = h.updated_by
 `;
 
 const escapeLike = (value) => value.replace(/[\\%_]/g, (char) => `\\${char}`);
@@ -65,6 +73,7 @@ export const hotelRepository = {
     const { rows } = await pool.query(
       `SELECT ${HOTEL_COLUMNS}, COUNT(*) OVER()::int AS total_count
          FROM hotels h
+         ${ATTRIBUTION_JOINS}
         WHERE ${where}
         ORDER BY ${orderBy}, h.id ASC
         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -78,6 +87,7 @@ export const hotelRepository = {
     const { rows } = await client.query(
       `SELECT ${HOTEL_COLUMNS}
          FROM hotels h
+         ${ATTRIBUTION_JOINS}
         WHERE ${numeric ? 'h.id = $1' : 'h.slug = $1'}
           AND h.deleted_at IS NULL
           ${publicOnly ? `AND h.status = 'PUBLISHED'` : ''}`,

@@ -65,6 +65,10 @@ const UserDetailPage = lazy(() => import('@/pages/admin/UserDetailPage.jsx').the
 const PartnerApplicationsPage = lazy(() => import('@/pages/admin/PartnerApplicationsPage.jsx').then((m) => ({ default: m.PartnerApplicationsPage })));
 const PartnerApplicationDetailPage = lazy(() => import('@/pages/admin/PartnerApplicationDetailPage.jsx').then((m) => ({ default: m.PartnerApplicationDetailPage })));
 const MasterDataPage = lazy(() => import('@/pages/admin/MasterDataPage.jsx').then((m) => ({ default: m.MasterDataPage })));
+const OnboardingAnalyticsOverviewPage = lazy(() => import('@/pages/admin/OnboardingAnalyticsOverviewPage.jsx').then((m) => ({ default: m.OnboardingAnalyticsOverviewPage })));
+const EmployeePerformancePage = lazy(() => import('@/pages/admin/EmployeePerformancePage.jsx').then((m) => ({ default: m.EmployeePerformancePage })));
+const EmployeePerformanceDetailPage = lazy(() => import('@/pages/admin/EmployeePerformanceDetailPage.jsx').then((m) => ({ default: m.EmployeePerformanceDetailPage })));
+const HotelOnboardingHistoryPage = lazy(() => import('@/pages/admin/HotelOnboardingHistoryPage.jsx').then((m) => ({ default: m.HotelOnboardingHistoryPage })));
 
 function NotFoundPage() {
   return (
@@ -168,6 +172,10 @@ export function App() {
         <Route path="partners/:userId" element={<PartnerApplicationDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
+        <Route path="onboarding-analytics" element={<OnboardingAnalyticsOverviewPage />} />
+        <Route path="onboarding-analytics/employees" element={<EmployeePerformancePage />} />
+        <Route path="onboarding-analytics/employees/:id" element={<EmployeePerformanceDetailPage />} />
+        <Route path="onboarding-analytics/hotels" element={<HotelOnboardingHistoryPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="profile" element={<AdminProfilePage />} />
       </Route>

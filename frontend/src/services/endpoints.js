@@ -142,6 +142,14 @@ export const adminApi = {
 
   // Audit log (ADMIN only; the backend enforces this)
   listAuditLogs: (params) => api.get('/admin/audit-logs', { params }).then((r) => r.data),
+  hotelActivityHistory: (hotelId, params) => api.get(`/admin/hotels/${hotelId}/activity-history`, { params }).then((r) => r.data),
+
+  // Onboarding & Performance Analytics (ADMIN only; the backend enforces this)
+  onboardingAnalyticsOverview: () => api.get('/admin/onboarding-analytics/overview').then((r) => r.data),
+  onboardingAnalyticsMonthlyTrends: (params) => api.get('/admin/onboarding-analytics/monthly-trends', { params }).then((r) => r.data.trends),
+  listEmployeePerformance: (params) => api.get('/admin/onboarding-analytics/employees', { params }).then((r) => r.data),
+  getEmployeePerformance: (id, params) => api.get(`/admin/onboarding-analytics/employees/${id}`, { params }).then((r) => r.data.employee),
+  listEmployeeActivities: (id, params) => api.get(`/admin/onboarding-analytics/employees/${id}/activities`, { params }).then((r) => r.data),
 
   // Reviews moderation (ADMIN sees every hotel; a HOTEL_OWNER is scoped server-side to their own)
   listReviews: (params) => api.get('/admin/reviews', { params }).then((r) => r.data),

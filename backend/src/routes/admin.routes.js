@@ -83,6 +83,14 @@ import {
   hotelPerformanceQuery,
 } from '../validators/adminBooking.validator.js';
 import { adminStaffCreateSchema, adminStaffUpdateSchema, adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
+import { onboardingAnalyticsController } from '../controllers/onboardingAnalytics.controller.js';
+import {
+  employeeActivityQuery,
+  employeeIdParam,
+  employeePerformanceListQuery,
+  hotelActivityHistoryQuery,
+  monthlyTrendsQuery,
+} from '../validators/onboardingAnalytics.validator.js';
 import { commissionConfigController } from '../controllers/commissionConfig.controller.js';
 import { commissionRateSchema } from '../validators/commissionConfig.validator.js';
 import { ledgerController } from '../controllers/ledger.controller.js';
@@ -359,6 +367,15 @@ adminRouter.get(
   hotelWorkspaceController.importHistory,
 );
 
+// Full hotel/room-type/rate-plan audit timeline for one hotel. ADMIN only -- same reveal-other-staff
+// concern as /audit-logs, just scoped to one hotel.
+adminRouter.get(
+  '/hotels/:id/activity-history',
+  validate({ params: idParam, query: hotelActivityHistoryQuery }),
+  requirePermission('audit.read'),
+  hotelWorkspaceController.activityHistory,
+);
+
 // Hotel onboarding (provider search and import jobs). Search/request are not hotel-scoped: there is no
 // hotel yet. Once a job exists, access narrows to its creator or (once resolved) its assigned hotel.
 adminRouter.post(
@@ -563,6 +580,35 @@ adminRouter.delete(
 
 // Audit log viewer. ADMIN only — it can reveal other staff members' actions across every hotel.
 adminRouter.get('/audit-logs', validate({ query: auditLogQuery }), requirePermission('audit.read'), auditLogController.list);
+
+// Onboarding & Performance Analytics. ADMIN only — same reasoning as /audit-logs and /users: this
+// reveals other staff members' individual performance, not just their own.
+adminRouter.get('/onboarding-analytics/overview', requirePermission('audit.read'), onboardingAnalyticsController.overview);
+adminRouter.get(
+  '/onboarding-analytics/monthly-trends',
+  validate({ query: monthlyTrendsQuery }),
+  requirePermission('audit.read'),
+  onboardingAnalyticsController.monthlyTrends,
+);
+adminRouter.get(
+  '/onboarding-analytics/employees',
+  validate({ query: employeePerformanceListQuery }),
+  requirePermission('audit.read'),
+  onboardingAnalyticsController.listEmployees,
+);
+adminRouter.get('/exports/employee-performance', validate({ query: employeePerformanceListQuery }), requirePermission('audit.read'), onboardingAnalyticsController.exportEmployeePerformanceCsv);
+adminRouter.get(
+  '/onboarding-analytics/employees/:id',
+  validate({ params: employeeIdParam, query: employeeActivityQuery }),
+  requirePermission('audit.read'),
+  onboardingAnalyticsController.employeeDetail,
+);
+adminRouter.get(
+  '/onboarding-analytics/employees/:id/activities',
+  validate({ params: employeeIdParam, query: employeeActivityQuery }),
+  requirePermission('audit.read'),
+  onboardingAnalyticsController.employeeActivities,
+);
 
 // Reviews moderation. HOTEL_OWNER gets read-only visibility into its own hotels (scoped in the service,
 // same hotel_managers table as everything else); only ADMIN may change a review's status.
