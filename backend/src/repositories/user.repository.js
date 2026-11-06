@@ -1,8 +1,26 @@
 import { pool } from '../db/pool.js';
 
+/**
+ * INSERT ... SELECT succeeds with zero rows when a deployment is missing the requested role.
+ * Throwing keeps the surrounding transaction from committing a valid-looking but roleless user.
+ */
+async function assignRole(client, userId, roleCode) {
+  const roleAssignment = await client.query(
+    `INSERT INTO user_roles (user_id, role_id)
+     SELECT $1, id FROM roles WHERE code = $2
+     RETURNING user_id`,
+    [userId, roleCode],
+  );
+  if (roleAssignment.rowCount !== 1) {
+    const error = new Error(`Staff role ${roleCode} is not available`);
+    error.code = 'STAFF_ROLE_NOT_AVAILABLE';
+    throw error;
+  }
+}
+
 const USER_COLUMNS = `
   u.id, u.email::text AS email, u.password_hash, u.first_name, u.last_name,
-  u.phone, u.is_active, u.email_verified_at, u.created_at, u.is_guest
+  u.phone, u.is_active, u.email_verified_at, u.created_at, u.is_guest, u.hotel_review_access
 `;
 
 function toUser(row, roles, permissions) {
@@ -17,6 +35,7 @@ function toUser(row, roles, permissions) {
     emailVerifiedAt: row.email_verified_at,
     createdAt: row.created_at,
     isGuest: row.is_guest,
+    hotelReviewAccess: row.hotel_review_access,
     roles,
     permissions,
   };
@@ -37,10 +56,17 @@ async function loadUserWithRoles(rows, client = pool) {
       ORDER BY r.code`,
     [row.id],
   );
+  const roles = roleRows.map((role) => role.code);
+  // A per-user override, kept separate from role_permissions: an onboarding executive individually
+  // granted review access also gets the console.review / hotel.review permissions a HOTEL_REVIEW_EXECUTIVE
+  // would otherwise need its own role for.
+  const extraPermissions = row.hotel_review_access && roles.includes('HOTEL_ONBOARDING_EXECUTIVE')
+    ? ['console.review', 'hotel.review']
+    : [];
   return toUser(
     row,
-    roleRows.map((role) => role.code),
-    [...new Set(roleRows.flatMap((role) => role.permissions))].sort(),
+    roles,
+    [...new Set([...roleRows.flatMap((role) => role.permissions), ...extraPermissions])].sort(),
   );
 }
 
@@ -62,27 +88,31 @@ export const userRepository = {
   },
 
   /** Inserts the user and grants a role, both inside the caller's transaction. */
-  async create(client, { email, passwordHash, firstName, lastName, phone, roleCode, isGuest = false }) {
+  async create(client, { email, passwordHash, firstName, lastName, phone, roleCode, isGuest = false, hotelReviewAccess = false }) {
     const { rows } = await client.query(
-      `INSERT INTO users (email, password_hash, first_name, last_name, phone, is_guest)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO users (email, password_hash, first_name, last_name, phone, is_guest, hotel_review_access)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
-      [email, passwordHash, firstName, lastName, phone ?? null, isGuest],
+      [email, passwordHash, firstName, lastName, phone ?? null, isGuest, hotelReviewAccess],
     );
-    const roleAssignment = await client.query(
-      `INSERT INTO user_roles (user_id, role_id)
-       SELECT $1, id FROM roles WHERE code = $2
-       RETURNING user_id`,
-      [rows[0].id, roleCode],
-    );
-    // INSERT ... SELECT succeeds with zero rows when a deployment is missing the requested role.
-    // Throwing keeps the surrounding transaction from committing a valid-looking but roleless user.
-    if (roleAssignment.rowCount !== 1) {
-      const error = new Error(`Staff role ${roleCode} is not available`);
-      error.code = 'STAFF_ROLE_NOT_AVAILABLE';
-      throw error;
-    }
+    await assignRole(client, rows[0].id, roleCode);
     return rows[0].id;
+  },
+
+  /** Replaces a staff user's single role (admin Edit User flow). */
+  async setRole(client, userId, roleCode) {
+    await client.query(`DELETE FROM user_roles WHERE user_id = $1`, [userId]);
+    await assignRole(client, userId, roleCode);
+  },
+
+  /** Admin Edit User flow: profile fields and the per-user review-access flag, independent of role. */
+  async updateProfile(client, userId, { firstName, lastName, email, phone, hotelReviewAccess }) {
+    await client.query(
+      `UPDATE users
+          SET first_name = $2, last_name = $3, email = $4, phone = $5, hotel_review_access = $6, updated_at = now()
+        WHERE id = $1`,
+      [userId, firstName, lastName, email, phone ?? null, hotelReviewAccess],
+    );
   },
 
   // The only caller is the email-verified "reset password" flow, so setting a real password here always

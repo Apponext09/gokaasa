@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN hotel_review_access BOOLEAN NOT NULL DEFAULT FALSE;

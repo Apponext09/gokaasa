@@ -113,6 +113,7 @@ export const presenceRepository = {
     params.push(limit, (page - 1) * limit);
     const { rows } = await pool.query(
       `SELECT u.id, u.email::text AS email, u.first_name, u.last_name, u.phone, u.is_active, u.created_at, u.last_login_at,
+              u.hotel_review_access,
               roles.codes AS role_codes,
               s.id AS session_id, s.platform, s.browser, s.os, s.current_route, s.current_route_label,
               s.started_at AS session_started_at, s.last_heartbeat_at,
@@ -137,6 +138,7 @@ export const presenceRepository = {
   async adminFindById(userId) {
     const { rows } = await pool.query(
       `SELECT u.id, u.email::text AS email, u.first_name, u.last_name, u.phone, u.is_active, u.created_at, u.last_login_at,
+              u.hotel_review_access,
               roles.codes AS role_codes
          FROM users u
          CROSS JOIN LATERAL (

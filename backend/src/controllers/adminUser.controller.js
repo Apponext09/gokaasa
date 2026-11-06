@@ -30,6 +30,11 @@ export const adminUserController = {
     return res.json({ user });
   },
 
+  async update(req, res) {
+    const user = await adminUserService.updateStaff(req.validated.params.id, req.validated.body, actorOf(req));
+    return res.json({ user });
+  },
+
   async forceSignOut(req, res) {
     return res.json(await adminUserService.forceSignOut(req.validated.params.id, actorOf(req)));
   },

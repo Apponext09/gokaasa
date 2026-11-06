@@ -36,11 +36,15 @@ const OWNER_PATH = /^\/admin\/(?:dashboard|hotels(?:\/new|\/onboarding(?:\/\d+\/
 export function canAccessAdminPath(user, pathname) {
   if (!isApprovedStaff(user)) return false;
   if (hasPermission(user, 'console.full')) return true;
-  if (hasPermission(user, 'console.owner')) return OWNER_PATH.test(pathname);
-  if (hasPermission(user, 'console.sales')) return SALES_PATH.test(pathname);
-  if (hasPermission(user, 'console.onboarding')) return ONBOARDING_PATH.test(pathname);
-  if (hasPermission(user, 'console.review')) return REVIEW_PATH.test(pathname);
-  return false;
+  // Each permission's path set is checked independently (not an else-if chain) so a user holding more
+  // than one -- e.g. an onboarding executive individually granted review access -- gets their union,
+  // not just whichever permission happened to be checked first.
+  let allowed = false;
+  if (hasPermission(user, 'console.owner')) allowed ||= OWNER_PATH.test(pathname);
+  if (hasPermission(user, 'console.sales')) allowed ||= SALES_PATH.test(pathname);
+  if (hasPermission(user, 'console.onboarding')) allowed ||= ONBOARDING_PATH.test(pathname);
+  if (hasPermission(user, 'console.review')) allowed ||= REVIEW_PATH.test(pathname);
+  return allowed;
 }
 
 /**

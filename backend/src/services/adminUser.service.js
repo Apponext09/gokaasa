@@ -37,12 +37,15 @@ function toUserRow(row) {
   return {
     id: row.id,
     name: [row.first_name, row.last_name].filter(Boolean).join(' '),
+    firstName: row.first_name,
+    lastName: row.last_name,
     email: row.email,
     phone: row.phone,
     roles: row.role_codes ?? [],
     isActive: row.is_active,
     joinedAt: row.created_at,
     lastLoginAt: row.last_login_at,
+    hotelReviewAccess: row.hotel_review_access,
     presenceStatus: presenceStatus(row.last_heartbeat_at),
     session,
   };
@@ -60,15 +63,73 @@ export const adminUserService = {
         lastName: input.lastName,
         phone: input.phone,
         roleCode: input.role,
+        hotelReviewAccess: input.hotelReviewAccess,
       });
       await auditService.record(client, {
         actor,
         action: 'user.staff_created',
         entity: 'user',
         entityId: id,
-        newValue: { email: input.email, role: input.role },
+        newValue: { email: input.email, role: input.role, hotelReviewAccess: input.hotelReviewAccess },
       });
       return id;
+    });
+    return this.detail(userId);
+  },
+
+  /**
+   * Admin Edit User flow. `row.role_codes` only ever holds one staff role in practice (see
+   * userRepository.create/setRole), so the "current role" used for the review-access cross-check and
+   * the "did the role change" check both just read its first entry.
+   */
+  async updateStaff(userId, input, actor) {
+    const row = await presenceRepository.adminFindById(userId);
+    if (!row) throw AppError.notFound('User not found');
+    const currentRole = (row.role_codes ?? [])[0] ?? null;
+
+    if (input.email && input.email !== row.email) {
+      const existing = await userRepository.findByEmail(input.email);
+      if (existing && existing.id !== userId) throw AppError.conflict('An account with this email already exists');
+    }
+
+    const effectiveRole = input.role ?? currentRole;
+    if (input.hotelReviewAccess === true && effectiveRole !== 'HOTEL_ONBOARDING_EXECUTIVE') {
+      throw AppError.badRequest('Review access can only be granted to Hotel Onboarding Executives');
+    }
+
+    const roleChanging = input.role !== undefined && input.role !== currentRole;
+    // Default-to-NO safety net: moving a user off the onboarding role always clears the flag, even if
+    // the request tried to keep it, so review access never silently survives under an unrelated role.
+    const hotelReviewAccess = roleChanging && input.role !== 'HOTEL_ONBOARDING_EXECUTIVE'
+      ? false
+      : input.hotelReviewAccess ?? row.hotel_review_access;
+
+    const statusChanging = input.isActive !== undefined && input.isActive !== row.is_active;
+
+    await withTransaction(async (client) => {
+      await userRepository.updateProfile(client, userId, {
+        firstName: input.firstName ?? row.first_name,
+        lastName: input.lastName ?? row.last_name,
+        email: input.email ?? row.email,
+        phone: input.phone !== undefined ? input.phone : row.phone,
+        hotelReviewAccess,
+      });
+      if (roleChanging) await userRepository.setRole(client, userId, input.role);
+      if (statusChanging) {
+        await client.query(`UPDATE users SET is_active = $2, updated_at = now() WHERE id = $1`, [userId, input.isActive]);
+        if (!input.isActive) {
+          await authRepository.revokeAllForUser(client, userId);
+          await presenceRepository.endAllForUser(client, userId);
+        }
+      }
+      await auditService.record(client, {
+        actor,
+        action: 'user.staff_updated',
+        entity: 'user',
+        entityId: userId,
+        oldValue: { email: row.email, role: currentRole, isActive: row.is_active, hotelReviewAccess: row.hotel_review_access },
+        newValue: { email: input.email ?? row.email, role: input.role ?? currentRole, isActive: input.isActive ?? row.is_active, hotelReviewAccess },
+      });
     });
     return this.detail(userId);
   },

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Check, ChevronLeft, ChevronRight, Clock3, MapPin, ShieldCheck, Sparkles, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
+import { Check, Clock3, MapPin, ShieldCheck, Sparkles, Star, Tag, Undo2, UtensilsCrossed } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge, Skeleton } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -14,7 +14,7 @@ import { stayParams, slugifyPlace } from '@/features/search/searchParams.js';
 import { discountDisplay } from '@/features/search/discountDisplay.js';
 import { isIllustrativeCover } from '@/features/hotels/imageDisclaimer.js';
 import { formatHotelLocation } from '@/features/hotels/hotelLocation.js';
-import { bookingApi, discoveryApi } from '@/services/endpoints.js';
+import { bookingApi } from '@/services/endpoints.js';
 import { normalizeError } from '@/services/api.js';
 import { cn } from '@/lib/utils.js';
 
@@ -64,10 +64,6 @@ export function HotelCard({ hotel, state, compact = false }) {
   const remainingAmenitiesCount = Math.max(0, allAmenities.length - 3);
   const fullPath = hotelPath(hotel, state);
 
-  const [details, setDetails] = useState(null);
-  const [detailsState, setDetailsState] = useState('idle');
-  const [hovered, setHovered] = useState(false);
-  const [photoIndex, setPhotoIndex] = useState(0);
   const [guestModalOpen, setGuestModalOpen] = useState(false);
   const [pendingSelection, setPendingSelection] = useState(null);
   const [reserving, setReserving] = useState(false);
@@ -83,34 +79,6 @@ export function HotelCard({ hotel, state, compact = false }) {
     const timer = setInterval(update, 1000);
     return () => clearInterval(timer);
   }, [hotel.retryAt, temporarilyHeld]);
-
-  const loadDetails = useCallback(() => {
-    if (details || detailsState === 'loading') return;
-    setDetailsState('loading');
-    discoveryApi
-      .hotel(hotel.slug)
-      .then((result) => {
-        setDetails(result);
-        setDetailsState('ready');
-      })
-      .catch(() => setDetailsState('error'));
-  }, [details, detailsState, hotel.slug]);
-
-  const gallery = useMemo(() => {
-    if (details?.images?.length) return details.images.filter((image) => image.url).slice(0, 6);
-    return hotel.image?.url ? [{ id: `cover-${hotel.id}`, ...hotel.image }] : [];
-  }, [details?.images, hotel.id, hotel.image]);
-
-  useEffect(() => {
-    if (!hovered) {
-      setPhotoIndex(0);
-    } else if (gallery.length > 1) {
-      setPhotoIndex(1);
-    }
-  }, [hovered, gallery.length]);
-
-  const currentPhoto = gallery[photoIndex] ?? hotel.image;
-  const currentCategory = currentPhoto?.categoryName || (currentPhoto?.category ? currentPhoto.category.charAt(0).toUpperCase() + currentPhoto.category.slice(1).toLowerCase().replaceAll('_', ' ') : null);
 
   const startHold = async (selection) => {
     if (!selection) return;
@@ -182,63 +150,27 @@ export function HotelCard({ hotel, state, compact = false }) {
 
   return (
     <>
-      <article className={cn(
-        'customer-hotel-card group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500',
-        compact ? 'w-full' : 'hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row',
-      )}>
-      <div
-        className={cn('relative aspect-[4/3] w-full shrink-0 overflow-hidden', !compact && 'md:aspect-auto md:w-72 lg:w-80')}
-        onMouseEnter={() => {
-          setHovered(true);
-          loadDetails();
+      <article
+        className={cn(
+          'customer-hotel-card group flex flex-col overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-card)] transition-all duration-500',
+          compact ? 'w-full' : 'cursor-pointer hover:-translate-y-1.5 hover:border-brand-300 hover:shadow-xl md:flex-row',
+        )}
+        onClick={compact ? undefined : (event) => {
+          if (event.defaultPrevented) return;
+          navigate(fullPath);
         }}
-        onMouseLeave={() => setHovered(false)}
       >
-        {gallery.length > 0 ? gallery.map((image, index) => (
-          <SafeImage
-            key={image.id ?? image.url}
-            src={image.url}
-            alt={image.altText ?? `${hotel.name} photo ${index + 1}`}
-            className={cn(
-              'absolute inset-0 transition-all duration-500 ease-out motion-reduce:transition-none',
-              index === photoIndex ? 'scale-100 opacity-100 group-hover:scale-[1.035]' : 'scale-[1.02] opacity-0',
-            )}
-            sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 100vw"
-            fallbackLabel={`${hotel.name}: photo ${index + 1}`}
-          />
-        )) : (
-          <SafeImage className="absolute inset-0" fallbackLabel={`${hotel.name}: photos coming soon`} />
-        )}
+      <div className={cn('relative aspect-[4/3] w-full shrink-0 overflow-hidden', !compact && 'md:aspect-auto md:w-72 lg:w-80')}>
+        <SafeImage
+          src={hotel.image?.url}
+          alt={hotel.image?.altText ?? hotel.name}
+          className={cn(
+            'absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.035] motion-reduce:transition-none motion-reduce:group-hover:scale-100',
+          )}
+          sizes="(min-width: 1024px) 320px, (min-width: 768px) 288px, 100vw"
+          fallbackLabel={`${hotel.name}: photos coming soon`}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/0 to-transparent transition-colors duration-500 group-hover:from-slate-950/15" />
-        {gallery.length > 1 && (
-          <>
-            <button
-              type="button"
-              className="absolute left-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100 focus:opacity-100"
-              aria-label="Previous hotel photo"
-              onClick={(event) => {
-                event.preventDefault();
-                setPhotoIndex((index) => (index - 1 + gallery.length) % gallery.length);
-              }}
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className="absolute right-3 top-1/2 z-10 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-slate-800 opacity-0 shadow-md transition-opacity hover:bg-white group-hover:opacity-100 focus:opacity-100"
-              aria-label="Next hotel photo"
-              onClick={(event) => {
-                event.preventDefault();
-                setPhotoIndex((index) => (index + 1) % gallery.length);
-              }}
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <span className="absolute bottom-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-2.5 py-1 text-[11px] font-medium text-white">
-              <Camera className="h-3 w-3" aria-hidden="true" /> {photoIndex + 1}/{gallery.length}
-            </span>
-          </>
-        )}
         {/* A fixed top-left slot, always the same badge, so the discount never competes for space with the other badges below. */}
         {discountPercent > 0 && (
           <div className="absolute left-3 top-3">
@@ -248,9 +180,9 @@ export function HotelCard({ hotel, state, compact = false }) {
         <div className="absolute right-3 top-3">
           <WishlistButton hotelId={hotel.id} initial={hotel.wishlisted} hotelName={hotel.name} variant="chip" />
         </div>
-        {(currentCategory || isIllustrativeCover(currentPhoto ?? hotel.image)) && (
+        {isIllustrativeCover(hotel.image) && (
           <p className="hcard-image-disclaimer absolute inset-x-0 bottom-0 bg-slate-950/55 px-2.5 py-1 text-center text-[11px] text-white/90">
-            {currentCategory ?? 'Illustrative image'}
+            Illustrative image
           </p>
         )}
       </div>
@@ -364,7 +296,7 @@ export function HotelCard({ hotel, state, compact = false }) {
 
         {unavailable && !offer && (
           <div className="mt-auto pt-1">
-            <Button variant="secondary" onClick={() => navigate(fullPath)}>View hotel</Button>
+            <Button variant="secondary" onClick={(event) => { event.stopPropagation(); navigate(fullPath); }}>View hotel</Button>
           </div>
         )}
 
@@ -440,12 +372,23 @@ export function HotelCard({ hotel, state, compact = false }) {
             </div>
             <div className="grid min-w-44 gap-2">
               <Button
-                onClick={() => navigate(fullPath)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate(fullPath);
+                }}
                 className="bg-gradient-to-r from-brand-800 to-brand-600 font-semibold shadow-md hover:from-brand-900 hover:to-brand-700"
               >
                 View Rooms &amp; Deals
               </Button>
-              <Button variant="secondary" onClick={quickReserve} loading={reserving} disabled={unavailable}>
+              <Button
+                variant="secondary"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  quickReserve();
+                }}
+                loading={reserving}
+                disabled={unavailable}
+              >
                 {!reserving && <Sparkles className="h-4 w-4 text-brand-600" aria-hidden="true" />}
                 {unavailable ? (temporarilyHeld ? 'Room currently held' : 'Sold out') : 'Quick Reserve'}
               </Button>
@@ -487,14 +430,21 @@ export function HotelCard({ hotel, state, compact = false }) {
             <button
               type="button"
               className="hcard-btn-view"
-              onClick={() => navigate(fullPath)}
+              onClick={(event) => {
+                event.stopPropagation();
+                navigate(fullPath);
+              }}
             >
               VIEW ROOMS &amp; DEALS
             </button>
             <button
               type="button"
               className="hcard-btn-reserve"
-              onClick={offer && !unavailable ? quickReserve : () => navigate(fullPath)}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (offer && !unavailable) quickReserve();
+                else navigate(fullPath);
+              }}
               disabled={reserving || unavailable}
             >
               {reserving ? 'Reserving…' : unavailable ? (temporarilyHeld ? 'ROOM CURRENTLY HELD' : 'SOLD OUT') : 'Quick Reserve'}

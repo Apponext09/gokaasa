@@ -25,11 +25,33 @@ export const adminUserStatusSchema = z.object({ isActive: z.boolean() });
 const staffPassword = z.string().min(10).max(128).regex(/[a-zA-Z]/, 'Password must include a letter').regex(/[0-9]/, 'Password must include a number');
 const staffName = z.string().trim().min(1).max(80).regex(/^[\p{L}\p{M}' .-]+$/u, 'Name contains invalid characters');
 
+const staffRole = z.enum(['SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE']);
+const staffPhone = z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/, 'Enter a valid phone number').optional().or(z.literal('').transform(() => undefined));
+
+function rejectReviewAccessOffRole(val, ctx) {
+  if (val.hotelReviewAccess && val.role !== undefined && val.role !== 'HOTEL_ONBOARDING_EXECUTIVE') {
+    ctx.addIssue({ code: 'custom', path: ['hotelReviewAccess'], message: 'Review access can only be granted to Hotel Onboarding Executives' });
+  }
+}
+
 export const adminStaffCreateSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   password: staffPassword,
   firstName: staffName,
   lastName: staffName,
-  phone: z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/, 'Enter a valid phone number').optional().or(z.literal('').transform(() => undefined)),
-  role: z.enum(['SALES_EXECUTIVE', 'HOTEL_ONBOARDING_EXECUTIVE', 'HOTEL_REVIEW_EXECUTIVE']),
-});
+  phone: staffPhone,
+  role: staffRole,
+  hotelReviewAccess: z.boolean().optional().default(false),
+}).superRefine(rejectReviewAccessOffRole);
+
+export const adminStaffUpdateSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254).optional(),
+  firstName: staffName.optional(),
+  lastName: staffName.optional(),
+  phone: staffPhone,
+  role: staffRole.optional(),
+  isActive: z.boolean().optional(),
+  hotelReviewAccess: z.boolean().optional(),
+})
+  .refine((val) => Object.keys(val).length > 0, { message: 'Provide at least one field to update' })
+  .superRefine(rejectReviewAccessOffRole);

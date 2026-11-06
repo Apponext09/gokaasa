@@ -82,7 +82,7 @@ import {
   dashboardTrendsQuery,
   hotelPerformanceQuery,
 } from '../validators/adminBooking.validator.js';
-import { adminStaffCreateSchema, adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
+import { adminStaffCreateSchema, adminStaffUpdateSchema, adminUserIdParam, adminUserListQuery, adminUserSessionParam, adminUserStatusSchema } from '../validators/adminUser.validator.js';
 import { commissionConfigController } from '../controllers/commissionConfig.controller.js';
 import { commissionRateSchema } from '../validators/commissionConfig.validator.js';
 import { ledgerController } from '../controllers/ledger.controller.js';
@@ -541,6 +541,12 @@ adminRouter.post('/users/staff', validate({ body: adminStaffCreateSchema }), req
 adminRouter.get('/users/kpis', requirePermission('user.manage'), adminUserController.kpis);
 adminRouter.get('/users', validate({ query: adminUserListQuery }), requirePermission('user.manage'), adminUserController.list);
 adminRouter.get('/users/:id', validate({ params: adminUserIdParam }), requirePermission('user.manage'), adminUserController.detail);
+adminRouter.patch(
+  '/users/:id',
+  validate({ params: adminUserIdParam, body: adminStaffUpdateSchema }),
+  requirePermission('user.manage'),
+  adminUserController.update,
+);
 adminRouter.patch(
   '/users/:id/status',
   validate({ params: adminUserIdParam, body: adminUserStatusSchema }),

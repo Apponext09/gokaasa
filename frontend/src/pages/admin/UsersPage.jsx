@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Search, Users, Wifi, WifiOff } from 'lucide-react';
+import { Pencil, Plus, Search, Users, Wifi, WifiOff } from 'lucide-react';
 import { Card, Skeleton, Alert, Badge } from '@/components/ui/surfaces.jsx';
 import { Input, PasswordInput, Select } from '@/components/ui/form-controls.jsx';
 import { Button } from '@/components/ui/button.jsx';
@@ -22,7 +22,7 @@ const ROLE_OPTIONS = [
   { value: 'HOTEL_ONBOARDING_EXECUTIVE', label: 'Hotel Onboarding Executive' },
   { value: 'HOTEL_REVIEW_EXECUTIVE', label: 'Hotel Review Executive' },
 ];
-const EMPTY_STAFF = { firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', role: 'SALES_EXECUTIVE' };
+const EMPTY_STAFF = { firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', role: 'SALES_EXECUTIVE', hotelReviewAccess: false };
 const STATUS_OPTIONS = [
   { value: '', label: 'Any account status' },
   { value: 'active', label: 'Active' },
@@ -101,6 +101,7 @@ export function UsersPage() {
       const user = await adminApi.createStaff({
         firstName: staff.firstName, lastName: staff.lastName, email: staff.email,
         phone: staff.phone, password: staff.password, role: staff.role,
+        hotelReviewAccess: staff.role === 'HOTEL_ONBOARDING_EXECUTIVE' ? staff.hotelReviewAccess : false,
       });
       setData((current) => current ? { ...current, items: [user, ...current.items].slice(0, 20), pagination: { ...current.pagination, total: current.pagination.total + 1 } } : current);
       setKpis((current) => current ? { ...current, totalUsers: current.totalUsers + 1 } : current);
@@ -233,11 +234,21 @@ export function UsersPage() {
               <Input placeholder="Phone (optional)" aria-label="Phone" value={staff.phone} onChange={(e) => setStaff((v) => ({ ...v, phone: e.target.value }))} />
               <PasswordInput required minLength={10} placeholder="Password (10+ characters)" aria-label="Password" value={staff.password} onChange={(e) => setStaff((v) => ({ ...v, password: e.target.value }))} />
               <PasswordInput required minLength={10} placeholder="Confirm password" aria-label="Confirm password" value={staff.confirmPassword} onChange={(e) => setStaff((v) => ({ ...v, confirmPassword: e.target.value }))} />
-              <Select aria-label="Staff role" value={staff.role} onChange={(e) => setStaff((v) => ({ ...v, role: e.target.value }))}>
+              <Select aria-label="Staff role" value={staff.role} onChange={(e) => setStaff((v) => ({ ...v, role: e.target.value, hotelReviewAccess: false }))}>
                 <option value="SALES_EXECUTIVE">Sales Executive</option>
                 <option value="HOTEL_ONBOARDING_EXECUTIVE">Hotel Onboarding Executive</option>
                 <option value="HOTEL_REVIEW_EXECUTIVE">Hotel Review Executive</option>
               </Select>
+              {staff.role === 'HOTEL_ONBOARDING_EXECUTIVE' && (
+                <Select
+                  aria-label="Hotel Onboarding Review Access"
+                  value={staff.hotelReviewAccess ? 'yes' : 'no'}
+                  onChange={(e) => setStaff((v) => ({ ...v, hotelReviewAccess: e.target.value === 'yes' }))}
+                >
+                  <option value="no">Review access: No</option>
+                  <option value="yes">Review access: Yes</option>
+                </Select>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
@@ -297,6 +308,7 @@ export function UsersPage() {
                   <th scope="col" className="px-4 py-3 font-semibold">Device</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Last Activity</th>
                   <th scope="col" className="px-4 py-3 font-semibold">Joined</th>
+                  <th scope="col" className="px-4 py-3 font-semibold"><span className="sr-only">Edit</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border-subtle)]">
@@ -319,6 +331,11 @@ export function UsersPage() {
                       {relativeTimeLabel(u.session?.lastHeartbeatAt ?? u.lastLoginAt, now)}
                     </td>
                     <td className="px-4 py-3 text-[var(--text-muted)]">{new Date(u.joinedAt).toLocaleDateString('en-IN')}</td>
+                    <td className="px-4 py-3">
+                      <Link to={`/admin/users/${u.id}?edit=1`} className="inline-flex items-center gap-1 text-[var(--text-muted)] hover:text-brand-700" aria-label={`Edit ${u.name || u.email}`}>
+                        <Pencil className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>

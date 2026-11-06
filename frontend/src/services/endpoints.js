@@ -133,6 +133,7 @@ export const adminApi = {
   listUsers: (params) => api.get('/admin/users', { params }).then((r) => r.data),
   createStaff: (body) => api.post('/admin/users/staff', body).then((r) => r.data.user),
   getUser: (id) => api.get(`/admin/users/${id}`).then((r) => r.data.user),
+  updateStaff: (id, body) => api.patch(`/admin/users/${id}`, body).then((r) => r.data.user),
   getUserKpis: () => api.get('/admin/users/kpis').then((r) => r.data),
   setUserStatus: (id, isActive) => api.patch(`/admin/users/${id}/status`, { isActive }).then((r) => r.data.user),
   forceSignOutUser: (id) => api.post(`/admin/users/${id}/force-signout`).then((r) => r.data),
