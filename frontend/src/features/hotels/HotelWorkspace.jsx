@@ -143,6 +143,7 @@ export function HotelWorkspace({ hotelId, sidePanel = null, extraActions = null 
     canEdit: hotel?.canEdit,
     isAdmin,
     isReviewExecutive,
+    isOnboardingExecutive,
   });
 
   const applyHotel = useCallback(

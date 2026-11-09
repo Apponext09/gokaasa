@@ -32,7 +32,7 @@ const STATUS_LABEL = { ACTIVE: 'Active', INACTIVE: 'Inactive', ARCHIVED: 'Archiv
 
 /** One room type: details, amenities, images, and permanently-priced rate plans. */
 export function RoomEditorPage() {
-  const { isAdmin, isReviewExecutive } = useAuth();
+  const { isAdmin, isReviewExecutive, isOnboardingExecutive } = useAuth();
   const { hotelId: hotelParam, roomId } = useParams();
   const hotelId = Number(hotelParam);
   const isNew = !roomId;
@@ -58,7 +58,9 @@ export function RoomEditorPage() {
 
   const form = useForm({ resolver: zodResolver(roomFormSchema), defaultValues: EMPTY_ROOM_FORM, mode: 'onTouched' });
   const { handleSubmit, reset, formState } = form;
-  const isReviewOnly = Boolean(isReviewExecutive && !isAdmin);
+  // An onboarding executive with hotel_review_access also holds console.review, but is not a pure
+  // reviewer -- see hotelWorkspaceAccess.js for the equivalent gate on the hotel-level workspace.
+  const isReviewOnly = Boolean(isReviewExecutive && !isAdmin && !isOnboardingExecutive);
   const readOnly = isReviewOnly || room?.status === 'ARCHIVED';
   const amenitiesDirty = selectedAmenities.slice().sort().join(',') !== savedAmenities.slice().sort().join(',');
 
