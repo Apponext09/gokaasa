@@ -36,7 +36,7 @@ export function MainTabNavigator() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="MyTrips" component={MyTripsScreen} options={{ title: 'My Trips' }} />
-      <Tab.Screen name="Wishlist" component={WishlistScreen} />
+      <Tab.Screen name="Wishlist" component={WishlistScreen} options={{ title: 'My Wishlist' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );

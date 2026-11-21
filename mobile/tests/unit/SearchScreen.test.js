@@ -18,15 +18,23 @@ import { hotelsApi } from '../../src/api/hotelsApi.js';
 describe('SearchScreen', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('with no destination chosen, tapping "Search Hotels" shows a validation error and never calls the API', async () => {
+  test('with no destination chosen, all hotels are loaded by default and tapping "Search Hotels" searches all hotels', async () => {
+    const body = { items: [{ id: 1, name: 'The Taj Mahal Palace, Mumbai', slug: 'taj-mahal-palace-mumbai', city: 'Mumbai', area: 'Colaba' }], total: 1 };
+    hotelsApi.search.mockResolvedValue(body);
+
     const route = { params: {} };
     const navigation = { navigate: jest.fn() };
     await render(<SearchScreen route={route} navigation={navigation} />);
 
-    fireEvent.press(screen.getByText('Search Hotels'));
+    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalled());
+    expect(hotelsApi.search).toHaveBeenCalledWith(
+      expect.objectContaining({ destination: undefined }),
+      expect.objectContaining({ signal: expect.anything() }),
+    );
 
-    await waitFor(() => expect(screen.queryByText(/choose a destination/i)).toBeTruthy());
-    expect(hotelsApi.search).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText('Search Hotels'));
+    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText('The Taj Mahal Palace, Mumbai')).toBeTruthy());
   });
 
   test('arriving with an already-chosen destination (e.g. a Home destination-card tap) searches immediately and renders real results', async () => {
@@ -56,46 +64,40 @@ describe('SearchScreen', () => {
   });
 });
 
-describe('SearchScreen quick filters (one-tap shortcuts to the real backend filters)', () => {
+describe('SearchScreen filters modal', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('tapping "Free cancellation" re-searches with the real freeCancellation filter applied, and tapping it again clears it', async () => {
+  test('opening Filters modal and applying "Free cancellation only" re-searches with freeCancellation: "true"', async () => {
     hotelsApi.search.mockResolvedValue({ items: [], total: 0 });
     const route = { params: { destination: 'mumbai', label: 'Mumbai', checkIn: '2026-11-12', checkOut: '2026-11-14', occupancy: [{ adults: 2, childAges: [] }] } };
     await render(<SearchScreen route={route} navigation={{ navigate: jest.fn() }} />);
     await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(1));
 
-    fireEvent.press(screen.getByText('Free cancellation'));
+    fireEvent.press(screen.getByText('Filters'));
+    const freeCancel = await screen.findByTestId('filter-free-cancellation');
+    fireEvent.press(freeCancel);
+    await waitFor(() => expect(screen.getByTestId('filter-free-cancellation').props.accessibilityState.checked).toBe(true));
+
+    fireEvent.press(screen.getByText('Apply filters'));
+
     await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(2));
     expect(hotelsApi.search).toHaveBeenLastCalledWith(expect.objectContaining({ freeCancellation: 'true' }), expect.anything());
-
-    fireEvent.press(screen.getByText('Free cancellation'));
-    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(3));
-    expect(hotelsApi.search).toHaveBeenLastCalledWith(expect.objectContaining({ freeCancellation: undefined }), expect.anything());
   });
 
-  test('tapping "4★ guest rating+" sends the real guestRating threshold the backend\'s hotelSearchQuery validator actually supports', async () => {
+  test('opening Filters modal and selecting 4+ guest rating applies guestRating: 4', async () => {
     hotelsApi.search.mockResolvedValue({ items: [], total: 0 });
     const route = { params: { destination: 'mumbai', label: 'Mumbai', checkIn: '2026-11-12', checkOut: '2026-11-14', occupancy: [{ adults: 2, childAges: [] }] } };
     await render(<SearchScreen route={route} navigation={{ navigate: jest.fn() }} />);
     await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(1));
 
-    fireEvent.press(screen.getByText('4★ guest rating+'));
+    fireEvent.press(screen.getByText('Filters'));
+    const fourPlus = await screen.findByLabelText('Guest rating 4+');
+    fireEvent.press(fourPlus);
+    await waitFor(() => expect(screen.getByLabelText('Guest rating 4+').props.accessibilityState.selected).toBe(true));
+
+    fireEvent.press(screen.getByText('Apply filters'));
+
     await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(2));
     expect(hotelsApi.search).toHaveBeenLastCalledWith(expect.objectContaining({ guestRating: 4 }), expect.anything());
-  });
-
-  test('tapping "Resorts" and "Swimming pool" together applies the real propertyTypes and amenities filters at once', async () => {
-    hotelsApi.search.mockResolvedValue({ items: [], total: 0 });
-    const route = { params: { destination: 'mumbai', label: 'Mumbai', checkIn: '2026-11-12', checkOut: '2026-11-14', occupancy: [{ adults: 2, childAges: [] }] } };
-    await render(<SearchScreen route={route} navigation={{ navigate: jest.fn() }} />);
-    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(1));
-
-    fireEvent.press(screen.getByText('Resorts'));
-    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(2));
-    fireEvent.press(screen.getByText('Swimming pool'));
-    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(3));
-
-    expect(hotelsApi.search).toHaveBeenLastCalledWith(expect.objectContaining({ propertyTypes: 'RESORT', amenities: 'POOL' }), expect.anything());
   });
 });

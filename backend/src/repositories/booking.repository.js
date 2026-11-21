@@ -37,7 +37,9 @@ export const bookingRepository = {
               h.pets_allowed,
               h.check_in_time::text AS check_in_time,
               (SELECT i.storage_key FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
-                ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover_storage_key
+                ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover_storage_key,
+              (SELECT i.source_url FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
+                ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover_source_url
          FROM hotels h
         WHERE h.id = $1 AND h.status = 'PUBLISHED' AND h.deleted_at IS NULL`,
       [hotelId],

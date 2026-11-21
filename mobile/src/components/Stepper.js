@@ -5,10 +5,13 @@ import { spacing, typography } from '../theme/spacing.js';
 
 /** A +/- counter used for adults, children, and rooms -- min/max are always passed in by the caller
  * (the real occupancy limits from constants/booking.js), never hardcoded per use. */
-export function Stepper({ label, value, min = 0, max = 99, onChange }) {
+export function Stepper({ label, hint, value, min = 0, max = 99, onChange }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.labelCol}>
+        <Text style={styles.label}>{label}</Text>
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+      </View>
       <View style={styles.controls}>
         <Pressable
           onPress={() => value > min && onChange(value - 1)}
@@ -36,7 +39,9 @@ export function Stepper({ label, value, min = 0, max = 99, onChange }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm },
+  labelCol: { flex: 1, marginRight: spacing.sm },
   label: { ...typography.body, color: colors.textStrong },
+  hint: { ...typography.caption, color: colors.textMuted, marginTop: 1 },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   button: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, borderColor: colors.borderSubtle, alignItems: 'center', justifyContent: 'center' },
   buttonDisabled: { opacity: 0.4 },

@@ -10,6 +10,8 @@ import { BookingProgress } from '@/features/booking/components/BookingProgress.j
 import { HoldCountdown } from '@/features/booking/components/HoldCountdown.jsx';
 import { HoldExpiredPanel } from '@/features/booking/components/HoldExpiredPanel.jsx';
 import { StaySummary } from '@/features/booking/components/StaySummary.jsx';
+import { BookingStayBar } from '@/features/booking/components/BookingStayBar.jsx';
+import { readSelection } from '@/features/booking/selection.js';
 import { buildGuestFormSchema, defaultGuestValues, toGuestDetailsPayload, ADULT_AGE } from '@/features/booking/bookingSchemas.js';
 import { useHold } from '@/features/booking/useHold.js';
 import { applyServerFieldErrors, normalizeError } from '@/services/api.js';
@@ -23,12 +25,14 @@ export function GuestDetailsPage() {
   const navigate = useNavigate();
   const holdId = params.get('holdId');
   const coupon = params.get('coupon');
+  const isQuickReserve = params.get('quickReserve') === 'true' || Boolean(readSelection()?.quickReserve);
   const bookingPath = (path, id) => {
     const next = new URLSearchParams({ holdId: String(id) });
     if (coupon) next.set('coupon', coupon);
+    if (isQuickReserve) next.set('quickReserve', 'true');
     return `${path}?${next}`;
   };
-  const { hold, loading, error, reload } = useHold(holdId);
+  const { hold, loading, error, reload, setHold } = useHold(holdId);
 
   useDocumentMeta({ title: 'Guest details | Gokaasa', description: 'Enter your guest details to continue your booking.' });
 
@@ -69,6 +73,7 @@ export function GuestDetailsPage() {
   return (
     <div className="guest-details-page mx-auto w-full max-w-6xl px-4 py-4 pb-28 sm:px-6 lg:pb-8">
       <BookingProgress current={2} />
+      <BookingStayBar hold={hold} onHoldUpdated={(newHold) => setHold(newHold)} />
       {expired ? (
         <HoldExpiredPanel />
       ) : (
@@ -77,7 +82,7 @@ export function GuestDetailsPage() {
             <div className="guest-hold-countdown">
               <HoldCountdown expiresAt={hold.expiresAt} onExpire={reload} />
             </div>
-            <GuestForm hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
+            <GuestForm key={hold.id} hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
           </div>
           <aside className="guest-details-summary lg:sticky lg:top-20 lg:self-start">
             <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} className="guest-stay-summary" />

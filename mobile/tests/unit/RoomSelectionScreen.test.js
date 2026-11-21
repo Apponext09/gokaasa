@@ -125,7 +125,6 @@ describe('RoomSelectionScreen', () => {
 
     await waitFor(() => expect(screen.getByText('Taxes')).toBeTruthy());
     expect(screen.getByText('Room charge (2 nights)')).toBeTruthy();
-    expect(screen.getByText('Fees')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Price breakdown'));
     await waitFor(() => expect(screen.queryByText('Taxes')).toBeNull());

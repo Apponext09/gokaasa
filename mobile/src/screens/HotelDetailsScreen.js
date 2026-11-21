@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/ScreenContainer.js';
@@ -10,22 +10,42 @@ import { StarRating } from '../components/StarRating.js';
 import { SectionHeader } from '../components/SectionHeader.js';
 import { HotelCard } from '../components/HotelCard.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
+import { StaySearchBar } from '../components/StaySearchBar.js';
+import { HotelReviewsSection } from '../components/HotelReviewsSection.js';
 import { hotelsApi } from '../api/hotelsApi.js';
+import { resolveImageUrl } from '../utils/imageUrl.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useWishlist } from '../context/WishlistContext.js';
+import { useBookingSearch } from '../context/BookingSearchContext.js';
 import { PROPERTY_TYPE_LABEL } from '../constants/booking.js';
 import { todayIso, addDaysIso } from '../utils/format.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 
 export default function HotelDetailsScreen({ route, navigation }) {
-  const { idOrSlug, checkIn, checkOut, occupancy } = route.params;
+  const { idOrSlug, checkIn, checkOut, occupancy } = route.params ?? {};
   const { isAuthenticated } = useAuth();
   const { isWishlisted, toggle } = useWishlist();
+  const searchCtx = useBookingSearch();
   const [state, setState] = useState({ status: 'loading', hotel: null, error: null });
   const { width } = useWindowDimensions();
   const [activeImage, setActiveImage] = useState(0);
   const galleryRef = useRef(null);
+
+  // Local stay state — initialized from route params or persistent search context
+  const defaultCheckIn = checkIn ?? searchCtx.checkIn ?? addDaysIso(todayIso(), 1);
+  const defaultCheckOut = checkOut ?? searchCtx.checkOut ?? addDaysIso(todayIso(), 2);
+  const defaultOccupancy = occupancy ?? searchCtx.rooms ?? [{ adults: 2, childAges: [] }];
+  const [stayCheckIn, setStayCheckIn] = useState(defaultCheckIn);
+  const [stayCheckOut, setStayCheckOut] = useState(defaultCheckOut);
+  const [stayOccupancy, setStayOccupancy] = useState(defaultOccupancy);
+
+  // Keep in sync with context if params were omitted (e.g. from Wishlist)
+  useEffect(() => {
+    if (!checkIn && searchCtx.checkIn) setStayCheckIn(searchCtx.checkIn);
+    if (!checkOut && searchCtx.checkOut) setStayCheckOut(searchCtx.checkOut);
+    if (!occupancy && searchCtx.rooms) setStayOccupancy(searchCtx.rooms);
+  }, [checkIn, checkOut, occupancy, searchCtx.checkIn, searchCtx.checkOut, searchCtx.rooms]);
 
   useEffect(() => {
     hotelsApi
@@ -49,14 +69,30 @@ export default function HotelDetailsScreen({ route, navigation }) {
       hotelId: hotel.id,
       hotelSlug: hotel.slug,
       hotelName: hotel.name,
-      checkIn: checkIn ?? addDaysIso(todayIso(), 1),
-      checkOut: checkOut ?? addDaysIso(todayIso(), 2),
-      occupancy: occupancy ?? [{ adults: 2, childAges: [] }],
+      checkIn: stayCheckIn,
+      checkOut: stayCheckOut,
+      occupancy: stayOccupancy,
     });
+  };
+
+  const handleSearchApply = (newCheckIn, newCheckOut, newOccupancy) => {
+    setStayCheckIn(newCheckIn);
+    setStayCheckOut(newCheckOut);
+    setStayOccupancy(newOccupancy);
+    searchCtx.setStay({ checkIn: newCheckIn, checkOut: newCheckOut, rooms: newOccupancy });
   };
 
   return (
     <ScreenContainer edges={['bottom']}>
+      {/* ── Stay search bar — above the gallery, full-width at top ── */}
+      <StaySearchBar
+        checkIn={stayCheckIn}
+        checkOut={stayCheckOut}
+        occupancy={stayOccupancy}
+        hotelName={hotel.name}
+        onApply={handleSearchApply}
+      />
+
       <ScrollView>
         <View>
           <FlatList
@@ -69,7 +105,7 @@ export default function HotelDetailsScreen({ route, navigation }) {
             onMomentumScrollEnd={(e) => setActiveImage(Math.round(e.nativeEvent.contentOffset.x / width))}
             renderItem={({ item }) => (
               <Image
-                source={item?.url ? { uri: item.url } : undefined}
+                source={resolveImageUrl(item?.url) ? { uri: resolveImageUrl(item.url) } : undefined}
                 style={[styles.galleryImage, { width }]}
                 contentFit="cover"
                 placeholder={{ color: colors.surfaceMuted }}
@@ -125,6 +161,23 @@ export default function HotelDetailsScreen({ route, navigation }) {
             <Text style={styles.address}>{address}</Text>
           </View>
 
+          {(hotel.latitude || hotel.locationUrl) && (() => {
+            const mapUrl = hotel.locationUrl ??
+              `https://www.google.com/maps/search/?api=1&query=${hotel.latitude},${hotel.longitude}`;
+            return (
+              <Pressable
+                style={styles.mapButton}
+                onPress={() => Linking.openURL(mapUrl)}
+                accessibilityRole="link"
+                accessibilityLabel="View on map"
+              >
+                <Ionicons name="map-outline" size={14} color={colors.brand600} />
+                <Text style={styles.mapButtonText}>View on map</Text>
+                <Ionicons name="open-outline" size={12} color={colors.brand600} />
+              </Pressable>
+            );
+          })()}
+
           {hotel.description ? (
             <Text style={styles.description}>{hotel.description}</Text>
           ) : (
@@ -154,21 +207,29 @@ export default function HotelDetailsScreen({ route, navigation }) {
 
           {hotel.cancellationPolicies?.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Cancellation policies</Text>
-              {hotel.cancellationPolicies.map((p) => (
-                // Verified live against production: a policy here is { code, name, summary } -- there is
-                // no `id` field (that only exists on a HOLD's own resolved cancellationPolicy, a
-                // different shape from RoomSelection/BookingScreen). `code` is the real, stable,
-                // unique-per-type identifier; `p.id` was always undefined, which is exactly why React
-                // reported a missing key here. `p.description` was also wrong -- the real field is
-                // `summary` (it was silently rendering "undefined" before).
-                <View key={p.code} style={styles.policyRow}>
-                  <Ionicons name="shield-checkmark-outline" size={14} color={colors.brand600} />
-                  <Text style={[styles.caption, styles.policyText]}>{p.summary}</Text>
+              <Text style={styles.sectionTitle}>Cancellation policy</Text>
+              <View style={styles.policyCard}>
+                <View style={styles.policyRow}>
+                  <Ionicons name="shield-checkmark" size={16} color={colors.success600} style={{ marginTop: 1 }} />
+                  <Text style={[styles.caption, { fontWeight: '700', color: colors.textStrong, flex: 1, fontSize: 13, lineHeight: 18 }]}>
+                    {hotel.cancellationPolicies[0]?.summary}
+                  </Text>
                 </View>
-              ))}
+                <View style={styles.policyNoteRow}>
+                  <Ionicons name="information-circle-outline" size={13} color={colors.textMuted} style={{ marginTop: 1 }} />
+                  <Text style={[styles.caption, { color: colors.textMuted, fontSize: 11, lineHeight: 15, flex: 1 }]}>
+                    Some rooms and rates may have different cancellation terms. Check the room for details.
+                  </Text>
+                </View>
+              </View>
             </View>
           )}
+
+          {/* ── Guest Reviews — fetched live from /api/hotels/:slug/reviews ── */}
+          <HotelReviewsSection
+            hotelIdOrSlug={hotel.slug || String(hotel.id)}
+            initialRating={hotel.rating}
+          />
 
           {hotel.similarHotels?.length > 0 && (
             <View style={styles.similarSection}>
@@ -183,7 +244,9 @@ export default function HotelDetailsScreen({ route, navigation }) {
                   <View style={styles.similarCard}>
                     <HotelCard
                       hotel={item}
-                      onPress={() => navigation.push('HotelDetails', { idOrSlug: item.slug, checkIn, checkOut, occupancy })}
+                      compact
+                      variant="similar"
+                      onPress={() => navigation.push('HotelDetails', { idOrSlug: item.slug, checkIn: stayCheckIn, checkOut: stayCheckOut, occupancy: stayOccupancy })}
                     />
                   </View>
                 )}
@@ -246,8 +309,28 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 6,
   },
   amenityText: { ...typography.caption, color: colors.textBody },
+  policyCard: {
+    backgroundColor: colors.surfaceMuted,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    gap: spacing.xs,
+  },
   policyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   policyText: { flex: 1 },
+  policyNoteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    paddingLeft: 2,
+  },
+  mapButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+    backgroundColor: colors.brand50 ?? '#eff6ff', borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: 6,
+  },
+  mapButtonText: { ...typography.captionStrong, color: colors.brand600 },
   similarSection: { marginTop: spacing.lg },
   similarCard: { width: 260 },
   // Deliberately NOT flexDirection: 'row' (it has exactly one child, the button, so a row never bought

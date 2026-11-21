@@ -104,7 +104,7 @@ export async function quoteStay(client, input, { checkAvailability = true } = {}
   // Check-in instant in the hotel's own zone. Cancellation deadlines are measured from this instant.
   const checkInAt = zonedTimeToInstant(checkIn, (hotel.check_in_time ?? DEFAULT_CHECK_IN_TIME).slice(0, 5), hotel.time_zone);
 
-  const cover = hotel.cover_storage_key ? getStorage().publicUrl(hotel.cover_storage_key) : null;
+  const cover = hotel.cover_storage_key ? getStorage().publicUrl(hotel.cover_storage_key) : (hotel.cover_source_url ?? null);
   const snapshot = {
     version: QUOTE_SNAPSHOT_VERSION,
     quotedAt: new Date().toISOString(),

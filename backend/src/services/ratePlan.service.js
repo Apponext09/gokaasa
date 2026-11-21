@@ -59,6 +59,12 @@ export const ratePlanService = {
         throw AppError.conflict('This room already has a rate plan with that code', { field: 'code' });
       }
       await catalogService.requireActive('meal-plans', input.mealPlan, client);
+      if (input.cancellationPolicyId != null) {
+        const policy = await cancellationPolicyRepository.findById(input.cancellationPolicyId, client);
+        if (policy) {
+          input.isRefundable = !policy.is_non_refundable;
+        }
+      }
       await checkRefundability(client, { hotelId: room.hotel_id, ...input });
 
       const id = await ratePlanRepository.insert(client, {
@@ -107,8 +113,15 @@ export const ratePlanService = {
         await catalogService.requireActive('meal-plans', input.mealPlan, client);
       }
 
-      const nextRefundable = input.isRefundable ?? current.is_refundable;
       const nextPolicyId = input.cancellationPolicyId !== undefined ? input.cancellationPolicyId : current.cancellation_policy_id;
+      let nextRefundable = input.isRefundable ?? current.is_refundable;
+      if (nextPolicyId != null) {
+        const policy = await cancellationPolicyRepository.findById(nextPolicyId, client);
+        if (policy) {
+          nextRefundable = !policy.is_non_refundable;
+          input.isRefundable = nextRefundable;
+        }
+      }
       await checkRefundability(client, { hotelId: current.hotel_id, isRefundable: nextRefundable, cancellationPolicyId: nextPolicyId });
 
       const changes = {};

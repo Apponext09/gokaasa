@@ -9,6 +9,8 @@ import { ErrorView } from '../components/ErrorView.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { AppButton } from '../components/AppButton.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
+import { ExtendStayModal } from '../components/ExtendStayModal.js';
+import { WriteReviewModal } from '../components/WriteReviewModal.js';
 import { bookingsApi } from '../api/bookingsApi.js';
 import { formatMoneyMinor, formatStayDate } from '../utils/format.js';
 import { BOOKING_STATUS_LABEL } from '../constants/booking.js';
@@ -20,6 +22,8 @@ export default function BookingDetailsScreen({ route, navigation }) {
   const [state, setState] = useState({ status: 'loading', booking: null, error: null });
   const [cancelling, setCancelling] = useState(false);
   const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [extendModalOpen, setExtendModalOpen] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
 
   const load = () => {
     setState((s) => ({ ...s, status: 'loading' }));
@@ -46,6 +50,9 @@ export default function BookingDetailsScreen({ route, navigation }) {
   // the booking is actually CONFIRMED, even though the backend's invoice service itself has no status
   // check -- a PAYMENT_PENDING/FAILED booking has nothing real to invoice yet.
   const canDownloadInvoice = booking.status === 'CONFIRMED';
+  const canExtendStay = booking.status === 'CONFIRMED';
+  const isPastCheckOut = Boolean(booking.stay?.checkOut && new Date(`${booking.stay.checkOut}T23:59:59`) <= new Date());
+  const canReview = booking.status === 'CONFIRMED' && isPastCheckOut;
 
   const onDownloadInvoice = async () => {
     setDownloadingInvoice(true);
@@ -111,6 +118,16 @@ export default function BookingDetailsScreen({ route, navigation }) {
           <Row label="Dates" value={`${formatStayDate(booking.stay.checkIn)} → ${formatStayDate(booking.stay.checkOut)} (${booking.stay.nights} night${booking.stay.nights === 1 ? '' : 's'})`} />
           <Row label="Rooms" value={booking.rooms.map((r) => `${r.quantity} × ${r.name}`).join(', ')} />
           <Row label="Rate plan" value={booking.rooms[0]?.ratePlanName} />
+          {canExtendStay && (
+            <AppButton
+              title="Extend stay"
+              variant="secondary"
+              size="sm"
+              icon={<Ionicons name="calendar-outline" size={16} color={colors.brand600} />}
+              onPress={() => setExtendModalOpen(true)}
+              style={styles.extendButton}
+            />
+          )}
         </Section>
 
         <Section title="Lead guest">
@@ -118,6 +135,26 @@ export default function BookingDetailsScreen({ route, navigation }) {
           <Row label="Email" value={booking.primaryContact.email} />
           <Row label="Mobile" value={booking.primaryContact.mobile} />
         </Section>
+
+        {booking.guests?.length > 0 ? (
+          <Section title="Room guests">
+            {booking.guests.map((g, idx) => (
+              <Row
+                key={idx}
+                label={`Room ${(g.roomIndex ?? 0) + 1} · Guest`}
+                value={`${g.name}${g.age != null ? ` (${g.age} yrs)` : ''}`}
+              />
+            ))}
+          </Section>
+        ) : null}
+
+        {booking.companyName || booking.gstNumber ? (
+          <Section title="Company & GST">
+            {booking.companyName ? <Row label="Company" value={booking.companyName} /> : null}
+            {booking.gstNumber ? <Row label="GSTIN" value={booking.gstNumber} /> : null}
+            {booking.billingAddress ? <Row label="Billing address" value={booking.billingAddress} /> : null}
+          </Section>
+        ) : null}
 
         {booking.specialRequest ? (
           <Section title="Special requests">
@@ -129,21 +166,32 @@ export default function BookingDetailsScreen({ route, navigation }) {
           <Row label="Subtotal" value={formatMoneyMinor(booking.amounts.subtotal, booking.amounts.currency)} />
           {booking.amounts.discount > 0 && <Row label="Discount" value={`−${formatMoneyMinor(booking.amounts.discount, booking.amounts.currency)}`} />}
           <Row label="Taxes" value={formatMoneyMinor(booking.amounts.taxes, booking.amounts.currency)} />
-          <Row label="Fees" value={formatMoneyMinor(booking.amounts.fees, booking.amounts.currency)} />
           {booking.amounts.couponDiscount > 0 && <Row label={`Coupon (${booking.amounts.couponCode})`} value={`−${formatMoneyMinor(booking.amounts.couponDiscount, booking.amounts.currency)}`} />}
           <Row label="Total" value={formatMoneyMinor(booking.amounts.total, booking.amounts.currency)} strong />
           <Row label="Paid" value={formatMoneyMinor(booking.amounts.paid, booking.amounts.currency)} />
-          {canDownloadInvoice && (
-            <AppButton
-              title="Download invoice"
-              variant="secondary"
-              size="sm"
-              loading={downloadingInvoice}
-              onPress={onDownloadInvoice}
-              icon={<Ionicons name="document-text-outline" size={16} color={colors.textStrong} />}
-              style={styles.invoiceButton}
-            />
-          )}
+          <View style={styles.buttonRow}>
+            {canDownloadInvoice && (
+              <AppButton
+                title="Download invoice"
+                variant="secondary"
+                size="sm"
+                loading={downloadingInvoice}
+                onPress={onDownloadInvoice}
+                icon={<Ionicons name="document-text-outline" size={16} color={colors.textStrong} />}
+                style={styles.invoiceButton}
+              />
+            )}
+            {canReview && (
+              <AppButton
+                title="Write a review"
+                variant="secondary"
+                size="sm"
+                onPress={() => setReviewModalOpen(true)}
+                icon={<Ionicons name="star-outline" size={16} color={colors.accent600} />}
+                style={styles.reviewButton}
+              />
+            )}
+          </View>
         </Section>
 
         {booking.cancellation ? (
@@ -157,6 +205,21 @@ export default function BookingDetailsScreen({ route, navigation }) {
         )}
         </FadeSlideIn>
       </ScrollView>
+
+      <ExtendStayModal
+        booking={booking}
+        visible={extendModalOpen}
+        onClose={() => setExtendModalOpen(false)}
+        onExtended={() => load()}
+      />
+
+      <WriteReviewModal
+        visible={reviewModalOpen}
+        bookingId={booking.id}
+        hotelName={booking.hotel.name}
+        onClose={() => setReviewModalOpen(false)}
+        onSubmitted={() => load()}
+      />
     </ScreenContainer>
   );
 }
@@ -192,5 +255,8 @@ const styles = StyleSheet.create({
   strongValue: { ...typography.bodyStrong, color: colors.textStrong },
   cancelButton: { marginTop: spacing.sm, marginBottom: spacing.xxxl },
   resumeButton: { marginBottom: spacing.md },
+  extendButton: { marginTop: spacing.sm, alignSelf: 'flex-start' },
   invoiceButton: { marginTop: spacing.sm, alignSelf: 'flex-start' },
+  reviewButton: { marginTop: spacing.sm, alignSelf: 'flex-start' },
+  buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

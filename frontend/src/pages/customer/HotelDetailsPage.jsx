@@ -4,6 +4,7 @@ import {
   Building2,
   Calendar,
   ExternalLink,
+  Info,
   MapPin,
   RefreshCw,
   Search,
@@ -530,9 +531,6 @@ export function HotelDetailsPage() {
       taxesMinor:
         plan.taxes,
 
-      feesMinor:
-        plan.fees,
-
       finalAmountMinor:
         plan.finalAmount,
 
@@ -1020,13 +1018,24 @@ export function HotelDetailsPage() {
               </p>
             )}
 
-            <div className="hotel-overview-extra">
-              <div>
-                <ShieldCheck className="h-4 w-4 shrink-0 text-success-600" aria-hidden="true" />
-                <span className="min-w-0">
-                  <strong className="font-semibold text-[var(--text-strong)]">Cancellation:</strong>{' '}
-                  {policies[0]?.summary ?? 'Terms are shown with each available room rate.'}
-                </span>
+            <div className="hotel-overview-extra !border-t-0 !pt-2">
+              <div className="flex flex-col gap-1 rounded-md border border-[var(--border-subtle,#e2e8f0)] bg-[var(--surface-muted,#f8fafc)] px-3 py-2 text-xs">
+                <div className="flex items-start gap-2">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success-600" aria-hidden="true" />
+                  <div className="min-w-0 flex-1 leading-snug">
+                    <strong className="font-semibold text-[var(--text-strong)]">Cancellation: </strong>
+                    <span className="text-[var(--text-body)]">
+                      {policies[0]?.summary ?? 'Terms are shown with each available room rate.'}
+                    </span>
+                  </div>
+                </div>
+
+                {policies[0]?.summary && (
+                  <div className="flex items-center gap-1.5 pl-6 text-[11px] leading-tight text-[var(--text-muted)]">
+                    <Info className="h-3 w-3 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                    <span>Some rooms and rates may have different cancellation terms. Check the room for details.</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

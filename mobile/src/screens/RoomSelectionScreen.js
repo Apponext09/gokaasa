@@ -9,15 +9,18 @@ import { EmptyState } from '../components/EmptyState.js';
 import { AppButton } from '../components/AppButton.js';
 import { StatusBadge } from '../components/StatusBadge.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
+import { StaySearchBar } from '../components/StaySearchBar.js';
 import { hotelsApi } from '../api/hotelsApi.js';
 import { bookingsApi } from '../api/bookingsApi.js';
+import { resolveImageUrl } from '../utils/imageUrl.js';
 import { formatOccupancy, formatMoneyMinor, nightsBetween } from '../utils/format.js';
 import { MEAL_PLAN_LABEL, BED_TYPE_LABEL } from '../constants/booking.js';
 import { useAuth } from '../context/AuthContext.js';
+import { useBookingSearch } from '../context/BookingSearchContext.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 
-const CONTENT_PADDING = spacing.lg;
+const CONTENT_PADDING = spacing.md;
 
 const UNAVAILABLE_TEXT = {
   SOLD_OUT: 'Sold out for these dates',
@@ -98,7 +101,6 @@ function RatePlanRow({ plan, onSelect, holdBusy }) {
           <BreakdownRow label={`Room charge (${plan.nights} night${plan.nights === 1 ? '' : 's'})`} value={formatMoneyMinor(plan.subtotal)} />
           {plan.discount > 0 && <BreakdownRow label="Discount" value={`−${formatMoneyMinor(plan.discount)}`} tone="success" />}
           <BreakdownRow label="Taxes" value={formatMoneyMinor(plan.taxes)} />
-          <BreakdownRow label="Fees" value={formatMoneyMinor(plan.fees)} />
           <BreakdownRow label="Total" value={formatMoneyMinor(plan.finalAmount)} strong />
         </View>
       )}
@@ -127,7 +129,7 @@ function RoomCard({ room, onSelect, holdBusy }) {
           keyExtractor={(img, i) => img?.id ?? `ph-${i}`}
           onMomentumScrollEnd={(e) => setActiveImage(Math.round(e.nativeEvent.contentOffset.x / cardWidth))}
           renderItem={({ item }) => (
-            <Image source={item?.url ? { uri: item.url } : undefined} style={[styles.roomImage, { width: cardWidth }]} contentFit="cover" placeholder={{ color: colors.surfaceMuted }} />
+            <Image source={resolveImageUrl(item?.url) ? { uri: resolveImageUrl(item.url) } : undefined} style={[styles.roomImage, { width: cardWidth }]} contentFit="cover" placeholder={{ color: colors.surfaceMuted }} />
           )}
         />
         {images.length > 1 && (
@@ -175,18 +177,33 @@ function RoomCard({ room, onSelect, holdBusy }) {
  * price or availability is computed here.
  */
 export default function RoomSelectionScreen({ route, navigation }) {
-  const { hotelId, hotelSlug, hotelName, checkIn, checkOut, occupancy } = route.params;
+  const { hotelId, hotelSlug, hotelName, checkIn, checkOut, occupancy } = route.params ?? {};
   const { isAuthenticated } = useAuth();
+  const searchCtx = useBookingSearch();
   const [state, setState] = useState({ status: 'loading', data: null, error: null });
   const [holdBusy, setHoldBusy] = useState(false);
-  const nights = nightsBetween(checkIn, checkOut);
+
+  // Local stay state — updated when user taps Apply on the StaySearchBar
+  const [stayCheckIn, setStayCheckIn] = useState(checkIn ?? searchCtx.checkIn);
+  const [stayCheckOut, setStayCheckOut] = useState(checkOut ?? searchCtx.checkOut);
+  const [stayOccupancy, setStayOccupancy] = useState(occupancy ?? searchCtx.rooms);
+
+  const nights = nightsBetween(stayCheckIn, stayCheckOut);
 
   useEffect(() => {
+    setState({ status: 'loading', data: null, error: null });
     hotelsApi
-      .availability(hotelSlug, { checkIn, checkOut, occ: formatOccupancy(occupancy) })
+      .availability(hotelSlug, { checkIn: stayCheckIn, checkOut: stayCheckOut, occ: formatOccupancy(stayOccupancy) })
       .then((data) => setState({ status: 'ready', data, error: null }))
       .catch((err) => setState({ status: 'error', data: null, error: err.message }));
-  }, [hotelSlug, checkIn, checkOut, occupancy]);
+  }, [hotelSlug, stayCheckIn, stayCheckOut, stayOccupancy]);
+
+  const handleSearchApply = (newCheckIn, newCheckOut, newOccupancy) => {
+    setStayCheckIn(newCheckIn);
+    setStayCheckOut(newCheckOut);
+    setStayOccupancy(newOccupancy);
+    searchCtx.setStay({ checkIn: newCheckIn, checkOut: newCheckOut, rooms: newOccupancy });
+  };
 
   const selectRatePlan = async (room, plan) => {
     if (!isAuthenticated) {
@@ -199,10 +216,10 @@ export default function RoomSelectionScreen({ route, navigation }) {
         hotelId,
         roomTypeId: room.id,
         ratePlanId: plan.ratePlanId,
-        checkIn,
-        checkOut,
-        rooms: occupancy.length,
-        occupancy,
+        checkIn: stayCheckIn,
+        checkOut: stayCheckOut,
+        rooms: stayOccupancy.length,
+        occupancy: stayOccupancy,
       });
       navigation.navigate('Booking', { holdId: hold.id, hotelName, roomName: room.name, planName: plan.name });
     } catch (err) {
@@ -212,28 +229,46 @@ export default function RoomSelectionScreen({ route, navigation }) {
     }
   };
 
-  if (state.status === 'loading') return <LoadingView label="Checking real availability…" />;
+  // First load — show full-screen spinner (no data yet, bar can't show meaningfully)
+  if (state.status === 'loading' && !state.data) return <LoadingView label="Checking real availability…" />;
   if (state.status === 'error' && !state.data) return <ErrorView message={state.error} onRetry={() => navigation.replace('RoomSelection', route.params)} />;
 
-  const available = state.data.roomTypes.filter((r) => r.available);
-  const unavailable = state.data.roomTypes.filter((r) => !r.available);
+  const isRefetching = state.status === 'loading';
+  const available = (state.data?.roomTypes ?? []).filter((r) => r.available);
+  const unavailable = (state.data?.roomTypes ?? []).filter((r) => !r.available);
 
   return (
     <ScreenContainer edges={['bottom']}>
+      {/* ── Stay search bar — top of screen, always visible ── */}
+      <StaySearchBar
+        checkIn={stayCheckIn}
+        checkOut={stayCheckOut}
+        occupancy={stayOccupancy}
+        hotelName={hotelName}
+        onApply={handleSearchApply}
+      />
+
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.subtitle}>{hotelName} · {nights} night{nights === 1 ? '' : 's'}</Text>
 
-        {available.length === 0 && (
+        {isRefetching && (
+          <View style={styles.refetchRow}>
+            <Ionicons name="refresh-outline" size={14} color={colors.brand600} />
+            <Text style={styles.refetchText}>Checking availability…</Text>
+          </View>
+        )}
+
+        {!isRefetching && available.length === 0 && (
           <EmptyState icon="bed-outline" title="No rooms available" message="Try different dates or go back to results." />
         )}
 
-        {available.map((room, index) => (
+        {!isRefetching && available.map((room, index) => (
           <FadeSlideIn key={room.id} delay={index * 60}>
             <RoomCard room={room} onSelect={selectRatePlan} holdBusy={holdBusy} />
           </FadeSlideIn>
         ))}
 
-        {unavailable.length > 0 && (
+        {!isRefetching && unavailable.length > 0 && (
           <View style={styles.unavailableBlock}>
             <Text style={styles.sectionTitle}>{unavailable.length} other room type{unavailable.length === 1 ? '' : 's'} not available</Text>
             {unavailable.map((room) => (
@@ -251,38 +286,40 @@ export default function RoomSelectionScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: spacing.lg, gap: spacing.lg },
+  content: { padding: spacing.md, gap: spacing.md },
   subtitle: { ...typography.caption, color: colors.textMuted },
+  refetchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  refetchText: { ...typography.caption, color: colors.brand600 },
   flex1: { flex: 1 },
   roomCard: { backgroundColor: colors.surfaceCard, borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderSubtle, ...shadow.card },
-  roomImage: { height: 170, backgroundColor: colors.surfaceMuted },
-  dotsRow: { position: 'absolute', bottom: spacing.sm, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 5 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.55)' },
-  dotActive: { backgroundColor: colors.white, width: 8, height: 8, borderRadius: 4 },
-  roomBody: { padding: spacing.lg, gap: spacing.sm },
-  roomName: { ...typography.h2, color: colors.textStrong },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: 4 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  roomImage: { height: 135, backgroundColor: colors.surfaceMuted },
+  dotsRow: { position: 'absolute', bottom: spacing.xs, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 4 },
+  dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.55)' },
+  dotActive: { backgroundColor: colors.white, width: 7, height: 5, borderRadius: 2.5 },
+  roomBody: { padding: spacing.md, gap: 6 },
+  roomName: { ...typography.bodyStrong, fontSize: 16, lineHeight: 22, color: colors.textStrong },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: 3 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   caption: { ...typography.caption, color: colors.textMuted },
   successText: { color: colors.success600 },
-  amenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.md, rowGap: 4 },
+  amenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: 3 },
   amenityItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  planRow: { gap: 4, paddingTop: spacing.md, marginTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
-  planHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  planName: { ...typography.bodyStrong, color: colors.textStrong },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 2 },
-  cancelText: { ...typography.caption, color: colors.textMuted, marginTop: 2 },
-  priceFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.sm },
+  planRow: { gap: 3, paddingTop: spacing.sm, marginTop: 4, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  planHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
+  planName: { ...typography.bodyStrong, fontSize: 14, lineHeight: 19, color: colors.textStrong },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 2 },
+  cancelText: { ...typography.caption, fontSize: 11, lineHeight: 15, color: colors.textMuted, marginTop: 1 },
+  priceFooter: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.sm, marginTop: 4 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline' },
-  price: { ...typography.h2, color: colors.textStrong },
-  selectButton: { minWidth: 90 },
-  breakdownToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm, alignSelf: 'flex-start' },
-  breakdownToggleText: { ...typography.captionStrong, color: colors.brand600 },
-  breakdown: { marginTop: spacing.xs, gap: 2 },
+  price: { ...typography.bodyStrong, fontSize: 18, lineHeight: 24, color: colors.textStrong },
+  selectButton: { minWidth: 78 },
+  breakdownToggle: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3, alignSelf: 'flex-start' },
+  breakdownToggleText: { ...typography.captionStrong, fontSize: 11, color: colors.brand600 },
+  breakdown: { marginTop: 3, gap: 2 },
   breakdownRow: { flexDirection: 'row', justifyContent: 'space-between' },
   breakdownStrongLabel: { ...typography.captionStrong, color: colors.textStrong },
   breakdownStrongValue: { ...typography.captionStrong, color: colors.textStrong },
-  unavailableBlock: { padding: spacing.lg, backgroundColor: colors.surfaceMuted, borderRadius: radius.card, gap: spacing.sm },
+  unavailableBlock: { padding: spacing.md, backgroundColor: colors.surfaceMuted, borderRadius: radius.card, gap: spacing.xs },
   unavailableRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionTitle: { ...typography.bodyStrong, color: colors.textStrong },
 });

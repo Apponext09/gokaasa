@@ -57,7 +57,14 @@ export function renderInvoicePdf(booking) {
   if (booking.hotel.address) { doc.text(booking.hotel.address, 310, rightY, { width: 235 }); rightY += 26; }
   doc.text(`Check-in: ${booking.stay.checkIn}`, 310, rightY); rightY += 13;
   doc.text(`Check-out: ${booking.stay.checkOut}`, 310, rightY); rightY += 13;
-  doc.text(`${booking.stay.nights} night(s)  ·  ${booking.stay.rooms} room(s)  ·  ${booking.stay.adults} adult(s), ${booking.stay.children} child(ren)${booking.stay.pets ? `  ·  ${booking.stay.pets} pet(s)` : ''}`, 310, rightY, { width: 235 }); rightY += 13;
+  const nightsLabel = `${booking.stay.nights} ${booking.stay.nights === 1 ? 'night' : 'nights'}`;
+  const roomsLabel = `${booking.stay.rooms} ${booking.stay.rooms === 1 ? 'room' : 'rooms'}`;
+  const adultsLabel = `${booking.stay.adults} ${booking.stay.adults === 1 ? 'adult' : 'adults'}`;
+  const childrenLabel = booking.stay.children > 0 ? `, ${booking.stay.children} ${booking.stay.children === 1 ? 'child' : 'children'}` : '';
+  const petsLabel = booking.stay.pets ? `  ·  ${booking.stay.pets} ${booking.stay.pets === 1 ? 'pet' : 'pets'}` : '';
+  const staySummary = `${nightsLabel}  ·  ${roomsLabel}  ·  ${adultsLabel}${childrenLabel}${petsLabel}`;
+  doc.text(staySummary, 310, rightY, { width: 235 });
+  rightY += Math.max(13, doc.heightOfString(staySummary, { width: 235 }));
 
   let y = Math.max(leftY, rightY) + 20;
   doc.rect(50, y, 495, 20).fill(NAVY);

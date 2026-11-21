@@ -48,7 +48,7 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved, mealPl
 
   const onSubmit = async (values) => {
     try {
-      const payload = toRatePlanPayload(values);
+      const payload = toRatePlanPayload(values, policies);
       const saved = plan ? await roomApi.updateRatePlan(plan.id, payload) : await roomApi.createRatePlan(roomId, payload);
       toast.success(plan ? 'Rate plan saved' : 'Rate plan created');
       onSaved(saved);
@@ -98,9 +98,6 @@ function RatePlanDialog({ open, onClose, roomId, policies, plan, onSaved, mealPl
               <option value="INACTIVE">Inactive</option>
             </Select>
           </FormField>
-          <div className="sm:col-span-2">
-            <Checkbox label="Refundable rate (the policy decides how much)" {...register('isRefundable')} />
-          </div>
           <FormField id="rp-description" label="Description" error={e.description?.message} className="sm:col-span-2">
             <Textarea id="rp-description" {...register('description')} />
           </FormField>

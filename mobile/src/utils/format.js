@@ -25,6 +25,18 @@ export function occupancyLabel(occupancy = []) {
   return `${rooms} room${rooms === 1 ? '' : 's'} · ${adults} adult${adults === 1 ? '' : 's'}${children ? ` · ${children} child${children === 1 ? '' : 'ren'}` : ''}`;
 }
 
+export function summarizeOccupancy(rooms = []) {
+  const roomCount = rooms.length || 1;
+  const adults = rooms.reduce((sum, r) => sum + (r.adults || 0), 0);
+  const children = rooms.reduce((sum, r) => sum + ((r.childAges && r.childAges.length) || 0), 0);
+  const totalGuests = adults + children;
+  const plural = (n, word, suffix = 's') => `${n} ${word}${n === 1 ? '' : suffix}`;
+  if (roomCount === 1) {
+    return `${plural(roomCount, 'Room')} · ${plural(adults, 'Adult')}${children ? ` · ${plural(children, 'Child', 'ren')}` : ''}`;
+  }
+  return `${plural(roomCount, 'Room')} · ${plural(totalGuests, 'Guest')}`;
+}
+
 /** Rooms separated by "|"; each room is "<adults>" optionally followed by "-<age>.<age>..." -- the exact
  * shareable URL form backend/src/domain/occupancy.js parses on the server. */
 export function formatOccupancy(rooms) {
@@ -44,13 +56,18 @@ export function occupancyFromGuests(guests = []) {
 }
 
 export function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function addDaysIso(iso, days) {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
 }
 
 export function nightsBetween(checkIn, checkOut) {

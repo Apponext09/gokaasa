@@ -115,7 +115,7 @@ export const ratePlanFormSchema = z.object({
   name: z.string().trim().min(2, 'Name is required').max(120),
   description: text(1000),
   mealPlan: z.string().trim().regex(/^[A-Z][A-Z0-9_]{1,39}$/, 'Choose a meal plan'),
-  isRefundable: z.boolean(),
+  isRefundable: z.boolean().optional(),
   cancellationPolicyId: z.string().min(1, 'Choose a cancellation policy'),
   discountPercent: z.string().trim().refine((v) => v !== '' && Number(v) >= 0 && Number(v) <= 100, 'Enter 0 to 100'),
   taxPercent: z.string().trim().refine((v) => v !== '' && Number(v) >= 0 && Number(v) <= 100, 'Enter 0 to 100'),
@@ -128,7 +128,9 @@ export const EMPTY_RATE_PLAN_FORM = {
   discountPercent: '0', taxPercent: '12', basePriceRupees: '', status: 'ACTIVE',
 };
 
-export function toRatePlanPayload(values) {
+export function toRatePlanPayload(values, policies = []) {
+  const selectedPolicy = policies.find((p) => String(p.id) === String(values.cancellationPolicyId));
+  const isRefundable = selectedPolicy ? !selectedPolicy.isNonRefundable : (values.isRefundable ?? true);
   return {
     code: values.code,
     name: values.name,

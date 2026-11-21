@@ -110,5 +110,5 @@ export const nearbyHotelsQuery = z.object({
 
 export const handpickedHotelsQuery = z.object({
   page: z.coerce.number().int().min(1).max(100).default(1),
-  limit: z.coerce.number().int().min(1).max(24).default(10),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
 });

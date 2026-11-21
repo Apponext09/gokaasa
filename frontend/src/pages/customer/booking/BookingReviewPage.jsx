@@ -10,6 +10,8 @@ import { BookingProgress } from '@/features/booking/components/BookingProgress.j
 import { HoldCountdown } from '@/features/booking/components/HoldCountdown.jsx';
 import { HoldExpiredPanel } from '@/features/booking/components/HoldExpiredPanel.jsx';
 import { StaySummary } from '@/features/booking/components/StaySummary.jsx';
+import { BookingStayBar } from '@/features/booking/components/BookingStayBar.jsx';
+import { readSelection } from '@/features/booking/selection.js';
 import { SimulatedCheckoutDialog } from '@/features/booking/components/SimulatedCheckoutDialog.jsx';
 import { openRazorpayCheckout } from '@/features/booking/razorpayCheckout.js';
 import { formatMoneyMinor, occupancyLabel, EXPIRED_MESSAGE } from '@/features/booking/bookingFormat.js';
@@ -27,6 +29,7 @@ export function BookingReviewPage() {
   const navigate = useNavigate();
   const holdId = params.get('holdId');
   const coupon = params.get('coupon');
+  const isQuickReserve = params.get('quickReserve') === 'true' || Boolean(readSelection()?.quickReserve);
   const { hold, loading, error, reload, setHold } = useHold(holdId);
   const [phase, setPhase] = useState('idle'); // idle | creating | checkout | verifying
   const [priceChange, setPriceChange] = useState(null);
@@ -97,6 +100,7 @@ export function BookingReviewPage() {
     if (hold.guestDetails == null && hold.status === 'HELD') {
       const next = new URLSearchParams({ holdId: String(hold.id) });
       if (coupon) next.set('coupon', coupon);
+      if (isQuickReserve) next.set('quickReserve', 'true');
       navigate(`/booking/guest-details?${next}`, { replace: true });
     }
     if (hold.status === 'CONVERTED' && hold.bookingId) navigate(`/booking/confirmation/${hold.bookingId}`, { replace: true });
@@ -260,6 +264,13 @@ export function BookingReviewPage() {
   return (
     <div className="booking-review-page mx-auto w-full max-w-6xl px-4 py-4 pb-28 sm:px-6 lg:pb-8">
       <BookingProgress current={busy ? 4 : 3} />
+        <BookingStayBar
+          hold={hold}
+          onHoldUpdated={(newHold) => {
+            setHold(newHold);
+            setPriceChange(null);
+          }}
+        />
       {ended ? (
         <HoldExpiredPanel message={expiredMessage ?? EXPIRED_MESSAGE} />
       ) : (

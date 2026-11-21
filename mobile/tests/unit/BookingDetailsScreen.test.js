@@ -79,3 +79,35 @@ describe('BookingDetailsScreen payment recovery', () => {
     expect(screen.queryByText('Resume payment')).toBeNull();
   });
 });
+
+describe('BookingDetailsScreen extend stay', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  test('a CONFIRMED booking shows "Extend stay" button; tapping it opens ExtendStayModal', async () => {
+    bookingsApi.booking.mockResolvedValue(CONFIRMED_BOOKING);
+    bookingsApi.checkExtension = jest.fn().mockResolvedValue({
+      available: true,
+      extraNights: 1,
+      currency: 'INR',
+      subtotalMinor: 250000,
+      taxesMinor: 30000,
+      totalMinor: 280000,
+    });
+
+    await render(<BookingDetailsScreen route={{ params: { bookingId: 1 } }} navigation={{ navigate: jest.fn() }} />);
+
+    const extendBtn = await screen.findByText('Extend stay');
+    fireEvent.press(extendBtn);
+
+    expect(await screen.findByText('Extend your stay')).toBeTruthy();
+  });
+
+  test('a CANCELLED booking never shows "Extend stay" button', async () => {
+    bookingsApi.booking.mockResolvedValue({ ...CONFIRMED_BOOKING, status: 'CANCELLED' });
+    await render(<BookingDetailsScreen route={{ params: { bookingId: 1 } }} navigation={{ navigate: jest.fn() }} />);
+
+    await waitFor(() => expect(screen.queryByText('Abbot Hotel')).toBeTruthy());
+    expect(screen.queryByText('Extend stay')).toBeNull();
+  });
+});
+

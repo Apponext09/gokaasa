@@ -1709,61 +1709,6 @@ body {
   box-shadow: 0 16px 38px rgb(15 23 42 / 12%), 0 3px 10px rgb(15 23 42 / 5%);
 }
 
-.customer-quick-nav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.6rem;
-  width: min(71.25rem, calc(100% - 3rem));
-  margin: 1.5rem auto 0;
-}
-
-.customer-quick-nav-item {
-  display: inline-flex;
-  min-height: 2.75rem;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 1.1rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  background: var(--surface-card);
-  color: var(--text-strong);
-  font-size: 0.82rem;
-  font-weight: 600;
-  box-shadow: var(--shadow-card);
-  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-}
-
-.customer-quick-nav-item:hover {
-  border-color: var(--color-brand-300);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgb(15 23 42 / 10%);
-}
-
-.customer-quick-filter-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.customer-quick-filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  background: var(--surface-card);
-  color: var(--text-body);
-  font-size: 0.78rem;
-  font-weight: 600;
-  transition: border-color 150ms ease, color 150ms ease;
-}
-
-.customer-quick-filter-chip:hover {
-  border-color: var(--color-accent-500);
-  color: var(--text-strong);
-}
 
 .customer-search-widget {
   position: static;
@@ -11708,3 +11653,52 @@ body {
 .hotels-page-root .customer-search-shell {
   margin: 1rem auto 1.5rem !important;
 }
+
+/* ==========================================================================
+   Booking Stay Bar (Unified Stay Modifier on Guest Details & Review)
+   ========================================================================== */
+.booking-stay-bar .customer-date-range,
+.booking-stay-bar .customer-guests-field {
+  height: 100%;
+}
+
+.booking-stay-bar .customer-date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  height: 100%;
+}
+
+.booking-stay-bar .customer-date-field,
+.booking-stay-bar .customer-guests-control {
+  min-height: 60px;
+  height: 100%;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background-color: #ffffff;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.booking-stay-bar .customer-guests-field {
+  border: none;
+  background: transparent;
+}
+
+.booking-stay-bar .customer-guests-control {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.booking-stay-bar .customer-date-field:hover,
+.booking-stay-bar .customer-date-field:focus-visible,
+.booking-stay-bar .customer-guests-control:hover,
+.booking-stay-bar .customer-guests-control:focus-visible {
+  border-color: #14243b;
+  box-shadow: 0 0 0 3px rgba(20, 36, 59, 0.08);
+}
+

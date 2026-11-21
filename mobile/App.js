@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext.js';
 import { WishlistProvider } from './src/context/WishlistContext.js';
+import { BookingSearchProvider } from './src/context/BookingSearchContext.js';
 import { RootNavigator } from './src/navigation/RootNavigator.js';
 import { LoadingView } from './src/components/LoadingView.js';
 
@@ -28,8 +29,10 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <WishlistProvider>
-          <Gate />
-          <StatusBar style="dark" />
+          <BookingSearchProvider>
+            <Gate />
+            <StatusBar style="dark" />
+          </BookingSearchProvider>
         </WishlistProvider>
       </AuthProvider>
     </SafeAreaProvider>

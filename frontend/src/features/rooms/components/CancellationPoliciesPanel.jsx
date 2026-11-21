@@ -22,9 +22,6 @@ const policySchema = z
     refundPercent: z.string().regex(/^\d{1,3}$/, 'Enter 0 to 100').refine((v) => Number(v) <= 100, 'Enter 0 to 100'),
   })
   .superRefine((v, ctx) => {
-    if (v.isNonRefundable && (v.refundPercent !== '0' || v.deadlineHours !== '')) {
-      ctx.addIssue({ code: 'custom', path: ['isNonRefundable'], message: 'A non-refundable policy has no deadline and refunds nothing' });
-    }
     if (!v.isNonRefundable && Number(v.refundPercent) > 0 && v.deadlineHours === '') {
       ctx.addIssue({ code: 'custom', path: ['deadlineHours'], message: 'Set how many hours before check-in the refund applies' });
     }

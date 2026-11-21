@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,9 +13,11 @@ import { HotelCard, HotelCardSkeleton } from '../components/HotelCard.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
 import { hotelsApi } from '../api/hotelsApi.js';
+import { bookingsApi } from '../api/bookingsApi.js';
 import { notificationsApi } from '../api/notificationsApi.js';
 import { useAuth } from '../context/AuthContext.js';
-import { todayIso, addDaysIso, occupancyLabel } from '../utils/format.js';
+import { useBookingSearch } from '../context/BookingSearchContext.js';
+import { todayIso, addDaysIso, occupancyLabel, summarizeOccupancy, formatOccupancy } from '../utils/format.js';
 import { validateSearchCriteria } from '../utils/searchValidation.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
@@ -37,18 +39,103 @@ const DEFAULT_ROOM = { adults: 2, childAges: [] };
 export default function HomeScreen({ navigation }) {
   const { user, isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
+  const {
+    destination: contextDestination,
+    setDestination: setContextDestination,
+    checkIn,
+    checkOut,
+    setDates,
+    rooms,
+    setRooms,
+  } = useBookingSearch();
+
   const [destinations, setDestinations] = useState({ status: 'loading', items: [] });
-  const [handpicked, setHandpicked] = useState({ status: 'loading', items: [] });
+  const [handpicked, setHandpicked] = useState({ status: 'loading', items: [], total: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
-  const [destination, setDestination] = useState(null);
-  const [destinationText, setDestinationText] = useState('');
-  const [checkIn, setCheckIn] = useState(addDaysIso(todayIso(), 1));
-  const [checkOut, setCheckOut] = useState(addDaysIso(todayIso(), 2));
-  const [room, setRoom] = useState(DEFAULT_ROOM);
+  const [destination, setDestination] = useState(contextDestination);
+  const [destinationText, setDestinationText] = useState(contextDestination?.label ?? '');
   const [guestsOpen, setGuestsOpen] = useState(false);
   const [formError, setFormError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [reservingHotelId, setReservingHotelId] = useState(null);
+
+  useEffect(() => {
+    if (contextDestination) {
+      setDestination(contextDestination);
+      setDestinationText(contextDestination.label ?? '');
+    }
+  }, [contextDestination]);
+
+  const handleCheckInChange = (newIn) => {
+    if (checkOut <= newIn) {
+      setDates(newIn, addDaysIso(newIn, 1));
+    } else {
+      setDates(newIn, checkOut);
+    }
+  };
+
+  const handleCheckOutChange = (newOut) => {
+    setDates(checkIn, newOut);
+  };
+
+  const handleQuickReserve = async (hotel) => {
+    if (!isAuthenticated) {
+      navigation.navigate('Auth', { screen: 'Login' });
+      return;
+    }
+
+    setReservingHotelId(hotel.id);
+    try {
+      let roomTypeId = hotel.bestOffer?.roomTypeId;
+      let ratePlanId = hotel.bestOffer?.ratePlanId;
+      let roomName = hotel.bestOffer?.roomName;
+      let planName = hotel.bestOffer?.ratePlanName;
+
+      // If bestOffer is not pre-computed (e.g. curated handpicked teaser), fetch real availability
+      if (!roomTypeId || !ratePlanId) {
+        const avail = await hotelsApi.availability(hotel.slug, {
+          checkIn,
+          checkOut,
+          occ: formatOccupancy(rooms),
+        });
+        const firstAvailable = avail.roomTypes?.find((r) => r.available);
+        const firstPlan = firstAvailable?.ratePlans?.[0];
+
+        if (!firstAvailable || !firstPlan) {
+          navigation.navigate('HotelDetails', { idOrSlug: hotel.slug, checkIn, checkOut, occupancy: rooms });
+          return;
+        }
+
+        roomTypeId = firstAvailable.id;
+        ratePlanId = firstPlan.ratePlanId;
+        roomName = firstAvailable.name;
+        planName = firstPlan.name;
+      }
+
+      const hold = await bookingsApi.createHold({
+        hotelId: hotel.id,
+        roomTypeId,
+        ratePlanId,
+        checkIn,
+        checkOut,
+        rooms: rooms.length,
+        occupancy: rooms,
+      });
+
+      navigation.navigate('Booking', {
+        holdId: hold.id,
+        hotelName: hotel.name,
+        roomName: roomName || 'Selected Room',
+        planName: planName || 'Standard Rate',
+        isQuickReserve: true,
+      });
+    } catch (err) {
+      Alert.alert('Unable to reserve', err.message || 'Room could not be held. Please view hotel rooms.');
+    } finally {
+      setReservingHotelId(null);
+    }
+  };
 
   const loadUnreadCount = useCallback(() => {
     if (!isAuthenticated) {
@@ -64,9 +151,9 @@ export default function HomeScreen({ navigation }) {
       .then((items) => setDestinations({ status: 'ready', items }))
       .catch(() => setDestinations({ status: 'error', items: [] }));
     hotelsApi
-      .handpickedHotels({ limit: 10 })
-      .then((res) => setHandpicked({ status: 'ready', items: res.items ?? [] }))
-      .catch(() => setHandpicked({ status: 'error', items: [] }));
+      .handpickedHotels({ limit: 100 })
+      .then((res) => setHandpicked({ status: 'ready', items: res.items ?? [], total: res.pagination?.total ?? res.total ?? (res.items?.length ?? 0) }))
+      .catch(() => setHandpicked({ status: 'error', items: [], total: 0 }));
     await loadUnreadCount();
   }, [loadUnreadCount]);
 
@@ -80,10 +167,13 @@ export default function HomeScreen({ navigation }) {
     setRefreshing(false);
   };
 
-  const openHotel = (hotel) => navigation.navigate('HotelDetails', { idOrSlug: hotel.slug });
+  // Pass the currently selected dates and occupancy so HotelDetailsScreen starts with the same
+  // values the user just configured.
+  const openHotel = (hotel) => navigation.navigate('HotelDetails', { idOrSlug: hotel.slug, checkIn, checkOut, occupancy: rooms });
 
   const goToDestination = (item) => {
-    navigation.navigate('Search', { destination: item.destination, label: item.label, checkIn, checkOut, occupancy: [room] });
+    setContextDestination(item);
+    navigation.navigate('Search', { destination: item.destination, label: item.label, checkIn, checkOut, occupancy: rooms });
   };
 
   const onSearchPress = () => {
@@ -93,7 +183,8 @@ export default function HomeScreen({ navigation }) {
       return;
     }
     setFormError(null);
-    navigation.navigate('Search', { destination: destination.destination, area: destination.area, label: destination.label, checkIn, checkOut, occupancy: [room] });
+    if (destination) setContextDestination(destination);
+    navigation.navigate('Search', { destination: destination?.destination, area: destination?.area, label: destination?.label, checkIn, checkOut, occupancy: rooms });
   };
 
   return (
@@ -156,15 +247,23 @@ export default function HomeScreen({ navigation }) {
               setDestinationText((prev) => value?.label ?? prev);
               setFormError(null);
             }}
-            onPickHotel={(item) => navigation.navigate('HotelDetails', { idOrSlug: item.hotelSlug, checkIn, checkOut, occupancy: [room] })}
+            onPickHotel={(item) => navigation.navigate('HotelDetails', { idOrSlug: item.hotelSlug, checkIn, checkOut, occupancy: rooms })}
           />
           <View style={styles.row}>
-            <DateField label="Check-in" value={checkIn} onChange={setCheckIn} minimumDate={todayIso()} />
-            <DateField label="Check-out" value={checkOut} onChange={setCheckOut} minimumDate={addDaysIso(checkIn, 1)} />
+            <DateField label="Check-in" value={checkIn} onChange={handleCheckInChange} minimumDate={todayIso()} />
+            <DateField label="Check-out" value={checkOut} onChange={handleCheckOutChange} minimumDate={addDaysIso(checkIn, 1)} />
           </View>
-          <Pressable style={styles.guestsRow} onPress={() => setGuestsOpen(true)}>
-            <Ionicons name="people-outline" size={16} color={colors.brand600} />
-            <Text style={styles.guestsText}>{occupancyLabel([room])}</Text>
+          <Pressable
+            style={styles.guestsRow}
+            onPress={() => setGuestsOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Rooms and guests"
+          >
+            <Ionicons name="people-outline" size={18} color={colors.brand600} />
+            <View style={styles.guestsFieldTextWrap}>
+              <Text style={styles.guestsFieldLabel}>Rooms & Guests</Text>
+              <Text style={styles.guestsText}>{summarizeOccupancy(rooms)}</Text>
+            </View>
             <Ionicons name="chevron-down" size={16} color={colors.textMuted} style={styles.flex1End} />
           </Pressable>
 
@@ -202,10 +301,15 @@ export default function HomeScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionHeader title="Handpicked for you" actionLabel="See all" onAction={() => navigation.navigate('Search')} />
+          {handpicked.status === 'ready' && (handpicked.total || handpicked.items.length) > 0 && (
+            <Text style={styles.propertiesFound}>
+              Hotels ({handpicked.total || handpicked.items.length} {(handpicked.total || handpicked.items.length) === 1 ? 'Property' : 'Properties'} Found)
+            </Text>
+          )}
           {handpicked.status === 'loading' && (
             <>
-              <HotelCardSkeleton />
-              <HotelCardSkeleton />
+              <HotelCardSkeleton compact />
+              <HotelCardSkeleton compact />
             </>
           )}
           {handpicked.status === 'ready' && handpicked.items.length === 0 && (
@@ -213,13 +317,19 @@ export default function HomeScreen({ navigation }) {
           )}
           {handpicked.items.map((hotel, index) => (
             <FadeSlideIn key={hotel.id} delay={Math.min(index, 4) * 50}>
-              <HotelCard hotel={hotel} onPress={() => openHotel(hotel)} />
+              <HotelCard
+                hotel={hotel}
+                compact
+                onPress={() => openHotel(hotel)}
+                onQuickReserve={() => handleQuickReserve(hotel)}
+                isQuickReserving={reservingHotelId === hotel.id}
+              />
             </FadeSlideIn>
           ))}
         </View>
       </ScrollView>
 
-      <GuestsModal visible={guestsOpen} room={room} onChange={setRoom} onClose={() => setGuestsOpen(false)} />
+      <GuestsModal visible={guestsOpen} rooms={rooms} onChange={setRooms} onClose={() => setGuestsOpen(false)} />
     </ScreenContainer>
   );
 }
@@ -246,15 +356,23 @@ const styles = StyleSheet.create({
   searchCard: { marginHorizontal: spacing.lg, marginTop: -40, backgroundColor: colors.surfaceCard, borderRadius: radius.card, padding: spacing.lg, gap: spacing.md },
   row: { flexDirection: 'row', gap: spacing.sm },
   guestsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, height: 48, borderRadius: radius.control,
-    borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: spacing.md,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 52, borderRadius: radius.control,
+    borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
-  guestsText: { ...typography.body, color: colors.textStrong },
+  guestsFieldTextWrap: { flex: 1, justifyContent: 'center' },
+  guestsFieldLabel: { ...typography.tiny, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  guestsText: { ...typography.bodyStrong, color: colors.textStrong },
   flex1End: { marginLeft: 'auto' },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   errorText: { ...typography.caption, color: colors.danger600, flexShrink: 1 },
   searchButton: { height: 52 },
   section: { marginTop: spacing.xl, paddingHorizontal: spacing.lg },
+  propertiesFound: {
+    ...typography.caption,
+    color: colors.textMuted,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.md,
+  },
   destinationChip: {
     width: 136, height: 112, borderRadius: radius.card, backgroundColor: colors.surfaceCard, padding: spacing.md, gap: 4, ...shadow.card,
   },

@@ -61,7 +61,6 @@ export function StaySummary({ quote, petsCount, className = '' }) {
           <Row label={`${stay.rooms} room${stay.rooms === 1 ? '' : 's'} × ${stay.nights} night${stay.nights === 1 ? '' : 's'}`} value={money(totals.subtotal)} />
           {totals.discount > 0 && <Row label="Discount" value={`−${money(totals.discount)}`} tone="success" />}
           <Row label="Taxes" value={money(totals.taxes)} />
-          <Row label="Fees" value={money(totals.fees)} />
           {coupon && <Row label={`Coupon (${coupon.code})`} value={`−${money(totals.couponDiscount)}`} tone="success" />}
           <div className="flex items-baseline justify-between border-t border-[var(--border-subtle)] pt-3 text-base">
             <span className="font-semibold text-[var(--text-strong)]">Total</span>

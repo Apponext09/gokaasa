@@ -75,8 +75,6 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled, compac
           )}
           <dt className="text-[var(--text-muted)]">Taxes</dt>
           <dd className="text-right">{formatMoney(plan.taxes)}</dd>
-          <dt className="text-[var(--text-muted)]">Fees</dt>
-          <dd className="text-right">{formatMoney(plan.fees)}</dd>
           <dt className="border-t border-[var(--border-subtle)] pt-1 font-semibold text-[var(--text-strong)]">Total</dt>
           <dd className="border-t border-[var(--border-subtle)] pt-1 text-right font-semibold text-[var(--text-strong)]">{formatMoney(plan.finalAmount)}</dd>
         </dl>
