@@ -1,4 +1,4 @@
-/*  */import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import BookingScreen from '../../src/screens/BookingScreen.js';
 
 jest.mock('../../src/api/bookingsApi.js', () => ({
@@ -7,9 +7,6 @@ jest.mock('../../src/api/bookingsApi.js', () => ({
     createHold: jest.fn(),
     release: jest.fn(),
     saveGuests: jest.fn(),
-    holdCoupons: jest.fn(),
-    applyCoupon: jest.fn(),
-    removeCoupon: jest.fn(),
   },
 }));
 
@@ -27,6 +24,17 @@ const MOCK_HOLD = {
   id: 101,
   status: 'HELD',
   secondsRemaining: 600,
+  guestDetails: {
+    primaryContact: {
+      firstName: 'Samarth',
+      lastName: 'Giram',
+      email: 'samarth@example.com',
+      mobile: '9876543210',
+    },
+    rooms: [
+      { roomIndex: 0, guestIndex: 0, firstName: 'Samarth', lastName: 'Giram' },
+    ],
+  },
   quote: {
     hotel: { id: 1, name: 'The Taj Mahal Palace, Mumbai', address: 'Apollo Bunder, Colaba, Mumbai' },
     room: { id: 2, name: 'Luxury Grande Room' },
@@ -46,27 +54,16 @@ const MOCK_HOLD = {
       couponDiscount: 0,
       total: 2016000,
     },
-    coupon: null,
   },
 };
 
-const MOCK_COUPONS = [
-  {
-    code: 'WELCOME10',
-    title: 'Flat 10% OFF',
-    description: 'Special welcome offer on your stay',
-    discountMinor: 200000,
-  },
-];
-
-describe('BookingScreen - Offers & Coupons integration', () => {
+describe('BookingScreen - Guest Details Form', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  test('renders Offers & Coupons section and displays available offers', async () => {
+  test('renders stay summary and guest contact form prefilled with auth user', async () => {
     bookingsApi.hold.mockResolvedValue(MOCK_HOLD);
-    bookingsApi.holdCoupons.mockResolvedValue(MOCK_COUPONS);
 
     const route = {
       params: {
@@ -77,32 +74,66 @@ describe('BookingScreen - Offers & Coupons integration', () => {
       },
     };
 
-    await render(<BookingScreen route={route} navigation={{ navigate: jest.fn() }} />);
+    const { getByText } = await render(<BookingScreen route={route} navigation={{ navigate: jest.fn() }} />);
 
-    await waitFor(() => expect(screen.getByText('Offers & Coupons')).toBeTruthy());
-    await waitFor(() => expect(bookingsApi.holdCoupons).toHaveBeenCalledWith(101));
-    await waitFor(() => expect(screen.getByText('WELCOME10')).toBeTruthy());
-    expect(screen.getByText('Flat 10% OFF')).toBeTruthy();
+    await waitFor(() => expect(getByText('Lead guest details')).toBeTruthy());
+    expect(getByText('Continue to review')).toBeTruthy();
   });
 
-  test('tapping Apply on an available offer calls applyCoupon and updates price breakdown', async () => {
+  test('submitting guest details saves guests and navigates to BookingReview', async () => {
     bookingsApi.hold.mockResolvedValue(MOCK_HOLD);
-    bookingsApi.holdCoupons.mockResolvedValue(MOCK_COUPONS);
+    bookingsApi.saveGuests.mockResolvedValue({ id: 101, status: 'HELD' });
 
-    const updatedHold = {
+    const navigate = jest.fn();
+    const route = {
+      params: {
+        holdId: 101,
+        hotelName: 'The Taj Mahal Palace, Mumbai',
+        roomName: 'Luxury Grande Room',
+        planName: 'Breakfast Included',
+      },
+    };
+
+    const { getByText } = await render(<BookingScreen route={route} navigation={{ navigate }} />);
+
+    await waitFor(() => expect(getByText('Continue to review')).toBeTruthy());
+
+    const submitBtn = getByText('Continue to review');
+    fireEvent.press(submitBtn);
+
+    await waitFor(() => {
+      expect(bookingsApi.saveGuests).toHaveBeenCalledWith(
+        101,
+        expect.objectContaining({
+          primaryContact: expect.objectContaining({
+            firstName: 'Samarth',
+            lastName: 'Giram',
+            email: 'samarth@example.com',
+            mobile: '9876543210',
+          }),
+        })
+      );
+    });
+
+    await waitFor(() => {
+      expect(navigate).toHaveBeenCalledWith('BookingReview', {
+        holdId: 101,
+        hotelName: 'The Taj Mahal Palace, Mumbai',
+        roomName: 'Luxury Grande Room',
+        planName: 'Breakfast Included',
+      });
+    });
+  });
+
+  test('pre-fills Room 1 Guest 1 with user details when booking for myself, and clears on someone_else', async () => {
+    const holdWithoutRooms = {
       ...MOCK_HOLD,
-      quote: {
-        ...MOCK_HOLD.quote,
-        coupon: { code: 'WELCOME10' },
-        totals: {
-          ...MOCK_HOLD.quote.totals,
-          couponDiscount: 200000,
-          total: 1816000,
-        },
-      },
+      guestDetails: null,
     };
-    bookingsApi.applyCoupon.mockResolvedValue(updatedHold);
+    bookingsApi.hold.mockResolvedValue(holdWithoutRooms);
+    bookingsApi.saveGuests.mockResolvedValue({ id: 101, status: 'HELD' });
 
+    const navigate = jest.fn();
     const route = {
       params: {
         holdId: 101,
@@ -112,72 +143,24 @@ describe('BookingScreen - Offers & Coupons integration', () => {
       },
     };
 
-    await render(<BookingScreen route={route} navigation={{ navigate: jest.fn() }} />);
+    const { getByText, getAllByDisplayValue, queryAllByDisplayValue } = await render(<BookingScreen route={route} navigation={{ navigate }} />);
 
-    await waitFor(() => expect(screen.getByText('WELCOME10')).toBeTruthy());
+    // Both Lead Guest and Room 1 Guest 1 should be auto-filled with Samarth Giram
+    await waitFor(() => expect(getAllByDisplayValue('Samarth').length).toBe(2));
+    expect(getAllByDisplayValue('Giram').length).toBe(2);
 
-    // Press Apply button next to the offer
-    const applyButtons = screen.getAllByText('Apply');
-    fireEvent.press(applyButtons[applyButtons.length - 1]);
+    // Toggle to 'someone_else'
+    fireEvent.press(getByText('Someone else'));
 
-    await waitFor(() => expect(bookingsApi.applyCoupon).toHaveBeenCalledWith(101, 'WELCOME10'));
-    await waitFor(() => expect(screen.getByText('Remove')).toBeTruthy());
+    // Both should be cleared
+    await waitFor(() => expect(queryAllByDisplayValue('Samarth').length).toBe(0));
   });
 
-  test('removing an applied coupon calls removeCoupon and restores available offers', async () => {
-    const appliedHold = {
-      ...MOCK_HOLD,
-      quote: {
-        ...MOCK_HOLD.quote,
-        coupon: { code: 'WELCOME10' },
-        totals: {
-          ...MOCK_HOLD.quote.totals,
-          couponDiscount: 200000,
-          total: 1816000,
-        },
-      },
-    };
-    bookingsApi.hold.mockResolvedValue(appliedHold);
-    bookingsApi.removeCoupon.mockResolvedValue(MOCK_HOLD);
-    bookingsApi.holdCoupons.mockResolvedValue(MOCK_COUPONS);
-
-    const route = {
-      params: {
-        holdId: 101,
-        hotelName: 'The Taj Mahal Palace, Mumbai',
-        roomName: 'Luxury Grande Room',
-        planName: 'Breakfast Included',
-      },
-    };
-
-    await render(<BookingScreen route={route} navigation={{ navigate: jest.fn() }} />);
-
-    await waitFor(() => expect(screen.getByText('Remove')).toBeTruthy());
-
-    fireEvent.press(screen.getByText('Remove'));
-
-    await waitFor(() => expect(bookingsApi.removeCoupon).toHaveBeenCalledWith(101));
-    await waitFor(() => expect(bookingsApi.holdCoupons).toHaveBeenCalledWith(101));
-  });
-
-  test('entering manual coupon code in input and pressing Apply calls applyCoupon', async () => {
+  test('allows adding pets and sends pets in saveGuests payload', async () => {
     bookingsApi.hold.mockResolvedValue(MOCK_HOLD);
-    bookingsApi.holdCoupons.mockResolvedValue(MOCK_COUPONS);
+    bookingsApi.saveGuests.mockResolvedValue({ id: 101, status: 'HELD' });
 
-    const updatedHold = {
-      ...MOCK_HOLD,
-      quote: {
-        ...MOCK_HOLD.quote,
-        coupon: { code: 'SAVE500' },
-        totals: {
-          ...MOCK_HOLD.quote.totals,
-          couponDiscount: 50000,
-          total: 1966000,
-        },
-      },
-    };
-    bookingsApi.applyCoupon.mockResolvedValue(updatedHold);
-
+    const navigate = jest.fn();
     const route = {
       params: {
         holdId: 101,
@@ -187,46 +170,34 @@ describe('BookingScreen - Offers & Coupons integration', () => {
       },
     };
 
-    await render(<BookingScreen route={route} navigation={{ navigate: jest.fn() }} />);
+    const { getByText, getByLabelText, getByPlaceholderText, getByDisplayValue } = await render(<BookingScreen route={route} navigation={{ navigate }} />);
 
-    await waitFor(() => expect(screen.getByPlaceholderText('Enter coupon code')).toBeTruthy());
+    await waitFor(() => expect(getByText('Pet Details')).toBeTruthy());
+    expect(getByText('0 pets')).toBeTruthy();
 
-    const input = screen.getByPlaceholderText('Enter coupon code');
-    fireEvent.changeText(input, 'SAVE500');
-    await waitFor(() => expect(input.props.value).toBe('SAVE500'));
+    // Add pet
+    fireEvent.press(getByLabelText('Add pet'));
+    await waitFor(() => expect(getByText('1 pet')).toBeTruthy());
 
-    const applyButton = screen.getByTestId('apply-coupon-button');
-    fireEvent.press(applyButton);
+    // Fill in pet name and breed
+    fireEvent.changeText(getByPlaceholderText('e.g. Bruno, Bella'), 'Bruno');
+    await waitFor(() => expect(getByDisplayValue('Bruno')).toBeTruthy());
 
-    await waitFor(() => expect(bookingsApi.applyCoupon).toHaveBeenCalledWith(101, 'SAVE500'));
-    await waitFor(() => expect(screen.getByText('Coupon (SAVE500)')).toBeTruthy());
-  });
+    fireEvent.changeText(getByPlaceholderText('e.g. Labrador, Cat'), 'Labrador');
+    await waitFor(() => expect(getByDisplayValue('Labrador')).toBeTruthy());
 
-  test('displays error message when coupon application fails', async () => {
-    bookingsApi.hold.mockResolvedValue(MOCK_HOLD);
-    bookingsApi.holdCoupons.mockResolvedValue(MOCK_COUPONS);
-    bookingsApi.applyCoupon.mockRejectedValue(new Error('Coupon has expired or is invalid.'));
+    // Submit
+    const submitBtn = getByText('Continue to review');
+    fireEvent.press(submitBtn);
 
-    const route = {
-      params: {
-        holdId: 101,
-        hotelName: 'The Taj Mahal Palace, Mumbai',
-        roomName: 'Luxury Grande Room',
-        planName: 'Breakfast Included',
-      },
-    };
-
-    await render(<BookingScreen route={route} navigation={{ navigate: jest.fn() }} />);
-
-    await waitFor(() => expect(screen.getByPlaceholderText('Enter coupon code')).toBeTruthy());
-
-    const input = screen.getByPlaceholderText('Enter coupon code');
-    fireEvent.changeText(input, 'EXPIRED10');
-    await waitFor(() => expect(input.props.value).toBe('EXPIRED10'));
-
-    const applyButton = screen.getByTestId('apply-coupon-button');
-    fireEvent.press(applyButton);
-
-    await waitFor(() => expect(screen.getByText('Coupon has expired or is invalid.')).toBeTruthy());
+    await waitFor(() => {
+      expect(bookingsApi.saveGuests).toHaveBeenCalledWith(
+        101,
+        expect.objectContaining({
+          petsCount: 1,
+          pets: [{ name: 'Bruno', breed: 'Labrador' }],
+        })
+      );
+    });
   });
 });

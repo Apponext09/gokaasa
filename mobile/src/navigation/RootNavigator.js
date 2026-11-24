@@ -6,6 +6,7 @@ import { AuthNavigator } from './AuthNavigator.js';
 import HotelDetailsScreen from '../screens/HotelDetailsScreen.js';
 import RoomSelectionScreen from '../screens/RoomSelectionScreen.js';
 import BookingScreen from '../screens/BookingScreen.js';
+import BookingReviewScreen from '../screens/BookingReviewScreen.js';
 import PaymentScreen from '../screens/PaymentScreen.js';
 import BookingConfirmationScreen from '../screens/BookingConfirmationScreen.js';
 import BookingDetailsScreen from '../screens/BookingDetailsScreen.js';
@@ -50,6 +51,7 @@ export function RootNavigator() {
         <Stack.Screen name="HotelDetails" component={HotelDetailsScreen} options={{ ...headerOptions, headerShown: true, title: '' }} />
         <Stack.Screen name="RoomSelection" component={RoomSelectionScreen} options={{ ...headerOptions, headerShown: true, title: 'Select a room' }} />
         <Stack.Screen name="Booking" component={BookingScreen} options={{ ...headerOptions, headerShown: true, title: 'Guest details' }} />
+        <Stack.Screen name="BookingReview" component={BookingReviewScreen} options={{ ...headerOptions, headerShown: true, title: 'Review booking' }} />
         <Stack.Screen name="Payment" component={PaymentScreen} options={{ ...headerOptions, headerShown: true, title: 'Payment' }} />
         <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} options={{ ...headerOptions, headerShown: true, title: 'Trip details' }} />

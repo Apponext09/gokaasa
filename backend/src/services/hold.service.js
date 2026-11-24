@@ -115,6 +115,20 @@ export const holdService = {
     let hold;
     try {
       hold = await withTransaction(async (client) => {
+        // Enforce 1 active hold per user: automatically release any prior active holds
+        // for this user so previously held rooms return immediately to public availability.
+        const priorActiveHolds = await bookingRepository.findActiveHoldsForUser(userId, client);
+        for (const oldHold of priorActiveHolds) {
+          const reason = (input.replaceHoldId && Number(oldHold.id) === Number(input.replaceHoldId))
+            ? 'REPLACED_BY_STAY_UPDATE'
+            : 'REPLACED_BY_NEW_HOLD';
+          await closeHoldInTx(client, oldHold, {
+            holdStatus: HOLD_STATUS.RELEASED,
+            bookingStatus: BOOKING_STATUS.EXPIRED,
+            reason,
+          });
+        }
+
         const quote = await quoteStay(client, input, { checkAvailability: true });
 
         const { id, expires_at: expiresAt } = await bookingRepository.insertHold(client, {
@@ -136,6 +150,7 @@ export const holdService = {
           quoteSnapshot: quote.snapshot,
           holdMinutes,
           idempotencyKey: input.idempotencyKey ?? null,
+          sourcePlatform: input.sourcePlatform ?? null,
           petsCount: Number(input.petsCount ?? input.pets ?? (input.occupancy || []).reduce((sum, r) => sum + (r.pets || 0), 0) ?? 0),
         });
 
@@ -160,6 +175,10 @@ export const holdService = {
       if (input.idempotencyKey && error.code === '23505' && error.constraint === 'booking_holds_idempotency_unique') {
         const existing = await bookingRepository.findHoldByIdempotencyKey(userId, input.idempotencyKey);
         if (existing) return toHoldDto(existing);
+        // The hold that owns this key has since expired. The key is now a dead slot in the unique index.
+        // Retry as a completely fresh hold (no key) so the user is never stuck by a stale idempotency entry.
+        log.info('idempotency key expired, retrying as fresh hold', { userId, idempotencyKey: input.idempotencyKey });
+        return holdService.create(userId, { ...input, idempotencyKey: null });
       }
       throw error;
     }
@@ -177,9 +196,14 @@ export const holdService = {
     return toHoldDto(row);
   },
 
-  /** The hold to resume after a refresh, or null. */
+  /** The hold to resume after a refresh, or null. Lazily expires an overdue hold before returning. */
   async active(userId) {
-    const hold = await bookingRepository.activeHoldForUser(userId);
+    const hold = await withTransaction(async (client) => {
+      const h = await bookingRepository.activeHoldForUser(userId, client);
+      if (!h) return null;
+      await expireIfDue(client, h);
+      return bookingRepository.activeHoldForUser(userId, client);
+    });
     return hold ? toHoldDto(hold) : null;
   },
 

@@ -53,6 +53,37 @@ describe('SearchScreen', () => {
     await waitFor(() => expect(screen.queryByText('The Taj Mahal Palace, Mumbai')).toBeTruthy());
   });
 
+  test('when SearchScreen is already mounted and user taps a destination card on Home, route.params updates destination and searches', async () => {
+    const allHotels = { items: [{ id: 1, name: 'Hotel One', slug: 'hotel-1', city: 'Mumbai' }], total: 1 };
+    const ahilyanagarHotels = { items: [{ id: 2, name: 'Grand Ahilyanagar', slug: 'grand-ahilyanagar', city: 'Ahilyanagar' }], total: 1 };
+    hotelsApi.search.mockResolvedValueOnce(allHotels).mockResolvedValueOnce(ahilyanagarHotels);
+
+    const initialRoute = { params: {} };
+    const navigation = { navigate: jest.fn() };
+    const { rerender } = await render(<SearchScreen route={initialRoute} navigation={navigation} />);
+
+    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(1));
+
+    // User navigates from Home by clicking "Ahilyanagar" destination card
+    const updatedRoute = {
+      params: {
+        destination: 'ahilyanagar',
+        label: 'Ahilyanagar',
+        checkIn: '2026-11-25',
+        checkOut: '2026-11-27',
+        occupancy: [{ adults: 2, childAges: [] }],
+      },
+    };
+    rerender(<SearchScreen route={updatedRoute} navigation={navigation} />);
+
+    await waitFor(() => expect(hotelsApi.search).toHaveBeenCalledTimes(2));
+    expect(hotelsApi.search).toHaveBeenLastCalledWith(
+      expect.objectContaining({ destination: 'ahilyanagar', checkIn: '2026-11-25', checkOut: '2026-11-27' }),
+      expect.anything(),
+    );
+    await waitFor(() => expect(screen.queryByText('Grand Ahilyanagar')).toBeTruthy());
+  });
+
   test('a real search API error shows a readable message with a retry action, not a crash', async () => {
     hotelsApi.search.mockRejectedValue({ status: 500, code: 'ERROR', message: 'Something went wrong. Please try again.', fieldErrors: {} });
     const route = { params: { destination: 'mumbai', label: 'Mumbai' } };

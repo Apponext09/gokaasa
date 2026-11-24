@@ -116,6 +116,10 @@ export default function BookingDetailsScreen({ route, navigation }) {
 
         <Section title="Stay">
           <Row label="Dates" value={`${formatStayDate(booking.stay.checkIn)} → ${formatStayDate(booking.stay.checkOut)} (${booking.stay.nights} night${booking.stay.nights === 1 ? '' : 's'})`} />
+          <Row
+            label="Guests"
+            value={`${booking.stay.rooms} room${booking.stay.rooms === 1 ? '' : 's'} · ${booking.stay.adults} adult${booking.stay.adults === 1 ? '' : 's'}${booking.stay.children ? ` · ${booking.stay.children} child${booking.stay.children === 1 ? '' : 'ren'}` : ''}${booking.stay.pets ? ` · ${booking.stay.pets} pet${booking.stay.pets === 1 ? '' : 's'}` : ''}`}
+          />
           <Row label="Rooms" value={booking.rooms.map((r) => `${r.quantity} × ${r.name}`).join(', ')} />
           <Row label="Rate plan" value={booking.rooms[0]?.ratePlanName} />
           {canExtendStay && (
@@ -143,6 +147,18 @@ export default function BookingDetailsScreen({ route, navigation }) {
                 key={idx}
                 label={`Room ${(g.roomIndex ?? 0) + 1} · Guest`}
                 value={`${g.name}${g.age != null ? ` (${g.age} yrs)` : ''}`}
+              />
+            ))}
+          </Section>
+        ) : null}
+
+        {booking.pets?.length > 0 ? (
+          <Section title="🐾 Pets">
+            {booking.pets.map((p, idx) => (
+              <Row
+                key={idx}
+                label={`Pet ${idx + 1}`}
+                value={`${p.name}${p.breed ? ` (${p.breed})` : ''}`}
               />
             ))}
           </Section>

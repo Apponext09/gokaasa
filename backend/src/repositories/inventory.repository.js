@@ -17,7 +17,10 @@ export const inventoryRepository = {
                            AND n.stay_date >= b.start_date AND n.stay_date < b.end_date), 0)::int AS blocked,
               COALESCE((SELECT SUM(r.quantity) FROM inventory_reservations r
                          WHERE r.room_type_id = rt.id AND r.stay_date = n.stay_date
-                           AND (r.status = 'CONFIRMED' OR (r.status = 'HELD' AND r.expires_at > now()))), 0)::int AS reserved
+                           AND (r.status = 'CONFIRMED' OR (r.status = 'HELD' AND r.expires_at > now()))), 0)::int AS reserved,
+              COALESCE((SELECT SUM(r.quantity) FROM inventory_reservations r
+                         WHERE r.room_type_id = rt.id AND r.stay_date = n.stay_date
+                           AND r.status = 'HELD' AND r.expires_at > now()), 0)::int AS held
          FROM room_types rt
          CROSS JOIN UNNEST($2::date[]) AS n(stay_date)
         WHERE rt.id = ANY($1::bigint[])

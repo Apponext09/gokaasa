@@ -18,11 +18,8 @@ function generateCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, '0');
 }
 
-function assertStaff(user) {
+function assertActive(user) {
   if (!user?.isActive) throw AppError.unauthorized();
-  if (!user.permissions.includes('console.access')) {
-    throw AppError.forbidden('Email changes are available to staff accounts only');
-  }
 }
 
 function expiresAt() {
@@ -55,13 +52,13 @@ async function sendCode(newEmail, code) {
 export const emailChangeService = {
   async pending(userId) {
     const user = await userRepository.findById(userId);
-    assertStaff(user);
+    assertActive(user);
     return toPending(await emailChangeRepository.findActive(userId));
   },
 
   async request(userId, { newEmail, currentPassword }) {
     const user = await userRepository.findById(userId);
-    assertStaff(user);
+    assertActive(user);
 
     if (!(await bcrypt.compare(currentPassword, user.passwordHash))) {
       throw AppError.badRequest('Current password is incorrect');
@@ -89,7 +86,7 @@ export const emailChangeService = {
 
   async resend(userId) {
     const user = await userRepository.findById(userId);
-    assertStaff(user);
+    assertActive(user);
     const code = generateCode();
     const row = await withTransaction(async (client) => {
       const pending = await emailChangeRepository.findActiveForUpdate(client, userId);
@@ -111,7 +108,7 @@ export const emailChangeService = {
     try {
       outcome = await withTransaction(async (client) => {
         const user = await userRepository.findById(userId, client);
-        assertStaff(user);
+        assertActive(user);
         const pending = await emailChangeRepository.findActiveForUpdate(client, userId);
         if (!pending) return { error: 'missing' };
         if (pending.expires_at <= new Date()) return { error: 'expired' };
@@ -166,7 +163,7 @@ export const emailChangeService = {
 
   async cancel(userId) {
     const user = await userRepository.findById(userId);
-    assertStaff(user);
+    assertActive(user);
     await withTransaction((client) => emailChangeRepository.cancelActive(client, userId));
   },
 };

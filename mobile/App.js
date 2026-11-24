@@ -10,7 +10,7 @@ function Gate() {
   const { isLoading } = useAuth();
   // A brief, one-time splash while the cached session (if any) is restored/validated -- avoids a visible
   // flash where a tab first renders "signed out" and then flips to "signed in" a moment later.
-  if (isLoading) return <LoadingView label="Loading Gokaasa…" />;
+  if (isLoading) return <LoadingView label="Loading Gokaasa…" showLogo />;
   return <RootNavigator />;
 }
 

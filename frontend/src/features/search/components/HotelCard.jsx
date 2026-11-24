@@ -282,16 +282,9 @@ export function HotelCard({ hotel, state, compact = false }) {
         )}
 
         {unavailable && (
-          <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-950" role="status">
-            <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
-            <div>
-              <p className="font-semibold">{temporarilyHeld ? 'Temporarily unavailable' : unavailableCopy[0]}</p>
-              <p className="text-xs text-amber-800">
-                {temporarilyHeld
-                  ? `Another guest is completing a booking${holdSecondsRemaining != null && holdSecondsRemaining > 0 ? ` · check again in ${Math.floor(holdSecondsRemaining / 60)}:${String(holdSecondsRemaining % 60).padStart(2, '0')}` : ' · checking availability again shortly'}.`
-                  : unavailableCopy[1]}
-              </p>
-            </div>
+          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950" role="status">
+            <Clock3 className="h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" />
+            <span>Currently unavailable</span>
           </div>
         )}
 
@@ -391,7 +384,7 @@ export function HotelCard({ hotel, state, compact = false }) {
                 disabled={unavailable}
               >
                 {!reserving && <Sparkles className="h-4 w-4 text-brand-600" aria-hidden="true" />}
-                {unavailable ? (temporarilyHeld ? 'Room currently held' : 'Sold out') : 'Quick Reserve'}
+                {unavailable ? 'Currently unavailable' : 'Quick Reserve'}
               </Button>
             </div>
           </div>
@@ -448,7 +441,7 @@ export function HotelCard({ hotel, state, compact = false }) {
               }}
               disabled={reserving || unavailable}
             >
-              {reserving ? 'Reserving…' : unavailable ? (temporarilyHeld ? 'ROOM CURRENTLY HELD' : 'SOLD OUT') : 'Quick Reserve'}
+              {reserving ? 'Reserving…' : unavailable ? 'CURRENTLY UNAVAILABLE' : 'QUICK RESERVE'}
             </button>
           </div>
         </div>

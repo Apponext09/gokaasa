@@ -3,6 +3,7 @@ import {
   formatMoneyMinor,
   formatCountdown,
   occupancyLabel,
+  summarizeOccupancy,
   formatOccupancy,
   occupancyFromGuests,
   nightsBetween,
@@ -49,6 +50,17 @@ describe('occupancyLabel', () => {
   test('summarizes rooms/adults/children exactly like the website\'s bookingFormat.js', () => {
     expect(occupancyLabel([{ adults: 2, childAges: [] }])).toBe('1 room · 2 adults');
     expect(occupancyLabel([{ adults: 2, childAges: [7] }, { adults: 1, childAges: [] }])).toBe('2 rooms · 3 adults · 1 child');
+    expect(occupancyLabel([{ adults: 2, childAges: [], pets: 1 }])).toBe('1 room · 2 adults · 1 pet');
+    expect(occupancyLabel([{ adults: 2, childAges: [] }], 2)).toBe('1 room · 2 adults · 2 pets');
+  });
+});
+
+describe('summarizeOccupancy', () => {
+  test('formats rooms, adults, children, and pets with correct pluralization', () => {
+    expect(summarizeOccupancy([{ adults: 2, childAges: [] }])).toBe('1 Room · 2 Adults');
+    expect(summarizeOccupancy([{ adults: 2, childAges: [5] }])).toBe('1 Room · 2 Adults · 1 Child');
+    expect(summarizeOccupancy([{ adults: 2, childAges: [], pets: 1 }])).toBe('1 Room · 2 Adults · 1 Pet');
+    expect(summarizeOccupancy([{ adults: 2, childAges: [] }, { adults: 2, childAges: [] }], 2)).toBe('2 Rooms · 4 Guests · 2 Pets');
   });
 });
 

@@ -285,10 +285,10 @@ export const authService = {
    * access token (req.user.id), never from the request body, so a user can only ever update their own
    * row -- role, status and every other account field are untouched by this path.
    */
-  async updateProfile(userId, { firstName, lastName }) {
+  async updateProfile(userId, { firstName, lastName, phone }) {
     const user = await userRepository.findById(userId);
     if (!user || !user.isActive) throw AppError.unauthorized();
-    await userRepository.updateName(pool, userId, { firstName, lastName });
+    await userRepository.updateName(pool, userId, { firstName, lastName, phone });
     const updated = await userRepository.findById(userId);
     return toPublicUser(updated);
   },

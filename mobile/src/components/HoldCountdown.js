@@ -12,6 +12,11 @@ import { FadeSlideIn } from './FadeSlideIn.js';
  * does not re-render every second, which prevents UI/form resets and dialog flicker.
  */
 export function HoldCountdown({ secondsRemaining = 0, expiresAt, onExpire }) {
+  const onExpireRef = useRef(onExpire);
+  useEffect(() => {
+    onExpireRef.current = onExpire;
+  }, [onExpire]);
+
   const getInitialSeconds = () => {
     if (expiresAt) {
       return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000));
@@ -31,7 +36,10 @@ export function HoldCountdown({ secondsRemaining = 0, expiresAt, onExpire }) {
     if (seconds <= 0) {
       if (!firedRef.current) {
         firedRef.current = true;
-        onExpire?.();
+        const timer = setTimeout(() => {
+          onExpireRef.current?.();
+        }, 0);
+        return () => clearTimeout(timer);
       }
       return;
     }
@@ -40,10 +48,6 @@ export function HoldCountdown({ secondsRemaining = 0, expiresAt, onExpire }) {
       setSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          if (!firedRef.current) {
-            firedRef.current = true;
-            onExpire?.();
-          }
           return 0;
         }
         return prev - 1;
@@ -51,7 +55,7 @@ export function HoldCountdown({ secondsRemaining = 0, expiresAt, onExpire }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [seconds, onExpire]);
+  }, [seconds]);
 
   const urgent = seconds < 120;
 

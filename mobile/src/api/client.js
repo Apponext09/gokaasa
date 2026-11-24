@@ -127,9 +127,9 @@ let refreshInFlight = null;
  * call it directly on app startup -- see the comment on that call site for why /auth/me must NOT be used
  * for that (it would never auto-refresh; see below). Never logs the token or the request/response body.
  */
-export function refreshAccessToken() {
+export function refreshAccessToken(timeout = 4_000) {
   refreshInFlight ??= axios
-    .post(`${baseURL}/auth/refresh`, null, { withCredentials: true, timeout: 15_000 })
+    .post(`${baseURL}/auth/refresh`, null, { withCredentials: true, timeout })
     .then(({ data }) => data)
     .finally(() => {
       refreshInFlight = null;

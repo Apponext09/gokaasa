@@ -70,6 +70,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const loginWithGoogle = useCallback(async (body) => {
+    try {
+      const payload = typeof body === 'string' ? { credential: body } : body;
+      const { accessToken, user: loggedInUser } = await authApi.googleLogin(payload);
+      await persistSession(accessToken, loggedInUser);
+      setUser(loggedInUser);
+      setStatus('authenticated');
+      return { ok: true, user: loggedInUser };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  }, []);
+
   const register = useCallback(async (body) => {
     try {
       const { accessToken, user: newUser } = await authApi.register(body);
@@ -117,9 +130,15 @@ export function AuthProvider({ children }) {
     }
   }, [signOutLocally]);
 
+  const updateProfile = useCallback(async (details) => {
+    const updated = await authApi.updateProfile(details);
+    setUser(updated);
+    return updated;
+  }, []);
+
   const value = useMemo(
-    () => ({ user, status, isAuthenticated: status === 'authenticated', isLoading: status === 'loading', login, register, logout, refreshProfile }),
-    [user, status, login, register, logout, refreshProfile],
+    () => ({ user, status, isAuthenticated: status === 'authenticated', isLoading: status === 'loading', login, loginWithGoogle, register, logout, refreshProfile, updateProfile }),
+    [user, status, login, loginWithGoogle, register, logout, refreshProfile, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

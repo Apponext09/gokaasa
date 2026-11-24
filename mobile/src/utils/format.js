@@ -18,23 +18,26 @@ export function formatCountdown(seconds) {
   return `${String(minutes).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
 }
 
-export function occupancyLabel(occupancy = []) {
-  const adults = occupancy.reduce((sum, room) => sum + room.adults, 0);
-  const children = occupancy.reduce((sum, room) => sum + room.childAges.length, 0);
+export function occupancyLabel(occupancy = [], petsCount = 0) {
+  const adults = occupancy.reduce((sum, room) => sum + (room.adults || 0), 0);
+  const children = occupancy.reduce((sum, room) => sum + ((room.childAges && room.childAges.length) || 0), 0);
+  const pets = petsCount || occupancy.reduce((sum, room) => sum + (room.pets || 0), 0);
   const rooms = occupancy.length;
-  return `${rooms} room${rooms === 1 ? '' : 's'} · ${adults} adult${adults === 1 ? '' : 's'}${children ? ` · ${children} child${children === 1 ? '' : 'ren'}` : ''}`;
+  return `${rooms} room${rooms === 1 ? '' : 's'} · ${adults} adult${adults === 1 ? '' : 's'}${children ? ` · ${children} child${children === 1 ? '' : 'ren'}` : ''}${pets ? ` · ${pets} pet${pets === 1 ? '' : 's'}` : ''}`;
 }
 
-export function summarizeOccupancy(rooms = []) {
+export function summarizeOccupancy(rooms = [], petsCount = 0) {
   const roomCount = rooms.length || 1;
   const adults = rooms.reduce((sum, r) => sum + (r.adults || 0), 0);
   const children = rooms.reduce((sum, r) => sum + ((r.childAges && r.childAges.length) || 0), 0);
+  const pets = petsCount || rooms.reduce((sum, r) => sum + (r.pets || 0), 0);
   const totalGuests = adults + children;
   const plural = (n, word, suffix = 's') => `${n} ${word}${n === 1 ? '' : suffix}`;
+  const petPart = pets ? ` · ${plural(pets, 'Pet')}` : '';
   if (roomCount === 1) {
-    return `${plural(roomCount, 'Room')} · ${plural(adults, 'Adult')}${children ? ` · ${plural(children, 'Child', 'ren')}` : ''}`;
+    return `${plural(roomCount, 'Room')} · ${plural(adults, 'Adult')}${children ? ` · ${plural(children, 'Child', 'ren')}` : ''}${petPart}`;
   }
-  return `${plural(roomCount, 'Room')} · ${plural(totalGuests, 'Guest')}`;
+  return `${plural(roomCount, 'Room')} · ${plural(totalGuests, 'Guest')}${petPart}`;
 }
 
 /** Rooms separated by "|"; each room is "<adults>" optionally followed by "-<age>.<age>..." -- the exact

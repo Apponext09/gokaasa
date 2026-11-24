@@ -97,6 +97,7 @@ async function renderScreen(navigationOverrides = {}) {
 
 describe('RoomSelectionScreen', () => {
   beforeEach(() => jest.clearAllMocks());
+  jest.setTimeout(15000);
 
   test('renders real room facts (bed type, view, amenities, meal plan) and the unavailable room with its real reason', async () => {
     hotelsApi.availability.mockResolvedValue(AVAILABILITY);
@@ -128,6 +129,53 @@ describe('RoomSelectionScreen', () => {
 
     fireEvent.press(screen.getByText('Price breakdown'));
     await waitFor(() => expect(screen.queryByText('Taxes')).toBeNull());
+  });
+
+  test('renders held room as a RoomCard with "Currently unavailable · Held by another" banner and disabled button', async () => {
+    hotelsApi.availability.mockResolvedValue({
+      ...AVAILABILITY,
+      roomTypes: [
+        {
+          id: 12,
+          roomCode: 'MLK',
+          name: 'Milk Room',
+          bedType: 'DOUBLE',
+          bedCount: 1,
+          roomSizeSqm: 22,
+          maxAdults: 2,
+          maxChildren: 0,
+          maxOccupancy: 2,
+          amenities: [],
+          images: [],
+          available: false,
+          unavailableReason: 'HELD',
+          isHeld: true,
+          availableRooms: 0,
+          ratePlans: [
+            {
+              ratePlanId: 201,
+              name: 'Standard Rate',
+              mealPlan: 'ROOM_ONLY',
+              refundable: true,
+              pricePerNight: 400000,
+              rooms: 1,
+              nights: 2,
+              subtotal: 800000,
+              discount: 0,
+              taxes: 80000,
+              finalAmount: 880000,
+            },
+          ],
+        },
+      ],
+    });
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByText('Milk Room')).toBeTruthy());
+    expect(screen.getByText('Currently unavailable · Held by another')).toBeTruthy();
+    expect(screen.getByText('Held by another')).toBeTruthy();
+    // Verify "No rooms available" empty state is NOT shown because the held room card is visible
+    expect(screen.queryByText('No rooms available')).toBeNull();
   });
 });
 

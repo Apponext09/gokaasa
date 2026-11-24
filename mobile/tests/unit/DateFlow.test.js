@@ -64,6 +64,7 @@ jest.mock('../../src/api/notificationsApi.js', () => ({
 
 jest.mock('../../src/api/bookingsApi.js', () => ({
   bookingsApi: {
+    activeHold: jest.fn(() => Promise.resolve(null)),
     createHold: jest.fn(),
     hold: jest.fn(),
     holdCoupons: jest.fn(() => Promise.resolve([])),

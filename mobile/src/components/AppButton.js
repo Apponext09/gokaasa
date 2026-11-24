@@ -19,7 +19,7 @@ const SIZES = {
 
 /** The one button component every screen uses -- consistent height, color, disabled/loading state, and
  * a small, subtle press-down scale (native Animated API, no extra dependency) so every tap feels tactile. */
-export function AppButton({ title, onPress, variant = 'primary', size = 'md', disabled = false, loading = false, style, icon }) {
+export function AppButton({ title, onPress, variant = 'primary', size = 'md', disabled = false, loading = false, style, icon, accessibilityLabel, ...props }) {
   const v = VARIANTS[variant] ?? VARIANTS.primary;
   const s = SIZES[size] ?? SIZES.md;
   const isDisabled = disabled || loading;
@@ -31,10 +31,12 @@ export function AppButton({ title, onPress, variant = 'primary', size = 'md', di
     <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
         accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel || title}
         accessibilityState={{ disabled: isDisabled, busy: loading }}
         onPress={isDisabled ? undefined : onPress}
         onPressIn={() => !isDisabled && animateTo(0.97)}
         onPressOut={() => animateTo(1)}
+        {...props}
         style={({ pressed }) => [
           styles.base,
           v.elevation,

@@ -13,6 +13,7 @@ import { hotelsApi } from '../../src/api/hotelsApi.js';
 import { bookingsApi } from '../../src/api/bookingsApi.js';
 import { paymentsApi } from '../../src/api/paymentsApi.js';
 import { wishlistApi } from '../../src/api/wishlistApi.js';
+import { authApi } from '../../src/api/authApi.js';
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -71,8 +72,32 @@ describe('bookingsApi', () => {
     api.post.mockResolvedValue({ data: { hold } });
     const input = { hotelId: 1, roomTypeId: 2, ratePlanId: 3, checkIn: '2026-11-12', checkOut: '2026-11-14', rooms: 1, occupancy: [{ adults: 2, childAges: [] }] };
     const result = await bookingsApi.createHold(input);
-    expect(api.post).toHaveBeenCalledWith('/booking/holds', input);
+    expect(api.post).toHaveBeenCalledWith('/booking/holds', { ...input, sourcePlatform: 'MOBILE' });
     expect(result).toBe(hold);
+  });
+
+  test('applyCoupon() posts coupon code and unwraps response.data.hold', async () => {
+    const hold = { id: 99, quote: { totals: { couponDiscount: 50000 } } };
+    api.post.mockResolvedValue({ data: { hold } });
+    const result = await bookingsApi.applyCoupon(99, 'SAVE10');
+    expect(api.post).toHaveBeenCalledWith('/booking/holds/99/coupon', { code: 'SAVE10' });
+    expect(result).toBe(hold);
+  });
+
+  test('removeCoupon() deletes coupon and unwraps response.data.hold', async () => {
+    const hold = { id: 99, quote: { totals: { couponDiscount: 0 } } };
+    api.delete.mockResolvedValue({ data: { hold } });
+    const result = await bookingsApi.removeCoupon(99);
+    expect(api.delete).toHaveBeenCalledWith('/booking/holds/99/coupon');
+    expect(result).toBe(hold);
+  });
+
+  test('holdCoupons() gets coupons for hold and unwraps response.data.items', async () => {
+    const items = [{ code: 'SAVE10', discountMinor: 50000 }];
+    api.get.mockResolvedValue({ data: { items } });
+    const result = await bookingsApi.holdCoupons(99);
+    expect(api.get).toHaveBeenCalledWith('/booking/holds/99/coupons');
+    expect(result).toBe(items);
   });
 
   test('hold() unwraps response.data.hold, including its quote', async () => {
@@ -162,5 +187,74 @@ describe('wishlistApi', () => {
     api.delete.mockResolvedValue({ data: {} });
     await wishlistApi.remove(42);
     expect(api.delete).toHaveBeenCalledWith('/wishlist/42');
+  });
+});
+
+describe('authApi profile and email change additions', () => {
+  test('updateProfile() patches /auth/me and unwraps response.data.user', async () => {
+    const updatedUser = { id: 1, firstName: 'Samarth', lastName: 'Giram', phone: '+91 9876543210' };
+    api.patch.mockResolvedValue({ data: { user: updatedUser } });
+    const payload = { firstName: 'Samarth', lastName: 'Giram', phone: '+91 9876543210' };
+    const res = await authApi.updateProfile(payload);
+    expect(api.patch).toHaveBeenCalledWith('/auth/me', payload);
+    expect(res).toBe(updatedUser);
+  });
+
+  test('changePassword() posts /auth/change-password and returns data', async () => {
+    const resData = { message: 'Password updated successfully' };
+    api.post.mockResolvedValue({ data: resData });
+    const payload = { currentPassword: 'OldPassword123!', newPassword: 'NewPassword123!' };
+    const res = await authApi.changePassword(payload);
+    expect(api.post).toHaveBeenCalledWith('/auth/change-password', payload);
+    expect(res).toBe(resData);
+  });
+
+  test('pendingEmailChange() gets /auth/email-change and unwraps response.data.pending', async () => {
+    const pending = { newEmail: 'new@example.com', requestedAt: '2026-11-23T10:00:00Z' };
+    api.get.mockResolvedValue({ data: { pending } });
+    const res = await authApi.pendingEmailChange();
+    expect(api.get).toHaveBeenCalledWith('/auth/email-change');
+    expect(res).toBe(pending);
+  });
+
+  test('requestEmailChange() posts /auth/email-change/request and returns data', async () => {
+    const resData = { message: 'Code sent' };
+    api.post.mockResolvedValue({ data: resData });
+    const payload = { newEmail: 'new@example.com', currentPassword: 'Password123!' };
+    const res = await authApi.requestEmailChange(payload);
+    expect(api.post).toHaveBeenCalledWith('/auth/email-change/request', payload);
+    expect(res).toBe(resData);
+  });
+
+  test('resendEmailChange() posts /auth/email-change/resend and returns data', async () => {
+    const resData = { message: 'Code resent' };
+    api.post.mockResolvedValue({ data: resData });
+    const res = await authApi.resendEmailChange();
+    expect(api.post).toHaveBeenCalledWith('/auth/email-change/resend');
+    expect(res).toBe(resData);
+  });
+
+  test('verifyEmailChange() posts /auth/email-change/verify and returns data', async () => {
+    const resData = { message: 'Email updated successfully' };
+    api.post.mockResolvedValue({ data: resData });
+    const payload = { code: '123456' };
+    const res = await authApi.verifyEmailChange(payload);
+    expect(api.post).toHaveBeenCalledWith('/auth/email-change/verify', payload);
+    expect(res).toBe(resData);
+  });
+
+  test('cancelEmailChange() deletes /auth/email-change', async () => {
+    api.delete.mockResolvedValue({ data: { ok: true } });
+    await authApi.cancelEmailChange();
+    expect(api.delete).toHaveBeenCalledWith('/auth/email-change');
+  });
+
+  test('googleLogin() posts /auth/google and returns data', async () => {
+    const resData = { accessToken: 'tok-google', user: { id: 10, email: 'googleuser@example.com' } };
+    api.post.mockResolvedValue({ data: resData });
+    const payload = { credential: 'google-id-token' };
+    const res = await authApi.googleLogin(payload);
+    expect(api.post).toHaveBeenCalledWith('/auth/google', payload);
+    expect(res).toBe(resData);
   });
 });

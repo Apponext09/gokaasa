@@ -109,6 +109,9 @@ export function BookingDetailsPage() {
             <Field label="Rooms" value={booking.rooms.map((room) => `${room.quantity} × ${room.name} (${room.mealPlanName ?? room.mealPlan.replace(/_/g, ' ').toLowerCase()})`).join(', ')} />
             <Field label="Rate" value={booking.rooms[0]?.ratePlanName} />
             <Field label="Guests" value={`${booking.stay.rooms} room${booking.stay.rooms === 1 ? '' : 's'} · ${booking.stay.adults} adult${booking.stay.adults === 1 ? '' : 's'}${booking.stay.children ? ` · ${booking.stay.children} child${booking.stay.children === 1 ? '' : 'ren'}` : ''}${booking.stay.pets ? ` · ${booking.stay.pets} pet${booking.stay.pets === 1 ? '' : 's'}` : ''}`} />
+            {booking.stay.pets > 0 && Array.isArray(booking.pets) && booking.pets.length > 0 && (
+              <Field label="Pets" value={`🐾 ${booking.pets.map((p, idx) => `${idx + 1}) ${p.name ? (p.breed ? `${p.name} (${p.breed})` : p.name) : `Pet ${idx + 1}`}`).join(', ')}`} />
+            )}
           </dl>
         </Card>
 

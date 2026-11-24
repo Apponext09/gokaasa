@@ -10,7 +10,6 @@ import { BookingProgress } from '@/features/booking/components/BookingProgress.j
 import { HoldCountdown } from '@/features/booking/components/HoldCountdown.jsx';
 import { HoldExpiredPanel } from '@/features/booking/components/HoldExpiredPanel.jsx';
 import { StaySummary } from '@/features/booking/components/StaySummary.jsx';
-import { BookingStayBar } from '@/features/booking/components/BookingStayBar.jsx';
 import { readSelection } from '@/features/booking/selection.js';
 import { SimulatedCheckoutDialog } from '@/features/booking/components/SimulatedCheckoutDialog.jsx';
 import { openRazorpayCheckout } from '@/features/booking/razorpayCheckout.js';
@@ -157,7 +156,7 @@ export function BookingReviewPage() {
   };
 
   const reportFailed = (orderId, reason) => {
-    paymentApi.failed(orderId, reason).catch(() => {});
+    paymentApi.failed(orderId, reason).catch(() => { });
     setPhase('idle');
     setFailure('The payment was not completed. Your rooms are still held, so you can try again.');
   };
@@ -264,13 +263,6 @@ export function BookingReviewPage() {
   return (
     <div className="booking-review-page mx-auto w-full max-w-6xl px-4 py-4 pb-28 sm:px-6 lg:pb-8">
       <BookingProgress current={busy ? 4 : 3} />
-        <BookingStayBar
-          hold={hold}
-          onHoldUpdated={(newHold) => {
-            setHold(newHold);
-            setPriceChange(null);
-          }}
-        />
       {ended ? (
         <HoldExpiredPanel message={expiredMessage ?? EXPIRED_MESSAGE} />
       ) : (
@@ -302,22 +294,24 @@ export function BookingReviewPage() {
                   </span>
                 </p>
               )}
-              <ul className="space-y-1 text-sm text-[var(--text-body)]">
+              <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3 text-sm text-[var(--text-body)]">
                 {(hold.guestDetails?.rooms ?? []).map((room) => (
-                  <li key={room.roomIndex}>
-                    <span className="font-medium">Room {room.roomIndex + 1}:</span>{' '}
-                    {room.guests.map((guest) => `${guest.firstName} ${guest.lastName}${guest.age != null && guest.age !== '' ? ` (${guest.age})` : ''}`).join(', ')}
-                  </li>
+                  <div key={room.roomIndex} className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-semibold text-[var(--text-strong)]">Room {room.roomIndex + 1}:</span>
+                    <span>{room.guests.map((guest, idx) => `${idx + 1}) ${guest.firstName} ${guest.lastName}${guest.age != null && guest.age !== '' ? ` (${guest.age})` : ''}`).join(', ')}</span>
+                  </div>
                 ))}
-              </ul>
-              {hold.guestDetails?.pets?.length > 0 && (
-                <div className="flex items-start gap-2 text-sm text-[var(--text-body)]">
-                  <span>🐾 <strong>Pets ({hold.guestDetails.pets.length}):</strong></span>
-                  <span>
-                    {hold.guestDetails.pets.map((p) => p.name ? (p.breed ? `${p.name} (${p.breed})` : p.name) : 'Pet').join(', ')}
-                  </span>
-                </div>
-              )}
+                {((hold.guestDetails?.pets?.length > 0) || (hold.petsCount > 0) || (hold.quote?.stay?.petsCount > 0)) && (
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="font-semibold text-[var(--text-strong)]">🐾 Pets:</span>
+                    <span>
+                      {hold.guestDetails?.pets?.length > 0
+                        ? hold.guestDetails.pets.map((p, idx) => `${idx + 1}) ${p.name ? (p.breed ? `${p.name} (${p.breed})` : p.name) : `Pet ${idx + 1}`}`).join(', ')
+                        : `1) Pet 1`}
+                    </span>
+                  </div>
+                )}
+              </div>
               {hold.guestDetails?.companyName && <p className="text-sm text-[var(--text-body)]">Company: {hold.guestDetails.companyName}</p>}
               {hold.guestDetails?.gstNumber && <p className="text-sm text-[var(--text-body)]">GST: {hold.guestDetails.gstNumber}</p>}
               {hold.guestDetails?.specialRequest && <p className="text-sm text-[var(--text-body)]">Requests: {hold.guestDetails.specialRequest}</p>}
@@ -410,7 +404,7 @@ export function BookingReviewPage() {
           </div>
 
           <aside className="booking-review-summary lg:sticky lg:top-20 lg:self-start">
-            <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} className="guest-stay-summary review-stay-summary" />
+            <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} pets={hold.guestDetails?.pets} className="guest-stay-summary review-stay-summary" />
           </aside>
         </div>
       )}

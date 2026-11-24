@@ -79,6 +79,7 @@ export const hotelSearchRepository = {
        ),
        cheapest AS (
          SELECT DISTINCT ON (rt.hotel_id) rt.hotel_id,
+                rt.total_units,
                 rp.base_price_minor,
                 ROUND(rp.base_price_minor * rp.discount_percent / 100)::bigint AS discount_minor,
                 (rp.base_price_minor
@@ -97,6 +98,7 @@ export const hotelSearchRepository = {
               h.star_rating, h.guest_rating, h.review_count,
               h.latitude, h.longitude, w.distance_km,
               c.base_price_minor, c.discount_minor, c.final_price_minor,
+              c.total_units AS rooms_left,
               (SELECT json_build_object('storageKey', i.storage_key, 'sourceUrl', i.source_url, 'altText', i.alt_text, 'imageType', i.image_type, 'category', i.category, 'categoryName', (SELECT ic.name FROM image_categories ic WHERE ic.code = i.category))
                  FROM hotel_images i WHERE i.hotel_id = h.id AND i.deleted_at IS NULL
                 ORDER BY i.is_cover DESC, i.sort_order ASC, i.id ASC LIMIT 1) AS cover,

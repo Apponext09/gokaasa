@@ -29,6 +29,7 @@ import {
 import { Reveal } from '@/components/shared/Reveal.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { HeroSection } from '@/features/home/HeroSection.jsx';
+import { ActiveHoldCard } from '@/features/home/ActiveHoldCard.jsx';
 import { DestinationCard } from '@/features/home/DestinationCard.jsx';
 import { useHomepageBackground } from '@/features/home/HomepageBackgroundContext.jsx';
 import { useGeolocation } from '@/features/home/useGeolocation.js';
@@ -569,6 +570,7 @@ export function HomePage() {
   const extraStats = buildStats(stats);
   return (
     <div className="customer-home min-h-screen text-[var(--text-body)]" style={useSharedBackdrop ? { background: 'transparent' } : undefined}>
+      <ActiveHoldCard />
       <HeroSection
         onSearch={(nextSearch) => {
           setHotelSearch(nextSearch);

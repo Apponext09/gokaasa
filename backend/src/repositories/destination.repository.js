@@ -35,10 +35,10 @@ export const destinationRepository = {
   async popularCities(limit = 6) {
     const { rows } = await pool.query(
       `WITH cities AS (
-         SELECT city, country_code, COUNT(*)::int AS hotel_count
+         SELECT INITCAP(TRIM(city)) AS city, country_code, COUNT(*)::int AS hotel_count
            FROM hotels
           WHERE status = 'PUBLISHED' AND deleted_at IS NULL
-          GROUP BY city, country_code
+          GROUP BY LOWER(TRIM(city)), INITCAP(TRIM(city)), country_code
           ORDER BY hotel_count DESC, city ASC
           LIMIT $1
        )
@@ -55,7 +55,7 @@ export const destinationRepository = {
              FROM hotels h
              JOIN hotel_images i ON i.hotel_id = h.id AND i.deleted_at IS NULL
             WHERE h.status = 'PUBLISHED' AND h.deleted_at IS NULL
-              AND lower(h.city) = lower(c.city) AND h.country_code = c.country_code
+              AND lower(trim(h.city)) = lower(c.city) AND h.country_code = c.country_code
             ORDER BY i.is_cover DESC, h.guest_rating DESC NULLS LAST, i.sort_order ASC, i.id ASC
             LIMIT 1
          ) cover ON TRUE

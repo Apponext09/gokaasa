@@ -3,7 +3,7 @@ import { SafeImage } from '@/components/shared/SafeImage.jsx';
 import { formatMoneyMinor, formatStayDate, occupancyLabel } from '../bookingFormat.js';
 
 /** The booking's facts and price breakdown. Shown from the server's quote, never from the browser's own numbers. */
-export function StaySummary({ quote, petsCount, className = '' }) {
+export function StaySummary({ quote, petsCount, pets = [], className = '' }) {
   const { hotel, room, ratePlan, cancellationPolicy, stay, totals, coupon } = quote;
   const effectivePets = Number(petsCount ?? stay.petsCount ?? quote.petsCount ?? 0);
   const money = (minor) => formatMoneyMinor(minor, totals.currency);
@@ -46,7 +46,15 @@ export function StaySummary({ quote, petsCount, className = '' }) {
           </div>
           <div className="flex gap-2">
             <Users className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-            <dd className="text-[var(--text-body)]">{occupancyLabel(stay.occupancy, effectivePets)}</dd>
+            <div className="space-y-1 text-sm text-[var(--text-body)]">
+              <div>{occupancyLabel(stay.occupancy, effectivePets)}</div>
+              {pets && pets.length > 0 && (
+                <div className="flex flex-wrap items-baseline gap-1.5">
+                  <span className="font-semibold text-[var(--text-strong)]">🐾 Pets:</span>
+                  <span>{pets.map((p, idx) => `${idx + 1}) ${p.name ? (p.breed ? `${p.name} (${p.breed})` : p.name) : `Pet ${idx + 1}`}`).join(', ')}</span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />

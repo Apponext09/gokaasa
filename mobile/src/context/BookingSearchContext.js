@@ -45,8 +45,10 @@ export function BookingSearchProvider({ children }) {
           const parsed = JSON.parse(raw);
           const today = todayIso();
 
+          // Only persist stay dates and rooms across sessions -- browsing starts with All Properties unless user explicitly chooses a place
           if (parsed.destination) {
-            setDestinationState(parsed.destination);
+            // Clear any legacy persisted destination from storage
+            AsyncStorage.mergeItem(STORAGE_KEY, JSON.stringify({ destination: null })).catch(() => {});
           }
 
           // If cached check-in is in the future/today, preserve it; otherwise use tomorrow
@@ -80,12 +82,12 @@ export function BookingSearchProvider({ children }) {
       .catch(() => setHydrated(true));
   }, []);
 
-  // Save changes to AsyncStorage
+  // Save changes to AsyncStorage (dates and rooms only -- destination is session-scoped)
   const persistState = useCallback((nextState) => {
     AsyncStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        destination: nextState.destination,
+        destination: null,
         checkIn: nextState.checkIn,
         checkOut: nextState.checkOut,
         rooms: nextState.rooms,
@@ -93,13 +95,9 @@ export function BookingSearchProvider({ children }) {
     ).catch(() => {});
   }, []);
 
-  const setDestination = useCallback(
-    (dest) => {
-      setDestinationState(dest);
-      persistState({ destination: dest, checkIn, checkOut, rooms });
-    },
-    [checkIn, checkOut, rooms, persistState]
-  );
+  const setDestination = useCallback((dest) => {
+    setDestinationState(dest);
+  }, []);
 
   const setDates = useCallback(
     (newCheckIn, newCheckOut) => {

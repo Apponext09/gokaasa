@@ -85,7 +85,7 @@ export function GuestDetailsPage() {
             <GuestForm key={hold.id} hold={hold} onSaved={() => navigate(bookingPath('/booking/review', hold.id))} onExpired={reload} />
           </div>
           <aside className="guest-details-summary lg:sticky lg:top-20 lg:self-start">
-            <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} className="guest-stay-summary" />
+            <StaySummary quote={hold.quote} petsCount={hold.petsCount || hold.guestDetails?.pets?.length} pets={hold.guestDetails?.pets} className="guest-stay-summary" />
           </aside>
         </div>
       )}
@@ -153,6 +153,12 @@ function GuestForm({ hold, onSaved, onExpired }) {
         if (userProfile.email) setValue('primaryContact.email', userProfile.email, { shouldValidate: true });
         if (userProfile.mobile) setValue('primaryContact.mobile', userProfile.mobile, { shouldValidate: true });
       }
+      // Also pre-fill Room 1 Guest 1 (the single primary adult) if currently blank
+      const currentGuest0 = getValues('rooms.0.guests.0');
+      if (!currentGuest0?.firstName && !currentGuest0?.lastName) {
+        if (userProfile.firstName) setValue('rooms.0.guests.0.firstName', userProfile.firstName, { shouldValidate: false });
+        if (userProfile.lastName) setValue('rooms.0.guests.0.lastName', userProfile.lastName, { shouldValidate: false });
+      }
     }
   }, [userProfile, bookingFor, setValue, getValues]);
 
@@ -177,6 +183,13 @@ function GuestForm({ hold, onSaved, onExpired }) {
         setValue('primaryContact.lastName', userProfile.lastName || '', { shouldValidate: true, shouldDirty: true });
         setValue('primaryContact.email', userProfile.email || '', { shouldValidate: true, shouldDirty: true });
         setValue('primaryContact.mobile', userProfile.mobile || '', { shouldValidate: true, shouldDirty: true });
+
+        // Auto-fill Room 1 Guest 1 with user profile if blank or was previously someone-else draft
+        const currentGuest0 = getValues('rooms.0.guests.0');
+        if (!currentGuest0?.firstName || currentGuest0.firstName === someoneElseDraft.firstName) {
+          setValue('rooms.0.guests.0.firstName', userProfile.firstName || '', { shouldValidate: false, shouldDirty: true });
+          setValue('rooms.0.guests.0.lastName', userProfile.lastName || '', { shouldValidate: false, shouldDirty: true });
+        }
       }
     } else {
       setBookingFor('someone_else');
@@ -187,6 +200,13 @@ function GuestForm({ hold, onSaved, onExpired }) {
       setValue('primaryContact.lastName', someoneElseDraft.lastName || '', { shouldValidate: false, shouldDirty: true });
       setValue('primaryContact.email', someoneElseDraft.email || '', { shouldValidate: false, shouldDirty: true });
       setValue('primaryContact.mobile', someoneElseDraft.mobile || '', { shouldValidate: false, shouldDirty: true });
+
+      // Clear Room 1 Guest 1 if it has user's name
+      const currentGuest0 = getValues('rooms.0.guests.0');
+      if (currentGuest0?.firstName === userProfile?.firstName && currentGuest0?.lastName === userProfile?.lastName) {
+        setValue('rooms.0.guests.0.firstName', '', { shouldValidate: false, shouldDirty: true });
+        setValue('rooms.0.guests.0.lastName', '', { shouldValidate: false, shouldDirty: true });
+      }
 
       setTimeout(() => {
         document.getElementById('pc-first')?.focus();

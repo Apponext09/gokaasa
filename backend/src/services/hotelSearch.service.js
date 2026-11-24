@@ -134,6 +134,7 @@ export function toHotelCard(row, { offers = [], checkIn = null, checkOut = null 
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),
+    roomsLeft: row.rooms_left != null ? Number(row.rooms_left) : null,
     available: row.is_available == null ? undefined : Boolean(row.is_available),
     availabilityStatus: row.is_available == null ? undefined : (row.availability_status ?? (row.is_available ? 'AVAILABLE' : 'SOLD_OUT')),
     retryAt: row.retry_at ? new Date(row.retry_at).toISOString() : null,
@@ -170,6 +171,7 @@ export function toCuratedCard(row, { offers = [] } = {}) {
     image: imageFor(row.cover),
     amenities: row.top_amenities ?? [],
     wishlisted: Boolean(row.wishlisted),
+    roomsLeft: row.rooms_left != null ? Number(row.rooms_left) : null,
     // No stay context exists yet on a homepage teaser, so bestDisplayOffer only considers coupons with no
     // min-nights/stay-date restriction -- see its own doc comment for the full, deliberately conservative rule.
     offer: row.final_price_minor == null ? null : offerBadgeFor(row, offers, { subtotalMinor: Number(row.final_price_minor) }),

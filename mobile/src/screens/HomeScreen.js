@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,13 +13,15 @@ import { SectionHeader } from '../components/SectionHeader.js';
 import { HotelCard, HotelCardSkeleton } from '../components/HotelCard.js';
 import { EmptyState } from '../components/EmptyState.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
+import { ActiveHoldCard } from '../components/ActiveHoldCard.js';
 import { hotelsApi } from '../api/hotelsApi.js';
 import { bookingsApi } from '../api/bookingsApi.js';
 import { notificationsApi } from '../api/notificationsApi.js';
 import { useAuth } from '../context/AuthContext.js';
 import { useBookingSearch } from '../context/BookingSearchContext.js';
-import { todayIso, addDaysIso, occupancyLabel, summarizeOccupancy, formatOccupancy } from '../utils/format.js';
+import { todayIso, addDaysIso, summarizeOccupancy, formatOccupancy } from '../utils/format.js';
 import { validateSearchCriteria } from '../utils/searchValidation.js';
+import { resolveDestinationImage } from '../utils/imageUrl.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 
@@ -53,19 +56,12 @@ export default function HomeScreen({ navigation }) {
   const [handpicked, setHandpicked] = useState({ status: 'loading', items: [], total: 0 });
   const [refreshing, setRefreshing] = useState(false);
 
-  const [destination, setDestination] = useState(contextDestination);
-  const [destinationText, setDestinationText] = useState(contextDestination?.label ?? '');
+  const [destination, setDestination] = useState(null);
+  const [destinationText, setDestinationText] = useState('');
   const [guestsOpen, setGuestsOpen] = useState(false);
   const [formError, setFormError] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [reservingHotelId, setReservingHotelId] = useState(null);
-
-  useEffect(() => {
-    if (contextDestination) {
-      setDestination(contextDestination);
-      setDestinationText(contextDestination.label ?? '');
-    }
-  }, [contextDestination]);
 
   const handleCheckInChange = (newIn) => {
     if (checkOut <= newIn) {
@@ -142,7 +138,7 @@ export default function HomeScreen({ navigation }) {
       setUnreadCount(0);
       return Promise.resolve();
     }
-    return notificationsApi.unreadCount().then(setUnreadCount).catch(() => {});
+    return notificationsApi.unreadCount().then(setUnreadCount).catch(() => { });
   }, [isAuthenticated]);
 
   const load = useCallback(async () => {
@@ -177,14 +173,36 @@ export default function HomeScreen({ navigation }) {
   };
 
   const onSearchPress = () => {
-    const error = validateSearchCriteria(destination, checkIn, checkOut);
+    const error = validateSearchCriteria(destination, checkIn, checkOut, { requireDestination: false });
     if (error) {
       setFormError(error);
       return;
     }
     setFormError(null);
-    if (destination) setContextDestination(destination);
-    navigation.navigate('Search', { destination: destination?.destination, area: destination?.area, label: destination?.label, checkIn, checkOut, occupancy: rooms });
+    if (destination) {
+      setContextDestination(destination);
+      navigation.navigate('Search', {
+        destination: destination.destination,
+        area: destination.area,
+        label: destination.label,
+        checkIn,
+        checkOut,
+        occupancy: rooms,
+      });
+    } else if (destinationText?.trim()) {
+      navigation.navigate('Search', {
+        label: destinationText.trim(),
+        checkIn,
+        checkOut,
+        occupancy: rooms,
+      });
+    } else {
+      navigation.navigate('Search', {
+        checkIn,
+        checkOut,
+        occupancy: rooms,
+      });
+    }
   };
 
   return (
@@ -218,7 +236,17 @@ export default function HomeScreen({ navigation }) {
                   <Ionicons name="heart-outline" size={20} color={colors.white} />
                 </Pressable>
               )}
-              <Pressable style={styles.headerIcon} onPress={() => navigation.navigate('Main', { screen: 'Profile' })} accessibilityLabel="Profile">
+              <Pressable
+                style={styles.headerIcon}
+                onPress={() => {
+                  if (isAuthenticated) {
+                    navigation.navigate('Main', { screen: 'Profile' });
+                  } else {
+                    navigation.navigate('Auth', { screen: 'Login' });
+                  }
+                }}
+                accessibilityLabel="Profile"
+              >
                 <Ionicons name="person-circle-outline" size={22} color={colors.white} />
               </Pressable>
             </View>
@@ -232,36 +260,47 @@ export default function HomeScreen({ navigation }) {
           </FadeSlideIn>
         </View>
 
-        <FadeSlideIn delay={80} style={[styles.searchCard, shadow.floating]}>
+        <FadeSlideIn delay={80} style={styles.searchCard}>
           <DestinationInput
             text={destinationText}
             onChangeText={setDestinationText}
             selected={destination}
-            onSelect={(value) => {
-              setDestination(value);
-              // A functional updater: DestinationInput calls this with `null` (to clear the prior
-              // selection) in the SAME synchronous handler as its own onChangeText(newText) call, right
-              // after a keystroke. Reading `destinationText` here directly would capture the
-              // pre-keystroke value and silently revert what was just typed -- found and fixed while
-              // validating the mobile Booking Assistant, which shares this exact pattern.
-              setDestinationText((prev) => value?.label ?? prev);
-              setFormError(null);
-            }}
-            onPickHotel={(item) => navigation.navigate('HotelDetails', { idOrSlug: item.hotelSlug, checkIn, checkOut, occupancy: rooms })}
+            onSelect={setDestination}
+            onPickHotel={(item) =>
+              navigation.navigate('HotelDetails', {
+                idOrSlug: item.hotelSlug,
+                checkIn,
+                checkOut,
+                occupancy: rooms,
+              })
+            }
           />
+
           <View style={styles.row}>
-            <DateField label="Check-in" value={checkIn} onChange={handleCheckInChange} minimumDate={todayIso()} />
-            <DateField label="Check-out" value={checkOut} onChange={handleCheckOutChange} minimumDate={addDaysIso(checkIn, 1)} />
+            <DateField
+              label="Check-in"
+              value={checkIn}
+              minimumDate={todayIso()}
+              onChange={handleCheckInChange}
+            />
+            <DateField
+              label="Check-out"
+              value={checkOut}
+              minimumDate={addDaysIso(checkIn, 1)}
+              onChange={handleCheckOutChange}
+            />
           </View>
+
           <Pressable
+            testID="home-guests-trigger"
             style={styles.guestsRow}
             onPress={() => setGuestsOpen(true)}
             accessibilityRole="button"
-            accessibilityLabel="Rooms and guests"
+            accessibilityLabel={`ROOMS & GUESTS, ${summarizeOccupancy(rooms)}`}
           >
             <Ionicons name="people-outline" size={18} color={colors.brand600} />
             <View style={styles.guestsFieldTextWrap}>
-              <Text style={styles.guestsFieldLabel}>Rooms & Guests</Text>
+              <Text style={styles.guestsFieldLabel}>ROOMS & GUESTS</Text>
               <Text style={styles.guestsText}>{summarizeOccupancy(rooms)}</Text>
             </View>
             <Ionicons name="chevron-down" size={16} color={colors.textMuted} style={styles.flex1End} />
@@ -277,6 +316,8 @@ export default function HomeScreen({ navigation }) {
           <AppButton title="Search Hotels" onPress={onSearchPress} style={styles.searchButton} />
         </FadeSlideIn>
 
+        {isAuthenticated && <ActiveHoldCard navigation={navigation} />}
+
         {destinations.items.length > 0 && (
           <View style={styles.section}>
             <SectionHeader title="Popular destinations" />
@@ -286,15 +327,34 @@ export default function HomeScreen({ navigation }) {
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => item.destination}
               contentContainerStyle={{ gap: spacing.md }}
-              renderItem={({ item }) => (
-                <Pressable style={styles.destinationChip} onPress={() => goToDestination(item)}>
-                  <View style={styles.destinationIconWrap}>
-                    <Ionicons name="location" size={18} color={colors.white} />
-                  </View>
-                  <Text style={styles.destinationLabel} numberOfLines={1}>{item.label}</Text>
-                  {item.hotelCount > 0 && <Text style={styles.destinationCount}>{item.hotelCount} hotel{item.hotelCount === 1 ? '' : 's'}</Text>}
-                </Pressable>
-              )}
+              renderItem={({ item }) => {
+                const imgUri = resolveDestinationImage(item);
+                return (
+                  <Pressable
+                    style={styles.destinationCard}
+                    onPress={() => goToDestination(item)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.label}, ${item.hotelCount > 0 ? `Explore ${item.hotelCount} ${item.hotelCount === 1 ? 'hotel' : 'hotels'}` : 'Explore hotels'}`}
+                  >
+                    <ExpoImage
+                      source={{ uri: imgUri }}
+                      style={styles.destinationImage}
+                      contentFit="cover"
+                      transition={150}
+                      placeholder={{ color: colors.brand800 }}
+                    />
+                    <View style={styles.destinationScrim} pointerEvents="none" />
+                    <View style={styles.destinationCaption} pointerEvents="none">
+                      <Text style={styles.destinationLabel} numberOfLines={1}>{item.label}</Text>
+                      {item.hotelCount > 0 && (
+                        <Text style={styles.destinationCount} numberOfLines={1}>
+                          Explore {item.hotelCount} {item.hotelCount === 1 ? 'hotel' : 'hotels'}
+                        </Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              }}
             />
           </View>
         )}
@@ -353,11 +413,27 @@ const styles = StyleSheet.create({
   hero: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, gap: 4 },
   heroTitle: { ...typography.hero, color: colors.white },
   heroSubtitle: { ...typography.body, color: 'rgba(255,255,255,0.78)' },
-  searchCard: { marginHorizontal: spacing.lg, marginTop: -40, backgroundColor: colors.surfaceCard, borderRadius: radius.card, padding: spacing.lg, gap: spacing.md },
+  searchCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: -40,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: radius.card,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadow.card,
+  },
   row: { flexDirection: 'row', gap: spacing.sm },
   guestsRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 52, borderRadius: radius.control,
-    borderWidth: 1, borderColor: colors.borderSubtle, paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.surfaceCard,
   },
   guestsFieldTextWrap: { flex: 1, justifyContent: 'center' },
   guestsFieldLabel: { ...typography.tiny, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
@@ -373,10 +449,53 @@ const styles = StyleSheet.create({
     marginTop: -spacing.xs,
     marginBottom: spacing.md,
   },
-  destinationChip: {
-    width: 136, height: 112, borderRadius: radius.card, backgroundColor: colors.surfaceCard, padding: spacing.md, gap: 4, ...shadow.card,
+  destinationCard: {
+    width: 148,
+    height: 148,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.brand800,
+    ...shadow.card,
   },
-  destinationIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.brand600, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  destinationLabel: { color: colors.textStrong, fontWeight: '700', fontSize: 14 },
-  destinationCount: { color: colors.textMuted, fontSize: 12 },
+  destinationImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 148,
+    height: 148,
+  },
+  destinationScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 148,
+    height: 148,
+    backgroundColor: 'rgba(10, 23, 38, 0.40)',
+  },
+  destinationCaption: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    gap: 2,
+  },
+  destinationLabel: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 15,
+    lineHeight: 18,
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  destinationCount: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
 });

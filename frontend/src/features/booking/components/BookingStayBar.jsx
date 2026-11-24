@@ -91,7 +91,7 @@ export function BookingStayBar({ hold, onHoldUpdated, className = '' }) {
       const totalPets = (occupancy || []).reduce((sum, r) => sum + (r.pets || 0), 0);
       const isQuickReserve = params.get('quickReserve') === 'true' || Boolean(readSelection()?.quickReserve);
 
-      // 1. Create a new hold for the updated dates & occupancy
+      // 1. Create a new hold for the updated dates & occupancy (atomically replacing previous hold)
       const newHold = await bookingApi.createHold({
         hotelId,
         roomTypeId,
@@ -101,19 +101,29 @@ export function BookingStayBar({ hold, onHoldUpdated, className = '' }) {
         rooms: occupancy.length,
         occupancy,
         petsCount: totalPets,
+        replaceHoldId: hold?.id,
       });
 
-      // 2. Release previous hold
-      if (hold?.id) {
+      // 2. Release previous hold fallback (if not already replaced in tx)
+      if (hold?.id && hold.id !== newHold.id) {
         bookingApi.release(hold.id).catch(() => {});
       }
 
-      // 3. Preserve guest contact & details if already entered on previous hold
-      if (hold?.guestDetails) {
+      // Check if room count or occupancy structure changed
+      const currentOccupancy = stay?.occupancy;
+      const roomsOrGuestsChanged =
+        currentOccupancy?.length !== occupancy.length ||
+        JSON.stringify(currentOccupancy) !== JSON.stringify(occupancy);
+
+      let holdToReport = newHold;
+
+      // 3. Preserve guest contact & details if already entered on previous hold and room count/occupancy did NOT change
+      if (hold?.guestDetails && !roomsOrGuestsChanged) {
         try {
-          await bookingApi.saveGuests(newHold.id, hold.guestDetails);
+          const savedHold = await bookingApi.saveGuests(newHold.id, hold.guestDetails);
+          holdToReport = savedHold || newHold;
         } catch {
-          // If occupancy structure changed, guest details can be reviewed on form
+          // If saving fails, holdToReport remains newHold with guestDetails: null
         }
       }
 
@@ -142,7 +152,7 @@ export function BookingStayBar({ hold, onHoldUpdated, className = '' }) {
 
       // 6. Notify parent component to update state and price breakdown
       if (onHoldUpdated) {
-        onHoldUpdated(newHold);
+        onHoldUpdated(holdToReport);
       }
 
       toast.success('Reservation dates updated successfully.');

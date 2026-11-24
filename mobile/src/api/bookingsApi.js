@@ -3,7 +3,7 @@ import { api } from './client.js';
 /** Holds, guest details, the booking itself, My Trips, cancellation, invoice -- mirrors the website's
  * bookingApi exactly. The backend remains authoritative for availability, price, and status at every step. */
 export const bookingsApi = {
-  createHold: (input) => api.post('/booking/holds', input).then((r) => r.data.hold),
+  createHold: (input) => api.post('/booking/holds', { ...input, sourcePlatform: 'MOBILE' }).then((r) => r.data.hold),
   activeHold: () => api.get('/booking/holds/active').then((r) => r.data.hold),
   hold: (id) => api.get(`/booking/holds/${id}`).then((r) => r.data.hold),
   saveGuests: (id, body) => api.put(`/booking/holds/${id}/guests`, body).then((r) => r.data.hold),

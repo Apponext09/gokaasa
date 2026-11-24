@@ -142,12 +142,19 @@ export const userRepository = {
     );
   },
 
-  /** Self-service profile edit: the authenticated user changing their own display name. */
-  async updateName(client, userId, { firstName, lastName }) {
-    await client.query(
-      `UPDATE users SET first_name = $2, last_name = $3, updated_at = now() WHERE id = $1`,
-      [userId, firstName, lastName],
-    );
+  /** Self-service profile edit: the authenticated user changing their own display name and phone. */
+  async updateName(client, userId, { firstName, lastName, phone }) {
+    if (phone !== undefined) {
+      await client.query(
+        `UPDATE users SET first_name = $2, last_name = $3, phone = $4, updated_at = now() WHERE id = $1`,
+        [userId, firstName, lastName, phone || null],
+      );
+    } else {
+      await client.query(
+        `UPDATE users SET first_name = $2, last_name = $3, updated_at = now() WHERE id = $1`,
+        [userId, firstName, lastName],
+      );
+    }
   },
 
   async touchLastLogin(userId) {

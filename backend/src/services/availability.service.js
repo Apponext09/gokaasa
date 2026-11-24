@@ -120,6 +120,11 @@ export const availabilityService = {
         }),
       );
       const availableRooms = Math.min(...nightFacts.map((facts) => facts.sellable));
+      const sellableWithoutHolds = Math.min(
+        ...nightFacts.map((facts) =>
+          Math.max(0, (facts.totalUnits ?? 0) - (facts.blocked ?? 0) - ((facts.reserved ?? 0) - (facts.held ?? 0)))
+        )
+      );
 
       const quotes = (plansForRoom.get(room.id) ?? [])
         .map((plan) => {
@@ -149,17 +154,23 @@ export const availabilityService = {
 
       let unavailableReason = null;
       if (!fits) unavailableReason = 'CAPACITY';
-      else if (availableRooms < rooms) unavailableReason = 'SOLD_OUT';
-      else if (quotes.length === 0) unavailableReason = 'NO_RATES';
+      else if (availableRooms < rooms) {
+        if (sellableWithoutHolds >= rooms) {
+          unavailableReason = 'HELD';
+        } else {
+          unavailableReason = 'SOLD_OUT';
+        }
+      } else if (quotes.length === 0) unavailableReason = 'NO_RATES';
 
       const available = unavailableReason === null;
       roomTypes.push({
         ...toPublicRoom(room, amenities, images),
         available,
         unavailableReason,
+        isHeld: unavailableReason === 'HELD',
         availableRooms: Math.max(0, availableRooms),
         stayLength: { minNights: null, maxNights: null },
-        ratePlans: available ? quotes : [],
+        ratePlans: available || unavailableReason === 'HELD' ? quotes : [],
       });
     }
 

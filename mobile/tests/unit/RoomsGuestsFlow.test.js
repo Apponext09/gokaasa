@@ -81,10 +81,34 @@ describe('Rooms & Guests Flow & Logic', () => {
 
       fireEvent.press(getByText(/Apply/));
       expect(onChange).toHaveBeenCalledWith([
-        { adults: 2, childAges: [] },
-        { adults: 2, childAges: [] },
+        { adults: 2, childAges: [], pets: 0 },
+        { adults: 2, childAges: [], pets: 0 },
       ]);
       expect(onClose).toHaveBeenCalled();
+    });
+
+    test('increasing pets updates summary and onChange payload', async () => {
+      const onClose = jest.fn();
+      const onChange = jest.fn();
+
+      const { getByLabelText, getByText } = await render(
+        <GuestsModal
+          visible={true}
+          rooms={[{ adults: 2, childAges: [] }]}
+          onChange={onChange}
+          onClose={onClose}
+        />
+      );
+
+      fireEvent.press(getByLabelText('Increase Pets'));
+      await waitFor(() => {
+        expect(getByText('1 Room · 2 Adults · 1 Pet')).toBeTruthy();
+      });
+
+      fireEvent.press(getByText(/Apply/));
+      expect(onChange).toHaveBeenCalledWith([
+        { adults: 2, childAges: [], pets: 1 },
+      ]);
     });
 
     test('increasing children adds age stepper for that child', async () => {

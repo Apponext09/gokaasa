@@ -44,6 +44,7 @@ export function HotelCard({ hotel, onPress, onQuickReserve, isQuickReserving, co
   const { isWishlisted, toggle } = useWishlist();
   const scale = useRef(new Animated.Value(1)).current;
   const offer = hotel.bestOffer;
+  const roomsLeft = offer?.roomsLeft ?? hotel.roomsLeft ?? hotel.rooms_left ?? null;
   // Search/availability results carry a full `bestOffer` (meal plan, nights, free cancellation). Teaser
   // lists with no stay context (handpickedHotels/nearbyHotels) carry only `price.amountMinor` instead --
   // verified live against production (search.controller.js's handpicked/nearby responses never include
@@ -95,6 +96,14 @@ export function HotelCard({ hotel, onPress, onQuickReserve, isQuickReserving, co
               <Text style={styles.illustrativeText}>Image for illustration</Text>
             </View>
           )}
+          {roomsLeft > 0 && roomsLeft <= 3 && (
+            <View style={[styles.urgencyBadge, hotel.image?.isIllustrative && styles.urgencyBadgeWithIllustrative]}>
+              <View style={styles.urgencyStarCircle}>
+                <Ionicons name="star" size={10} color="#FDE047" />
+              </View>
+              <Text style={styles.urgencyBadgeText}>Only {roomsLeft} left</Text>
+            </View>
+          )}
         </View>
 
         <View style={[styles.body, compact && styles.bodyCompact]}>
@@ -106,6 +115,12 @@ export function HotelCard({ hotel, onPress, onQuickReserve, isQuickReserving, co
             <Ionicons name="location-outline" size={13} color={colors.textMuted} />
             <Text style={styles.place} numberOfLines={1}>{place}</Text>
           </View>
+
+          {(hotel.petsAllowed || hotel.pets_allowed) && (
+            <View style={styles.row}>
+              <StatusBadge label="🐾 Pet friendly" tone="success" />
+            </View>
+          )}
 
           {ratingValue != null ? (
             <View style={styles.row}>
@@ -157,7 +172,6 @@ export function HotelCard({ hotel, onPress, onQuickReserve, isQuickReserving, co
                     ) : (
                       <StatusBadge label="Non-refundable" tone="danger" />
                     )}
-                    {offer.roomsLeft > 0 && offer.roomsLeft <= 3 && <StatusBadge label={`Only ${offer.roomsLeft} left`} tone="warning" />}
                     {couponOffer && <StatusBadge label={`${couponOffer.discountPercent}% OFF with code ${couponOffer.code}`} tone="premium" />}
                   </View>
                   <View style={styles.priceFooter}>
@@ -323,6 +337,39 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center',
   },
   discountBadge: { position: 'absolute', top: spacing.sm, left: spacing.sm },
+  urgencyBadge: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    backgroundColor: '#b45309',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingLeft: 4,
+    paddingRight: 9,
+    paddingVertical: 3.5,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.white,
+    ...shadow.subtle,
+  },
+  urgencyBadgeWithIllustrative: {
+    bottom: 26,
+  },
+  urgencyStarCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  urgencyBadgeText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   illustrativeStrip: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: colors.scrim, paddingVertical: 4 },
   illustrativeText: { ...typography.tiny, color: colors.white, textAlign: 'center' },
   body: { padding: spacing.lg, gap: 4 },
@@ -383,8 +430,8 @@ const styles = StyleSheet.create({
   },
   unavailableText: {
     ...typography.caption,
-    color: colors.textMuted,
-    fontStyle: 'italic',
+    color: colors.danger600,
+    fontWeight: '600',
   },
   skeletonBlock: { backgroundColor: colors.surfaceMuted },
   skeletonLine: { height: 12, borderRadius: 6, backgroundColor: colors.surfaceMuted, marginVertical: 3 },

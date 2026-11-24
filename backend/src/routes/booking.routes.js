@@ -31,6 +31,8 @@ bookingRouter.get('/holds/:id', validate({ params: holdIdParam }), bookingContro
 bookingRouter.put('/holds/:id/guests', validate({ params: holdIdParam, body: guestDetailsSchema }), bookingController.saveGuests);
 bookingRouter.post('/holds/:id/requote', validate({ params: holdIdParam }), bookingController.requote);
 bookingRouter.post('/holds/:id/release', validate({ params: holdIdParam }), bookingController.releaseHold);
+// DELETE /holds/:id is an alias for POST /holds/:id/release (spec requirement; idempotent cancel).
+bookingRouter.delete('/holds/:id', validate({ params: holdIdParam }), bookingController.releaseHold);
 bookingRouter.get('/holds/:id/coupons', validate({ params: holdIdParam }), bookingController.listHoldCoupons);
 bookingRouter.post('/holds/:id/coupon', validate({ params: holdIdParam, body: couponApplySchema }), bookingController.applyCoupon);
 bookingRouter.delete('/holds/:id/coupon', validate({ params: holdIdParam }), bookingController.removeCoupon);

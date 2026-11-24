@@ -156,6 +156,7 @@ export function StaySearchBar({ checkIn, checkOut, occupancy, hotelName, onApply
                 style={styles.guestsButton}
                 onPress={() => setGuestsOpen(true)}
                 accessibilityRole="button"
+                accessibilityLabel="Choose rooms and guests"
               >
                 <Ionicons name="people-outline" size={16} color={colors.brand600} />
                 <Text style={styles.guestsButtonText} numberOfLines={1}>
@@ -173,6 +174,7 @@ export function StaySearchBar({ checkIn, checkOut, occupancy, hotelName, onApply
             {/* Apply */}
             <AppButton
               title="Apply"
+              accessibilityLabel="Apply stay changes"
               onPress={handleApply}
               style={styles.applyButton}
               disabled={!draftCheckIn || !draftCheckOut || draftCheckOut <= draftCheckIn}

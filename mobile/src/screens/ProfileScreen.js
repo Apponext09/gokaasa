@@ -1,10 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ScreenContainer } from '../components/ScreenContainer.js';
-import { EmptyState } from '../components/EmptyState.js';
 import { AppButton } from '../components/AppButton.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
 import { useAuth } from '../context/AuthContext.js';
+import LoginScreen from './LoginScreen.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 
@@ -12,17 +12,7 @@ export default function ProfileScreen({ navigation }) {
   const { user, isAuthenticated, logout } = useAuth();
 
   if (!isAuthenticated) {
-    return (
-      <ScreenContainer>
-        <EmptyState
-          image={require('../../assets/icon.png')}
-          imageLabel="Gokaasa"
-          title="Sign in to your account"
-          message="See your profile, trips, and wishlist once you're signed in."
-          action={<AppButton title="Sign in" onPress={() => navigation.navigate('Auth', { screen: 'Login' })} />}
-        />
-      </ScreenContainer>
-    );
+    return <LoginScreen navigation={navigation} isTab />;
   }
 
   return (

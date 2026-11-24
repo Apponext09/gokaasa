@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BedDouble, Check, ChevronDown, Expand, Eye, Images, Maximize2, ShieldCheck, Undo2, Users, UtensilsCrossed } from 'lucide-react';
+import { BedDouble, Check, ChevronDown, Clock3, Expand, Eye, Images, Maximize2, ShieldCheck, Undo2, Users, UtensilsCrossed } from 'lucide-react';
 import { Badge } from '@/components/ui/surfaces.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { SafeImage } from '@/components/shared/SafeImage.jsx';
@@ -11,6 +11,7 @@ const MEAL_LABEL = { ROOM_ONLY: 'Room only', BREAKFAST: 'Breakfast included', HA
 const mealLabel = (code) => MEAL_LABEL[code] ?? String(code ?? 'Room rate').replaceAll('_', ' ').toLowerCase();
 const BED_LABEL = { KING: 'King bed', QUEEN: 'Queen bed', DOUBLE: 'Double bed', TWIN: 'Twin beds', SINGLE: 'Single bed', SOFA_BED: 'Sofa bed', BUNK: 'Bunk beds' };
 const UNAVAILABLE_TEXT = {
+  HELD: 'Currently unavailable · Held by another',
   SOLD_OUT: 'Sold out for these dates',
   CAPACITY: 'Does not fit your party',
   CLOSED: 'Closed for these dates',
@@ -19,7 +20,7 @@ const UNAVAILABLE_TEXT = {
 };
 
 /** Each rate plan, compared side by side: what it includes, its refund rule, and the price breakdown. */
-function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled, compact = false }) {
+function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled, isHeld = false, compact = false }) {
   const [open, setOpen] = useState(false);
   const cancelText = plan.cancellationPolicy?.description ?? 'Cancellation terms are not set for this rate.';
   const freeCancel = plan.refundable && plan.cancellationPolicy && !plan.cancellationPolicy.isNonRefundable && plan.cancellationPolicy.refundPercent === 100;
@@ -54,8 +55,8 @@ function RatePlanRow({ plan, nights, rooms, onSelect, selected, disabled, compac
           <p className="text-xs text-[var(--text-muted)]">
             {nights} Night{nights === 1 ? '' : 's'}{rooms > 1 ? ` · ${rooms} Rooms` : ''} · <span className="font-medium text-[var(--text-body)]">{formatMoney(plan.finalAmount)}</span> total
           </p>
-          <Button size="sm" variant={selected ? 'secondary' : 'primary'} disabled={disabled} onClick={() => onSelect(plan)}>
-            {selected ? <><Check className="h-4 w-4" aria-hidden="true" /> Selected</> : 'Select'}
+          <Button size="sm" variant={selected ? 'secondary' : 'primary'} disabled={disabled || isHeld} onClick={() => onSelect(plan)}>
+            {isHeld ? 'Currently unavailable' : selected ? <><Check className="h-4 w-4" aria-hidden="true" /> Selected</> : 'Select'}
           </Button>
         </div>
       </div>
@@ -94,10 +95,11 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, c
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const images = room.images ?? [];
   const current = images[photo];
+  const isHeld = !room.available && (room.unavailableReason === 'HELD' || room.isHeld);
   const scarce = room.available && room.availableRooms > 0 && room.availableRooms <= 3;
 
   return (
-    <article className="customer-room-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]">
+    <article className={cn('customer-room-card overflow-hidden rounded-[var(--radius-card)] border border-[var(--border-subtle)] bg-[var(--surface-card)]', isHeld && 'border-amber-300/80')}>
       <div className={cn('grid gap-0', !compact && 'md:grid-cols-[13rem_minmax(0,1fr)]')}>
         <div className="room-card-media group relative">
           {images.length > 0 ? (
@@ -162,6 +164,12 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, c
 
         <div className="room-card-content flex min-w-0 flex-col gap-3 p-4">
           <div className="room-card-summary space-y-1.5">
+            {isHeld && (
+              <div className="inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900" role="status">
+                <Clock3 className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden="true" />
+                <span>Currently unavailable · Held by another guest</span>
+              </div>
+            )}
             <h3 className="text-base font-semibold tracking-tight text-[var(--text-strong)]">{room.name}</h3>
             <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--text-body)]">
               {room.roomSizeSqm != null && (
@@ -186,18 +194,26 @@ export function RoomCard({ room, nights, rooms, onSelect, selection, disabled, c
           </div>
 
           <ul className="space-y-2.5" aria-label={`Rate plans for ${room.name}`}>
-            {room.ratePlans.map((plan) => (
-              <RatePlanRow
-                key={plan.ratePlanId}
-                plan={plan}
-                nights={nights}
-                rooms={rooms}
-                disabled={disabled}
-                selected={selection?.roomTypeId === room.id && selection?.ratePlanId === plan.ratePlanId}
-                onSelect={(p) => onSelect(room, p)}
-                compact={compact}
-              />
-            ))}
+            {room.ratePlans?.length > 0 ? (
+              room.ratePlans.map((plan) => (
+                <RatePlanRow
+                  key={plan.ratePlanId}
+                  plan={plan}
+                  nights={nights}
+                  rooms={rooms}
+                  disabled={disabled}
+                  isHeld={isHeld}
+                  selected={selection?.roomTypeId === room.id && selection?.ratePlanId === plan.ratePlanId}
+                  onSelect={(p) => onSelect(room, p)}
+                  compact={compact}
+                />
+              ))
+            ) : isHeld ? (
+              <li className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-3 text-sm text-[var(--text-muted)]">
+                <span>Another guest is currently holding this room. If their reservation is not completed, it will become available again.</span>
+                <Button size="sm" variant="secondary" disabled className="shrink-0">Currently unavailable</Button>
+              </li>
+            ) : null}
           </ul>
         </div>
       </div>

@@ -54,10 +54,10 @@ export default function SearchScreen({ route, navigation }) {
   const { isAuthenticated } = useAuth();
   const searchCtx = useBookingSearch();
   const params = route.params ?? {};
-  const initialDestination = params.destination ? { destination: params.destination, area: params.area ?? null, label: params.label } : searchCtx.destination;
+  const initialDestination = params.destination ? { destination: params.destination, area: params.area ?? null, label: params.label } : null;
 
   const [destination, setDestination] = useState(initialDestination);
-  const [destinationText, setDestinationText] = useState(params.label ?? searchCtx.destination?.label ?? '');
+  const [destinationText, setDestinationText] = useState(params.label ?? '');
   const [checkIn, setCheckIn] = useState(params.checkIn ?? searchCtx.checkIn);
   const [checkOut, setCheckOut] = useState(params.checkOut ?? searchCtx.checkOut);
   const [rooms, setRooms] = useState(params.occupancy ?? searchCtx.rooms);
@@ -142,6 +142,38 @@ export default function SearchScreen({ route, navigation }) {
     hotelsApi.amenities?.()?.then(setAmenityOptions).catch(() => setAmenityOptions([]));
     hotelsApi.catalog?.('property-types')?.then(setPropertyTypeOptions).catch(() => setPropertyTypeOptions([]));
   }, []);
+
+  // Sync state whenever route.params changes (e.g. user taps a popular destination on Home screen while Search tab is already mounted)
+  useEffect(() => {
+    if (!route.params) return;
+
+    if (route.params.destination !== undefined) {
+      const nextSlug = route.params.destination || null;
+      const nextArea = route.params.area ?? null;
+      if (destination?.destination !== nextSlug || destination?.area !== nextArea) {
+        const nextDest = nextSlug
+          ? {
+              destination: nextSlug,
+              area: nextArea,
+              label: route.params.label ?? nextSlug,
+            }
+          : null;
+        setDestination(nextDest);
+        setDestinationText(nextDest?.label ?? '');
+        setFormOpen(false);
+      }
+    }
+    if (route.params.checkIn && route.params.checkIn !== checkIn) {
+      setCheckIn(route.params.checkIn);
+    }
+    if (route.params.checkOut && route.params.checkOut !== checkOut) {
+      setCheckOut(route.params.checkOut);
+    }
+    if (route.params.occupancy && JSON.stringify(route.params.occupancy) !== JSON.stringify(rooms)) {
+      setRooms(route.params.occupancy);
+    }
+    setFormError(null);
+  }, [route.params, destination?.destination, destination?.area, checkIn, checkOut, rooms]);
 
   const runSearch = useCallback(
     async (page = 1) => {

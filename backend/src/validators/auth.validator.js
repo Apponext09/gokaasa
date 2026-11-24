@@ -61,6 +61,7 @@ export const emailChangeRequestSchema = z.object({
 export const updateProfileSchema = z.object({
   firstName: name('First name'),
   lastName: name('Last name'),
+  phone,
 });
 
 export const emailChangeVerifySchema = z.object({

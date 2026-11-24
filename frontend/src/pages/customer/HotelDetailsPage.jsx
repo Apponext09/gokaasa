@@ -448,8 +448,14 @@ export function HotelDetailsPage() {
 
   const rooms = availability?.roomTypes ?? [];
 
+  const isHeldRoom = (room) => !room.available && (room.unavailableReason === 'HELD' || room.isHeld);
+
   const bookable = rooms.filter(
     (room) => room.available
+  );
+
+  const displayRooms = rooms.filter(
+    (room) => room.available || isHeldRoom(room)
   );
 
   const cheapestPerNight =
@@ -470,7 +476,7 @@ export function HotelDetailsPage() {
       : null;
 
   const unavailable = rooms.filter(
-    (room) => !room.available
+    (room) => !room.available && !isHeldRoom(room)
   );
 
   const featuredOption = bookable
@@ -1265,7 +1271,7 @@ export function HotelDetailsPage() {
 
           {hasStay &&
             availabilityState === 'ready' &&
-            bookable.length === 0 && (
+            displayRooms.length === 0 && (
               <Alert
                 tone="warning"
                 title="This hotel is no longer available for your selected dates."
@@ -1278,12 +1284,12 @@ export function HotelDetailsPage() {
 
           {hasStay &&
             availabilityState === 'ready' &&
-            bookable.length > 0 && (
+            displayRooms.length > 0 && (
               <ul
                 className="space-y-4"
                 aria-label="Rooms available for your dates"
               >
-                {bookable.map((room) => (
+                {displayRooms.map((room) => (
                   <li key={room.id}>
                     <RoomCard
                       room={room}
@@ -1298,7 +1304,8 @@ export function HotelDetailsPage() {
             )}
 
           {hasStay &&
-            availabilityState === 'ready' && (
+            availabilityState === 'ready' &&
+            unavailable.length > 0 && (
               <UnavailableRooms
                 rooms={unavailable}
               />

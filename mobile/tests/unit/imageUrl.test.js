@@ -1,4 +1,4 @@
-import { resolveImageUrl } from '../../src/utils/imageUrl.js';
+import { resolveImageUrl, resolveDestinationImage, DEFAULT_DESTINATION_IMAGE } from '../../src/utils/imageUrl.js';
 
 describe('resolveImageUrl', () => {
   const originalEnv = process.env.EXPO_PUBLIC_API_URL;
@@ -37,5 +37,21 @@ describe('resolveImageUrl', () => {
   test('works with emulator IP dynamically', () => {
     process.env.EXPO_PUBLIC_API_URL = 'http://10.0.2.2:4000/api';
     expect(resolveImageUrl('/media/hotels/20/img.jpg')).toBe('http://10.0.2.2:4000/media/hotels/20/img.jpg');
+  });
+});
+
+describe('resolveDestinationImage', () => {
+  test('returns resolved imageUrl when present', () => {
+    expect(resolveDestinationImage({ imageUrl: 'https://images.unsplash.com/test.jpg' })).toBe('https://images.unsplash.com/test.jpg');
+  });
+
+  test('falls back to curated city photo when imageUrl is missing', () => {
+    const goaImg = resolveDestinationImage({ destination: 'goa', label: 'Goa' });
+    expect(goaImg).toMatch(/unsplash\.com/);
+  });
+
+  test('falls back to default destination photo for unknown city without imageUrl', () => {
+    expect(resolveDestinationImage({ destination: 'unknown-valley' })).toBe(DEFAULT_DESTINATION_IMAGE);
+    expect(resolveDestinationImage(null)).toBe(DEFAULT_DESTINATION_IMAGE);
   });
 });

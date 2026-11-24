@@ -46,6 +46,8 @@ export const holdCreateSchema = z
     ratePlanId: positiveId,
     rooms: z.number().int().min(1).max(LIMITS.maxRooms),
     idempotencyKey: z.string().trim().min(1).max(100).optional(),
+    replaceHoldId: positiveId.optional(),
+    sourcePlatform: z.enum(['WEB', 'MOBILE', 'API']).optional(),
     petsCount: z.number().int().min(0).max(10).optional(),
     ...stayFields,
   })

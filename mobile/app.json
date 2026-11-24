@@ -6,11 +6,23 @@
     "orientation": "portrait",
     "icon": "./assets/icon-square.png",
     "userInterfaceStyle": "light",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/99b4b230-28ad-4a86-9caa-21fd6663ec25"
+    },
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#faf8f4"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "in.apponext.gokaasa",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#faf8f4",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -21,6 +33,7 @@
       "favicon": "./assets/logo.png"
     },
     "plugins": [
+      "expo-updates",
       "expo-secure-store",
       "expo-image",
       "@react-native-community/datetimepicker",

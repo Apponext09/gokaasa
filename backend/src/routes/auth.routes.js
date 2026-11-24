@@ -34,12 +34,12 @@ authRouter.post('/change-password', authLimiter, authenticate, validate({ body: 
 authRouter.get('/me', authenticate, authController.me);
 authRouter.patch('/me', authenticate, validate({ body: updateProfileSchema }), authController.updateProfile);
 
-authRouter.get('/email-change', authenticate, requirePermission('console.access'), authController.pendingEmailChange);
+authRouter.get('/email-change', authenticate, authController.pendingEmailChange);
 
-authRouter.post('/email-change/request', otpLimiter, authenticate, requirePermission('console.access'), validate({ body: emailChangeRequestSchema }), authController.requestEmailChange);
+authRouter.post('/email-change/request', otpLimiter, authenticate, validate({ body: emailChangeRequestSchema }), authController.requestEmailChange);
 
-authRouter.post('/email-change/resend', otpLimiter, authenticate, requirePermission('console.access'), authController.resendEmailChange);
+authRouter.post('/email-change/resend', otpLimiter, authenticate, authController.resendEmailChange);
 
-authRouter.post('/email-change/verify', otpLimiter, authenticate, requirePermission('console.access'), validate({ body: emailChangeVerifySchema }), authController.verifyEmailChange);
+authRouter.post('/email-change/verify', otpLimiter, authenticate, validate({ body: emailChangeVerifySchema }), authController.verifyEmailChange);
 
-authRouter.delete('/email-change', authenticate, requirePermission('console.access'), authController.cancelEmailChange);
+authRouter.delete('/email-change', authenticate, authController.cancelEmailChange);

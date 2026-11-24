@@ -23,6 +23,7 @@ export async function loadNightly(client, roomTypeIds, nights) {
       max_stay: row.max_stay,
       blocked: row.blocked,
       reserved: row.reserved,
+      held: Number(row.held || 0),
     };
     facts.sellable = sellableUnits(facts);
     map.set(`${row.room_type_id}|${row.stay_date}`, facts);

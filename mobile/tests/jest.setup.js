@@ -8,3 +8,12 @@ jest.mock('react-native-webview', () => {
   return { WebView: (props) => React.createElement('WebViewStub', props) };
 });
 
+// Lightweight mock for FadeSlideIn across all test suites to avoid useNativeDriver timer issues in Node/Jest
+jest.mock('../src/components/FadeSlideIn.js', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    FadeSlideIn: ({ children, style }) => React.createElement(View, { style }, children),
+  };
+});
+

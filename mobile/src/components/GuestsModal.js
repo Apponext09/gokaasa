@@ -20,6 +20,7 @@ function normalizeRooms(rooms, room) {
     return rooms.map((r) => ({
       adults: Math.max(OCCUPANCY_LIMITS.minAdults, Math.min(OCCUPANCY_LIMITS.maxAdults, r.adults || 2)),
       childAges: Array.isArray(r.childAges) ? [...r.childAges] : [],
+      pets: Math.max(0, Math.min(3, r.pets || 0)),
     }));
   }
   if (room && typeof room === 'object') {
@@ -27,10 +28,11 @@ function normalizeRooms(rooms, room) {
       {
         adults: Math.max(OCCUPANCY_LIMITS.minAdults, Math.min(OCCUPANCY_LIMITS.maxAdults, room.adults || 2)),
         childAges: Array.isArray(room.childAges) ? [...room.childAges] : [],
+        pets: Math.max(0, Math.min(3, room.pets || 0)),
       },
     ];
   }
-  return [{ adults: 2, childAges: [] }];
+  return [{ adults: 2, childAges: [], pets: 0 }];
 }
 
 /**
@@ -54,6 +56,7 @@ export function GuestsModal({ visible, rooms, room, onChange, onClose }) {
         const added = Array.from({ length: newCount - prev.length }, () => ({
           adults: 2,
           childAges: [],
+          pets: 0,
         }));
         return [...prev, ...added];
       }
@@ -65,6 +68,14 @@ export function GuestsModal({ visible, rooms, room, onChange, onClose }) {
     setDraftRooms((prev) => {
       const updated = [...prev];
       updated[roomIdx] = { ...updated[roomIdx], adults };
+      return updated;
+    });
+  };
+
+  const updatePets = (roomIdx, pets) => {
+    setDraftRooms((prev) => {
+      const updated = [...prev];
+      updated[roomIdx] = { ...updated[roomIdx], pets };
       return updated;
     });
   };
@@ -99,7 +110,7 @@ export function GuestsModal({ visible, rooms, room, onChange, onClose }) {
 
   const addAnotherRoom = () => {
     if (draftRooms.length >= OCCUPANCY_LIMITS.maxRooms) return;
-    setDraftRooms((prev) => [...prev, { adults: 2, childAges: [] }]);
+    setDraftRooms((prev) => [...prev, { adults: 2, childAges: [], pets: 0 }]);
   };
 
   const handleApply = () => {
@@ -207,6 +218,19 @@ export function GuestsModal({ visible, rooms, room, onChange, onClose }) {
                         />
                       ))}
                     </View>
+                  )}
+
+                  {/* Pets */}
+                  <Stepper
+                    label="Pets"
+                    hint="Dogs, cats & service animals"
+                    value={r.pets || 0}
+                    min={0}
+                    max={3}
+                    onChange={(v) => updatePets(roomIdx, v)}
+                  />
+                  {(r.pets || 0) >= 3 && (
+                    <Text style={styles.limitMessage}>Max 3 pets per room.</Text>
                   )}
                 </View>
               );

@@ -7,6 +7,7 @@ import { LoadingView } from '../components/LoadingView.js';
 import { ErrorView } from '../components/ErrorView.js';
 import { AppButton } from '../components/AppButton.js';
 import { StarRating } from '../components/StarRating.js';
+import { StatusBadge } from '../components/StatusBadge.js';
 import { SectionHeader } from '../components/SectionHeader.js';
 import { HotelCard } from '../components/HotelCard.js';
 import { FadeSlideIn } from '../components/FadeSlideIn.js';
@@ -160,6 +161,12 @@ export default function HotelDetailsScreen({ route, navigation }) {
             <Ionicons name="location-outline" size={14} color={colors.textMuted} />
             <Text style={styles.address}>{address}</Text>
           </View>
+
+          {(hotel.petsAllowed || hotel.pets_allowed) && (
+            <View style={{ marginTop: 6, alignSelf: 'flex-start' }}>
+              <StatusBadge label="🐾 Pet friendly" tone="success" />
+            </View>
+          )}
 
           {(hotel.latitude || hotel.locationUrl) && (() => {
             const mapUrl = hotel.locationUrl ??

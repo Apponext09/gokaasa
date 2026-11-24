@@ -4,7 +4,8 @@ const HOLD_COLUMNS = `
   h.id, h.user_id, h.hotel_id, h.room_type_id, h.rate_plan_id, h.check_in::text AS check_in, h.check_out::text AS check_out,
   h.nights, h.rooms, h.occupancy, h.pets_count, h.currency, h.subtotal_minor, h.discount_minor, h.taxes_minor, h.fees_minor,
   h.total_minor, h.coupon_id, h.coupon_code, h.coupon_discount_minor, h.quote_snapshot, h.guest_details, h.status,
-  h.expires_at, h.booking_id, h.converted_at, h.released_at, h.created_at, h.updated_at, (h.expires_at <= now()) AS is_expired_now
+  h.expires_at, h.booking_id, h.converted_at, h.released_at, h.created_at, h.updated_at, (h.expires_at <= now()) AS is_expired_now,
+  h.source_platform
 `;
 
 const BOOKING_COLUMNS = `
@@ -81,18 +82,29 @@ export const bookingRepository = {
     return rows[0] ?? null;
   },
 
+  /** All active unexpired HELD holds for a user. */
+  async findActiveHoldsForUser(userId, client = pool) {
+    const { rows } = await client.query(
+      `SELECT ${HOLD_COLUMNS} FROM booking_holds h
+        WHERE h.user_id = $1 AND h.status = 'HELD' AND h.expires_at > now()
+        ORDER BY h.created_at ASC`,
+      [userId],
+    );
+    return rows;
+  },
+
   async insertHold(client, values) {
     const { rows } = await client.query(
       `INSERT INTO booking_holds (user_id, hotel_id, room_type_id, rate_plan_id, check_in, check_out, nights, rooms,
                                   occupancy, currency, subtotal_minor, discount_minor, taxes_minor, fees_minor, total_minor,
-                                  quote_snapshot, idempotency_key, status, expires_at, pets_count)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HELD', now() + ($18 || ' minutes')::interval, $19)
+                                  quote_snapshot, idempotency_key, status, expires_at, pets_count, source_platform)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'HELD', now() + ($18 || ' minutes')::interval, $19, $20)
        RETURNING id, expires_at`,
       [
         values.userId, values.hotelId, values.roomTypeId, values.ratePlanId, values.checkIn, values.checkOut,
         values.nights, values.rooms, JSON.stringify(values.occupancy), values.currency, values.subtotal,
         values.discount, values.taxes, values.fees, values.total, JSON.stringify(values.quoteSnapshot),
-        values.idempotencyKey ?? null, String(values.holdMinutes), values.petsCount ?? 0,
+        values.idempotencyKey ?? null, String(values.holdMinutes), values.petsCount ?? 0, values.sourcePlatform ?? null,
       ],
     );
     return rows[0];

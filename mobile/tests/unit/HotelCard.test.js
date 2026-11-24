@@ -165,4 +165,95 @@ describe('HotelCard', () => {
     fireEvent(viewBtn, 'press');
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  test.each([1, 2, 3])('renders urgency badge "Only %i left" when teaser card has roomsLeft <= 3', async (count) => {
+    const hotel = {
+      id: 32,
+      name: 'sam tech',
+      slug: 'sam-tech',
+      city: 'Navi Mumbai',
+      roomsLeft: count,
+      price: {
+        amountMinor: 1120000,
+      },
+    };
+
+    const { getByText } = await render(
+      <HotelCard
+        hotel={hotel}
+        onPress={onPress}
+      />
+    );
+
+    expect(getByText(`Only ${count} left`)).toBeTruthy();
+  });
+
+  test('does not render urgency badge when teaser card has roomsLeft > 3', async () => {
+    const hotel = {
+      id: 26,
+      name: 'Green Leaf Resort',
+      slug: 'green-leaf-resort',
+      city: 'Ahilyanagar',
+      roomsLeft: 8,
+      price: {
+        amountMinor: 297360,
+      },
+    };
+
+    const { queryByText } = await render(
+      <HotelCard
+        hotel={hotel}
+        onPress={onPress}
+      />
+    );
+
+    expect(queryByText(/Only \d+ left/)).toBeNull();
+  });
+
+  test('renders urgency badge when search card has offer.roomsLeft <= 3', async () => {
+    const hotel = {
+      id: 21,
+      name: 'Ahilya Grand Hotel',
+      slug: 'ahilya-grand-hotel',
+      city: 'Ahilyanagar',
+      bestOffer: {
+        roomTypeId: 101,
+        roomName: 'Deluxe Suite',
+        mealPlan: 'ROOM_ONLY',
+        freeCancellation: true,
+        pricePerNightMinor: 250000,
+        finalTotalMinor: 250000,
+        nights: 1,
+        roomsLeft: 2,
+      },
+    };
+
+    const { getByText } = await render(
+      <HotelCard
+        hotel={hotel}
+        onPress={onPress}
+      />
+    );
+
+    expect(getByText('Only 2 left')).toBeTruthy();
+  });
+
+  test('renders pet friendly badge when hotel allows pets', async () => {
+    const hotel = {
+      id: 25,
+      name: 'Pet Friendly Resort',
+      slug: 'pet-friendly-resort',
+      city: 'Goa',
+      petsAllowed: true,
+    };
+
+    const { getByText } = await render(
+      <HotelCard
+        hotel={hotel}
+        onPress={onPress}
+      />
+    );
+
+    expect(getByText('🐾 Pet friendly')).toBeTruthy();
+  });
 });

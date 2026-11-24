@@ -72,6 +72,9 @@ export default function BookingScreen({ route, navigation }) {
   // Room-by-room guests
   const [roomGuests, setRoomGuests] = useState([]);
 
+  // Accompanying pets
+  const [pets, setPets] = useState([]);
+
   // Company and GST details
   const [companyDetails, setCompanyDetails] = useState({
     gstNumber: '',
@@ -83,53 +86,8 @@ export default function BookingScreen({ route, navigation }) {
   // Special request
   const [specialRequest, setSpecialRequest] = useState('');
 
-  // Offers & Coupons
-  const [couponCode, setCouponCode] = useState('');
-  const [couponBusy, setCouponBusy] = useState(false);
-  const [couponError, setCouponError] = useState(null);
-  const [availableOffers, setAvailableOffers] = useState([]);
-
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
-
-  const loadAvailableCoupons = useCallback((hId) => {
-    if (!hId) return;
-    bookingsApi
-      .holdCoupons(hId)
-      .then((items) => setAvailableOffers(Array.isArray(items) ? items : []))
-      .catch(() => setAvailableOffers([]));
-  }, []);
-
-  const applyCoupon = async (codeToApply) => {
-    const code = (typeof codeToApply === 'string' ? codeToApply : couponCode).trim().toUpperCase();
-    if (!code) return;
-    setCouponBusy(true);
-    setCouponError(null);
-    try {
-      const updatedHold = await bookingsApi.applyCoupon(activeHoldId, code);
-      setState((s) => ({ ...s, hold: updatedHold }));
-      setCouponCode('');
-      setAvailableOffers([]);
-    } catch (err) {
-      setCouponError(err.message || 'Invalid or inapplicable coupon code.');
-    } finally {
-      setCouponBusy(false);
-    }
-  };
-
-  const removeCoupon = async () => {
-    setCouponBusy(true);
-    setCouponError(null);
-    try {
-      const updatedHold = await bookingsApi.removeCoupon(activeHoldId);
-      setState((s) => ({ ...s, hold: updatedHold }));
-      loadAvailableCoupons(activeHoldId);
-    } catch (err) {
-      Alert.alert('Unable to remove coupon', err.message || 'Please try again.');
-    } finally {
-      setCouponBusy(false);
-    }
-  };
 
   useEffect(() => {
     bookingsApi
@@ -137,12 +95,7 @@ export default function BookingScreen({ route, navigation }) {
       .then((hold) => {
         setState({ status: 'ready', hold, error: null });
 
-        if (!hold.quote?.coupon) {
-          loadAvailableCoupons(holdId);
-        } else {
-          setAvailableOffers([]);
-        }
-
+        let currentBookingFor = 'myself';
         // Pre-fill existing guest details if available
         if (hold.guestDetails) {
           const gd = hold.guestDetails;
@@ -154,6 +107,7 @@ export default function BookingScreen({ route, navigation }) {
               mobile: gd.primaryContact.mobile || '',
             });
             if (user?.email && gd.primaryContact.email && user.email.toLowerCase() !== gd.primaryContact.email.toLowerCase()) {
+              currentBookingFor = 'someone_else';
               setBookingFor('someone_else');
             }
           }
@@ -171,10 +125,44 @@ export default function BookingScreen({ route, navigation }) {
 
         // Initialize room guests based on stay occupancy
         const occupancy = hold.quote?.stay?.occupancy || [{ adults: 2, childAges: [] }];
-        setRoomGuests(initRoomGuests(occupancy, hold.guestDetails?.rooms || []));
+        const initializedRooms = initRoomGuests(occupancy, hold.guestDetails?.rooms || []);
+        // When booking for myself, auto-fill Room 1 Guest 1 (the single primary adult) with the logged-in user's details if blank
+        if (currentBookingFor === 'myself' && user && initializedRooms.length > 0 && initializedRooms[0].guests?.length > 0) {
+          const g0 = initializedRooms[0].guests[0];
+          if (!g0.firstName && !g0.lastName) {
+            g0.firstName = user.firstName || '';
+            g0.lastName = user.lastName || '';
+          }
+        }
+        setRoomGuests(initializedRooms);
+
+        // Initialize pets from existing guest details or stay occupancy
+        const initialPetsCount = hold.petsCount || occupancy.reduce((sum, r) => sum + (r.pets || 0), 0);
+        if (hold.guestDetails?.pets?.length) {
+          setPets(hold.guestDetails.pets.map((p) => ({ name: p.name || '', breed: p.breed || '' })));
+        } else if (initialPetsCount > 0) {
+          setPets(Array.from({ length: initialPetsCount }, () => ({ name: '', breed: '' })));
+        }
       })
       .catch((err) => setState({ status: 'error', hold: null, error: err.message }));
   }, [holdId, user?.email]);
+
+  const addPet = () => {
+    if (pets.length >= 10) return;
+    setPets((prev) => [...prev, { name: '', breed: '' }]);
+  };
+
+  const removePet = (index) => {
+    setPets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updatePet = (index, field, value) => {
+    setPets((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
 
   const handleHoldExpire = useCallback(() => {
     if (!activeHoldId) return;
@@ -197,12 +185,53 @@ export default function BookingScreen({ route, navigation }) {
         email: user.email || '',
         mobile: user.phone || '',
       });
+      // Auto-fill Room 1 Guest 1 (single adult) with user's name if blank
+      setRoomGuests((prev) => {
+        if (!prev.length || !prev[0]?.guests?.length) return prev;
+        const updated = [...prev];
+        const room0 = { ...updated[0] };
+        const guests0 = [...room0.guests];
+        const g0 = guests0[0];
+        if (!g0.firstName || g0.firstName === contact.firstName) {
+          guests0[0] = {
+            ...g0,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+          };
+          room0.guests = guests0;
+          updated[0] = room0;
+        }
+        return updated;
+      });
     } else if (choice === 'someone_else') {
+      const prevFirst = contact.firstName;
+      const prevLast = contact.lastName;
       setContact({
         firstName: '',
         lastName: '',
         email: '',
         mobile: '',
+      });
+      // Clear Room 1 Guest 1 if it was previously filled with user's name
+      setRoomGuests((prev) => {
+        if (!prev.length || !prev[0]?.guests?.length) return prev;
+        const updated = [...prev];
+        const room0 = { ...updated[0] };
+        const guests0 = [...room0.guests];
+        const g0 = guests0[0];
+        if (
+          (g0.firstName === user?.firstName && g0.lastName === user?.lastName) ||
+          (g0.firstName === prevFirst && g0.lastName === prevLast)
+        ) {
+          guests0[0] = {
+            ...g0,
+            firstName: '',
+            lastName: '',
+          };
+          room0.guests = guests0;
+          updated[0] = room0;
+        }
+        return updated;
       });
     }
   };
@@ -268,7 +297,8 @@ export default function BookingScreen({ route, navigation }) {
     setUpdatingStay(true);
     setSaveError(null);
     try {
-      // 1. Create new hold with updated dates and occupancy
+      // 1. Create new hold with updated dates and occupancy (atomically replacing previous hold)
+      const totalPets = (newOccupancy || []).reduce((sum, r) => sum + (r.pets || 0), 0);
       const newHold = await bookingsApi.createHold({
         hotelId: hotel.id,
         roomTypeId: room.id,
@@ -277,10 +307,12 @@ export default function BookingScreen({ route, navigation }) {
         checkOut: newCheckOut,
         rooms: newOccupancy.length,
         occupancy: newOccupancy,
+        petsCount: totalPets,
+        replaceHoldId: activeHoldId,
       });
 
-      // 2. Release previous hold
-      if (activeHoldId) {
+      // 2. Release previous hold fallback
+      if (activeHoldId && activeHoldId !== newHold.id) {
         bookingsApi.release(activeHoldId).catch(() => {});
       }
 
@@ -291,10 +323,8 @@ export default function BookingScreen({ route, navigation }) {
 
       // 4. Update room guests array for new occupancy structure
       setRoomGuests(initRoomGuests(newOccupancy, roomGuests));
-
-      // 5. Reload available coupons for the new hold
-      if (!newHold.quote?.coupon) {
-        loadAvailableCoupons(newHold.id);
+      if (pets.length === 0 && totalPets > 0) {
+        setPets(Array.from({ length: totalPets }, () => ({ name: '', breed: '' })));
       }
     } catch (err) {
       Alert.alert(
@@ -325,6 +355,11 @@ export default function BookingScreen({ route, navigation }) {
 
       const rawGst = companyDetails.gstNumber.trim().toUpperCase();
 
+      const formattedPets = pets.map((p, idx) => ({
+        name: p.name?.trim() || `Pet ${idx + 1}`,
+        breed: p.breed?.trim() || undefined,
+      }));
+
       await bookingsApi.saveGuests(activeHoldId, {
         primaryContact: {
           firstName: contact.firstName.trim(),
@@ -333,13 +368,15 @@ export default function BookingScreen({ route, navigation }) {
           mobile: contact.mobile.trim(),
         },
         rooms: formattedRooms,
+        petsCount: formattedPets.length,
+        pets: formattedPets,
         gstNumber: rawGst || undefined,
         companyName: companyDetails.companyName.trim() || undefined,
         billingAddress: companyDetails.billingAddress.trim() || undefined,
         specialRequest: specialRequest.trim() || undefined,
       });
 
-      navigation.navigate('Payment', { holdId: activeHoldId, hotelName, roomName, planName });
+      navigation.navigate('BookingReview', { holdId: activeHoldId, hotelName, roomName, planName });
     } catch (err) {
       setSaveError(err.message);
     } finally {
@@ -404,135 +441,6 @@ export default function BookingScreen({ route, navigation }) {
             <Row label="Taxes" value={formatMoneyMinor(totals.taxes, totals.currency)} />
             <View style={styles.divider} />
             <Row label="Total" value={formatMoneyMinor(totals.total, totals.currency)} strong />
-          </View>
-
-          {/* ── Offers & Coupons Card ── */}
-          <View style={[styles.card, shadow.card]}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="pricetag-outline" size={18} color={colors.brand600} />
-              <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>Offers & Coupons</Text>
-                <Text style={styles.cardSubtitle}>
-                  {hold.quote.coupon ? 'Coupon applied to your booking' : 'Apply promo codes or select available offers'}
-                </Text>
-              </View>
-            </View>
-
-            {hold.quote.coupon ? (
-              <View style={styles.appliedCouponBanner}>
-                <View style={styles.appliedCouponLeft}>
-                  <View style={styles.appliedCouponBadge}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success600} />
-                    <Text style={styles.appliedCouponCode}>{hold.quote.coupon.code}</Text>
-                  </View>
-                  <Text style={styles.appliedCouponSavings}>
-                    {totals.couponDiscount > 0
-                      ? `Saved ${formatMoneyMinor(totals.couponDiscount, totals.currency)} with this offer!`
-                      : 'Coupon applied successfully!'}
-                  </Text>
-                </View>
-                <Pressable
-                  style={styles.removeCouponButton}
-                  onPress={removeCoupon}
-                  disabled={couponBusy}
-                  accessibilityRole="button"
-                  accessibilityLabel="Remove coupon"
-                >
-                  {couponBusy ? (
-                    <ActivityIndicator size="small" color={colors.danger600} />
-                  ) : (
-                    <View style={styles.removeCouponContent}>
-                      <Ionicons name="close-circle-outline" size={16} color={colors.danger600} />
-                      <Text style={styles.removeCouponText}>Remove</Text>
-                    </View>
-                  )}
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.couponInputSection}>
-                <View style={styles.couponInputRow}>
-                  <View style={styles.couponInputWrap}>
-                    <TextInput
-                      placeholder="Enter coupon code"
-                      placeholderTextColor={colors.textMuted}
-                      value={couponCode}
-                      onChangeText={(txt) => {
-                        setCouponCode(txt);
-                        if (couponError) setCouponError(null);
-                      }}
-                      autoCapitalize="characters"
-                      autoCorrect={false}
-                      style={styles.couponTextInput}
-                      editable={!couponBusy}
-                    />
-                  </View>
-                  <Pressable
-                    testID="apply-coupon-button"
-                    style={[
-                      styles.applyCouponButton,
-                      (!couponCode.trim() || couponBusy) && styles.applyCouponButtonDisabled,
-                    ]}
-                    onPress={() => applyCoupon()}
-                    disabled={!couponCode.trim() || couponBusy}
-                    accessibilityRole="button"
-                    accessibilityLabel="Apply coupon"
-                  >
-                    {couponBusy ? (
-                      <ActivityIndicator size="small" color={colors.white} />
-                    ) : (
-                      <Text style={styles.applyCouponButtonText}>Apply</Text>
-                    )}
-                  </Pressable>
-                </View>
-
-                {couponError ? (
-                  <View style={styles.couponErrorRow}>
-                    <Ionicons name="alert-circle-outline" size={14} color={colors.danger600} />
-                    <Text style={styles.couponErrorText}>{couponError}</Text>
-                  </View>
-                ) : null}
-
-                {availableOffers.length > 0 && (
-                  <View style={styles.availableOffersSection}>
-                    <Text style={styles.availableOffersHeading}>
-                      Available offers for this stay
-                    </Text>
-                    <View style={styles.offersList}>
-                      {availableOffers.map((offer) => (
-                        <View key={offer.code} style={styles.offerTile}>
-                          <View style={styles.offerTileLeft}>
-                            <View style={styles.offerCodeBadge}>
-                              <Text style={styles.offerCodeText}>{offer.code}</Text>
-                            </View>
-                            <Text style={styles.offerTitle} numberOfLines={1}>
-                              {offer.title || offer.code}
-                            </Text>
-                            {offer.description ? (
-                              <Text style={styles.offerDesc} numberOfLines={2}>
-                                {offer.description}
-                              </Text>
-                            ) : null}
-                            {offer.discountMinor > 0 ? (
-                              <Text style={styles.offerSavings}>
-                                Save {formatMoneyMinor(offer.discountMinor, totals.currency)}
-                              </Text>
-                            ) : null}
-                          </View>
-                          <Pressable
-                            style={styles.offerApplyBtn}
-                            onPress={() => applyCoupon(offer.code)}
-                            disabled={couponBusy}
-                            accessibilityRole="button"
-                          >
-                            <Text style={styles.offerApplyBtnText}>Apply</Text>
-                          </Pressable>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </View>
-            )}
           </View>
 
           {/* ── Lead Guest Details Card ── */}
@@ -661,6 +569,78 @@ export default function BookingScreen({ route, navigation }) {
             </View>
           ))}
 
+          {/* ── Pet Details Card ── */}
+          <View style={[styles.card, shadow.card]}>
+            <View style={styles.cardHeader}>
+              <Text style={{ fontSize: 18 }}>🐾</Text>
+              <View style={styles.flex1}>
+                <View style={styles.roomHeaderRow}>
+                  <Text style={styles.cardTitle}>Pet Details</Text>
+                  <View style={styles.guestCountBadge}>
+                    <Text style={styles.guestCountText}>
+                      {pets.length} {pets.length === 1 ? 'pet' : 'pets'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.cardSubtitle}>
+                  Names and breeds of pets accompanying you.
+                </Text>
+              </View>
+            </View>
+
+            {pets.length === 0 ? (
+              <Text style={styles.emptyPetsText}>
+                No pets added. If you are bringing pets, tap "+ Add pet" below.
+              </Text>
+            ) : (
+              <View style={styles.guestSlotsContainer}>
+                {pets.map((pet, petIdx) => (
+                  <View key={petIdx} style={styles.guestSlot}>
+                    <View style={styles.petSlotHeader}>
+                      <Text style={styles.guestSlotLabel}>Pet {petIdx + 1}</Text>
+                      <Pressable
+                        onPress={() => removePet(petIdx)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove pet ${petIdx + 1}`}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={colors.danger600} />
+                      </Pressable>
+                    </View>
+                    <View style={styles.grid2}>
+                      <AppInput
+                        label="Pet name"
+                        value={pet.name}
+                        placeholder="e.g. Bruno, Bella"
+                        onChangeText={(v) => updatePet(petIdx, 'name', v)}
+                        containerStyle={styles.flex1}
+                      />
+                      <AppInput
+                        label="Breed / Type (optional)"
+                        value={pet.breed}
+                        placeholder="e.g. Labrador, Cat"
+                        onChangeText={(v) => updatePet(petIdx, 'breed', v)}
+                        containerStyle={styles.flex1}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {pets.length < 10 && (
+              <Pressable
+                style={styles.addPetButton}
+                onPress={addPet}
+                accessibilityRole="button"
+                accessibilityLabel="Add pet"
+              >
+                <Ionicons name="add-circle-outline" size={18} color={colors.brand600} />
+                <Text style={styles.addPetText}>+ Add pet</Text>
+              </Pressable>
+            )}
+          </View>
+
           {/* ── Company and Requests Card ── */}
           <View style={[styles.card, shadow.card]}>
             <View style={styles.cardHeader}>
@@ -716,7 +696,7 @@ export default function BookingScreen({ route, navigation }) {
           )}
 
           <AppButton
-            title="Continue to payment"
+            title="Continue to review"
             onPress={onContinue}
             loading={saving}
             disabled={!canSubmit}
@@ -884,6 +864,34 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: colors.textMuted,
   },
+  emptyPetsText: {
+    ...typography.caption,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    paddingVertical: spacing.xs,
+  },
+  petSlotHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  addPetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.control,
+    borderStyle: 'dashed',
+    marginTop: spacing.xs,
+  },
+  addPetText: {
+    ...typography.captionStrong,
+    color: colors.brand600,
+  },
 
   /* ── Errors and Submit ── */
   updatingBanner: {
@@ -916,169 +924,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submit: { marginTop: spacing.sm, marginBottom: spacing.xxxl },
-
-  /* ── Offers & Coupons ── */
-  appliedCouponBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.success50,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  appliedCouponLeft: {
-    flex: 1,
-    gap: 4,
-  },
-  appliedCouponBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  appliedCouponCode: {
-    ...typography.bodyStrong,
-    color: colors.success600,
-    letterSpacing: 0.5,
-  },
-  appliedCouponSavings: {
-    ...typography.caption,
-    color: colors.success600,
-  },
-  removeCouponButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  removeCouponContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  removeCouponText: {
-    ...typography.captionStrong,
-    color: colors.danger600,
-  },
-  couponInputSection: {
-    gap: spacing.sm,
-  },
-  couponInputRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'center',
-  },
-  couponInputWrap: {
-    flex: 1,
-    height: 46,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surfaceCard,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  couponTextInput: {
-    ...typography.body,
-    color: colors.textStrong,
-    letterSpacing: 0.5,
-    padding: 0,
-  },
-  applyCouponButton: {
-    height: 46,
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.control,
-    backgroundColor: colors.brand600,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  applyCouponButtonDisabled: {
-    backgroundColor: colors.brand200,
-  },
-  applyCouponButtonText: {
-    ...typography.bodyStrong,
-    color: colors.white,
-  },
-  couponErrorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: -2,
-  },
-  couponErrorText: {
-    ...typography.caption,
-    color: colors.danger600,
-    flexShrink: 1,
-  },
-  availableOffersSection: {
-    marginTop: spacing.xs,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-    gap: spacing.sm,
-  },
-  availableOffersHeading: {
-    ...typography.captionStrong,
-    color: colors.textStrong,
-  },
-  offersList: {
-    gap: spacing.sm,
-  },
-  offerTile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    backgroundColor: colors.surfacePage,
-    gap: spacing.sm,
-  },
-  offerTileLeft: {
-    flex: 1,
-    gap: 3,
-  },
-  offerCodeBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: radius.xs,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.brand400,
-    backgroundColor: colors.brand50,
-  },
-  offerCodeText: {
-    ...typography.tiny,
-    color: colors.brand700,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  offerTitle: {
-    ...typography.captionStrong,
-    color: colors.textStrong,
-  },
-  offerDesc: {
-    ...typography.tiny,
-    color: colors.textMuted,
-  },
-  offerSavings: {
-    ...typography.captionStrong,
-    color: colors.success600,
-  },
-  offerApplyBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.pill,
-    backgroundColor: colors.brand50,
-    borderWidth: 1,
-    borderColor: colors.brand200,
-  },
-  offerApplyBtnText: {
-    ...typography.captionStrong,
-    color: colors.brand600,
-  },
   successValue: {
     color: colors.success600,
     fontWeight: '600',

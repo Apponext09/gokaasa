@@ -23,6 +23,7 @@ import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 const CONTENT_PADDING = spacing.md;
 
 const UNAVAILABLE_TEXT = {
+  HELD: 'Currently unavailable · Held by another',
   SOLD_OUT: 'Sold out for these dates',
   CAPACITY: 'Does not fit your party',
   CLOSED: 'Closed for these dates',
@@ -56,7 +57,7 @@ function BreakdownRow({ label, value, tone, strong }) {
  * the website's RoomOffers.jsx#RatePlanRow field-for-field, including the exact free-cancellation
  * definition (refundable AND a policy AND not non-refundable AND a full 100% refund window).
  */
-function RatePlanRow({ plan, onSelect, holdBusy }) {
+function RatePlanRow({ plan, onSelect, holdBusy, isHeld }) {
   const [open, setOpen] = useState(false);
   const cancelText = plan.cancellationPolicy?.description ?? 'Cancellation terms are not set for this rate.';
   const freeCancel = plan.refundable && plan.cancellationPolicy && !plan.cancellationPolicy.isNonRefundable && plan.cancellationPolicy.refundPercent === 100;
@@ -89,7 +90,11 @@ function RatePlanRow({ plan, onSelect, holdBusy }) {
             {plan.nights} night{plan.nights === 1 ? '' : 's'}{plan.rooms > 1 ? ` · ${plan.rooms} rooms` : ''} · {formatMoneyMinor(plan.finalAmount)} total
           </Text>
         </View>
-        <AppButton title="Select" size="sm" loading={holdBusy} onPress={() => onSelect(plan)} style={styles.selectButton} />
+        {isHeld ? (
+          <AppButton title="Held by another" size="sm" disabled style={styles.selectButton} />
+        ) : (
+          <AppButton title="Select" size="sm" loading={holdBusy} onPress={() => onSelect(plan)} style={styles.selectButton} />
+        )}
       </View>
 
       <Pressable style={styles.breakdownToggle} onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }}>
@@ -117,9 +122,10 @@ function RoomCard({ room, onSelect, holdBusy }) {
   const [activeImage, setActiveImage] = useState(0);
   const images = room.images?.length ? room.images : [null];
   const scarce = room.availableRooms > 0 && room.availableRooms <= 3;
+  const isHeld = !room.available && (room.unavailableReason === 'HELD' || room.isHeld);
 
   return (
-    <View style={styles.roomCard}>
+    <View style={[styles.roomCard, isHeld && styles.roomCardHeld]}>
       <View>
         <FlatList
           data={images}
@@ -142,6 +148,13 @@ function RoomCard({ room, onSelect, holdBusy }) {
       </View>
 
       <View style={styles.roomBody}>
+        {isHeld && (
+          <View style={styles.heldBanner}>
+            <Ionicons name="time-outline" size={14} color={colors.warning700} />
+            <Text style={styles.heldBannerText}>Currently unavailable · Held by another</Text>
+          </View>
+        )}
+
         <Text style={styles.roomName}>{room.name}</Text>
         <View style={styles.metaRow}>
           {room.roomSizeSqm != null && <MetaItem icon="resize-outline" text={`${room.roomSizeSqm} m²`} />}
@@ -161,11 +174,18 @@ function RoomCard({ room, onSelect, holdBusy }) {
           </View>
         )}
 
-        {scarce && <StatusBadge label={`Only ${room.availableRooms} room${room.availableRooms === 1 ? '' : 's'} left`} tone="warning" />}
+        {scarce && !isHeld && <StatusBadge label={`Only ${room.availableRooms} room${room.availableRooms === 1 ? '' : 's'} left`} tone="warning" />}
 
-        {room.ratePlans.map((plan) => (
-          <RatePlanRow key={plan.ratePlanId} plan={plan} onSelect={(p) => onSelect(room, p)} holdBusy={holdBusy} />
-        ))}
+        {room.ratePlans?.length > 0 ? (
+          room.ratePlans.map((plan) => (
+            <RatePlanRow key={plan.ratePlanId} plan={plan} onSelect={(p) => onSelect(room, p)} holdBusy={holdBusy} isHeld={isHeld} />
+          ))
+        ) : isHeld ? (
+          <View style={styles.heldNoticeRow}>
+            <Text style={styles.caption}>Another guest is currently holding this room. If their reservation is not completed, it will become available again.</Text>
+            <AppButton title="Held by another" size="sm" disabled style={styles.selectButton} />
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -234,8 +254,9 @@ export default function RoomSelectionScreen({ route, navigation }) {
   if (state.status === 'error' && !state.data) return <ErrorView message={state.error} onRetry={() => navigation.replace('RoomSelection', route.params)} />;
 
   const isRefetching = state.status === 'loading';
-  const available = (state.data?.roomTypes ?? []).filter((r) => r.available);
-  const unavailable = (state.data?.roomTypes ?? []).filter((r) => !r.available);
+  const isHeldRoom = (r) => !r.available && (r.unavailableReason === 'HELD' || r.isHeld);
+  const displayRooms = (state.data?.roomTypes ?? []).filter((r) => r.available || isHeldRoom(r));
+  const otherUnavailable = (state.data?.roomTypes ?? []).filter((r) => !r.available && !isHeldRoom(r));
 
   return (
     <ScreenContainer edges={['bottom']}>
@@ -258,20 +279,20 @@ export default function RoomSelectionScreen({ route, navigation }) {
           </View>
         )}
 
-        {!isRefetching && available.length === 0 && (
+        {!isRefetching && displayRooms.length === 0 && (
           <EmptyState icon="bed-outline" title="No rooms available" message="Try different dates or go back to results." />
         )}
 
-        {!isRefetching && available.map((room, index) => (
+        {!isRefetching && displayRooms.map((room, index) => (
           <FadeSlideIn key={room.id} delay={index * 60}>
             <RoomCard room={room} onSelect={selectRatePlan} holdBusy={holdBusy} />
           </FadeSlideIn>
         ))}
 
-        {!isRefetching && unavailable.length > 0 && (
+        {!isRefetching && otherUnavailable.length > 0 && (
           <View style={styles.unavailableBlock}>
-            <Text style={styles.sectionTitle}>{unavailable.length} other room type{unavailable.length === 1 ? '' : 's'} not available</Text>
-            {unavailable.map((room) => (
+            <Text style={styles.sectionTitle}>{otherUnavailable.length} other room type{otherUnavailable.length === 1 ? '' : 's'} not available</Text>
+            {otherUnavailable.map((room) => (
               <View key={room.id} style={styles.unavailableRow}>
                 <Ionicons name="close-circle-outline" size={14} color={colors.textMuted} />
                 <Text style={[styles.caption, styles.flex1]}>{room.name}</Text>
@@ -292,6 +313,30 @@ const styles = StyleSheet.create({
   refetchText: { ...typography.caption, color: colors.brand600 },
   flex1: { flex: 1 },
   roomCard: { backgroundColor: colors.surfaceCard, borderRadius: radius.card, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderSubtle, ...shadow.card },
+  roomCardHeld: { borderColor: 'rgba(217, 119, 6, 0.35)' },
+  heldBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 119, 6, 0.25)',
+  },
+  heldBannerText: {
+    ...typography.caption,
+    fontWeight: '600',
+    color: colors.warning700,
+  },
+  heldNoticeRow: {
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    gap: spacing.sm,
+  },
   roomImage: { height: 135, backgroundColor: colors.surfaceMuted },
   dotsRow: { position: 'absolute', bottom: spacing.xs, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 4 },
   dot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(255,255,255,0.55)' },
