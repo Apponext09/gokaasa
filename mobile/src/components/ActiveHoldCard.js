@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { bookingsApi } from '../api/bookingsApi.js';
 import { FadeSlideIn } from './FadeSlideIn.js';
@@ -45,9 +46,12 @@ export function ActiveHoldCard({ navigation }) {
       });
   }, []);
 
-  useEffect(() => {
-    fetchActiveHold();
-  }, [fetchActiveHold]);
+  // Refetch every time the Home screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchActiveHold();
+    }, [fetchActiveHold])
+  );
 
   // Foreground refetch
   useEffect(() => {

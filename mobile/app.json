@@ -10,7 +10,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/99b4b230-28ad-4a86-9caa-21fd6663ec25"
+      "url": "https://u.expo.dev/62186116-5614-43f0-96ff-71f83daec282"
     },
     "splash": {
       "image": "./assets/logo.png",
@@ -44,8 +44,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "99b4b230-28ad-4a86-9caa-21fd6663ec25"
+        "projectId": "62186116-5614-43f0-96ff-71f83daec282"
       }
-    }
+    },
+    "owner": "swayam-lala"
   }
 }

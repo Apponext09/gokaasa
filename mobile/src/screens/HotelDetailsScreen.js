@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { useWishlist } from '../context/WishlistContext.js';
 import { useBookingSearch } from '../context/BookingSearchContext.js';
 import { PROPERTY_TYPE_LABEL } from '../constants/booking.js';
-import { todayIso, addDaysIso } from '../utils/format.js';
+import { todayIso, addDaysIso, formatTime12Hour } from '../utils/format.js';
 import { colors } from '../theme/colors.js';
 import { radius, shadow, spacing, typography } from '../theme/spacing.js';
 
@@ -193,8 +193,8 @@ export default function HotelDetailsScreen({ route, navigation }) {
 
           {(hotel.checkInTime || hotel.checkOutTime) && (
             <View style={styles.timesRow}>
-              {hotel.checkInTime && <Text style={styles.caption}>Check-in from {hotel.checkInTime.slice(0, 5)}</Text>}
-              {hotel.checkOutTime && <Text style={styles.caption}>Check-out before {hotel.checkOutTime.slice(0, 5)}</Text>}
+              {hotel.checkInTime && <Text style={styles.caption}>Check-in from {formatTime12Hour(hotel.checkInTime)}</Text>}
+              {hotel.checkOutTime && <Text style={styles.caption}>Check-out before {formatTime12Hour(hotel.checkOutTime)}</Text>}
             </View>
           )}
 
